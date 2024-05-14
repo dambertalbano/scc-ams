@@ -1,0 +1,471 @@
+.loginPage {
+    background-image: url("../employeems.png");
+    background: linear-gradient(rgba(11, 11, 11, 0.5), rgba(10, 10, 10, 0.5)), url("../employeems.png");
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
+    background-size: 100% 120%;
+  }
+  
+  .loginForm {
+    background-color: rgba(22,69,91, 0.6);
+    width: 400px;
+    border: none;
+    border-radius: 10px;
+    padding: 50px;
+  }
+  
+  .loginFormReg {
+    background-color: rgba(22,69,91, 0.6);
+    width: 400px;
+    border: none;
+    border-radius: 10px;
+    padding: 50px;
+  }
+  
+  ul li :hover {
+    background-color: rgb(71, 71, 71);
+  }
+  
+  .employee_image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+  
+  .emp_det_image {
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+  }
+  
+  /*------------------------START------------------------*/
+  
+  .text-center {
+    font-family: Arial Black, Helvetica, sans-serif;
+    color: white;
+    padding: 10px
+  }
+  
+  .btn-custom {
+    background-color: rgba(139, 181, 197, 0.6);
+    border-color: black;
+    border-radius: 10px;
+    position: relative;
+    width: 100%;
+  }
+  
+  /*------------------------ CLASSNAME SELECTOR: BUTTON-CUSTOM------------------------*/
+  .btn-custom:hover,
+  .btn-custom:focus,
+  .btn-custom:active,
+  .btn-custom.active,
+  .open .dropdown-toggle.btn-custom {
+  color: #ffffff;
+  background-color: #5c93ac;
+  }
+  
+  .btn-custom1 {
+    background-color: rgba(139, 181, 197, 0.6);
+    border-color: black;
+    border-radius: 10px;
+    position: relative;
+    width: 100%;
+    margin-top: 20px;
+  }
+  
+  .btn-custom1:hover,
+  .btn-custom1:focus,
+  .btn-custom1:active,
+  .btn-custom1.active,
+  .open .dropdown-toggle.btn-custom1 {
+  color: #ffffff;
+  background-color: #5c93ac;
+  }
+  
+  /*------------------------LOG IN------------------------*/
+  .loginpage {
+    font-family: Arial Black, Helvetica, sans-serif;
+    color: white;
+    text-align: center;
+  }
+  
+  .mb-3 {
+    font-family: Arial, Helvetica, sans-serif;
+    color: white;
+  }
+  
+  .form-control {
+    background-color: rgb(62, 99, 117);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .form-select {
+    background-color: rgb(62, 99, 117);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  a:link {
+    color: white;
+    text-decoration: none;
+  }
+  
+  a:visited {
+    color: black;
+  }
+  
+  a:hover {
+    color: #A9A9A9;
+  }
+  
+  /*------------------------REGISTER------------------------*/
+  
+  .register {
+    margin-top: 20px;
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+    color: white;
+  }
+  
+  /*------------------------ADD STUDENT------------------------*/
+  
+  .studentForm {
+    padding-top: 10%;
+  }
+  
+  .addstud {
+    font-family: Arial black, Helvetica, sans-serif;
+  }
+  
+  .addStudenttitle {
+    font-family: Arial black, Helvetica, sans-serif;
+    color:rgb(49, 48, 48)
+  }
+  
+  .form-label-stud {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 500;
+    color: rgb(0, 0, 0);
+  }
+  
+  .form-control1 {
+    background-color: rgb(255, 255, 255);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  .addStudForm {
+    background-color: rgba(192, 192, 192, 0.6);
+    width: 400px;
+    border: none;
+    border-radius: 10px;
+    padding: 50px;
+  }
+  
+  .btn-custom2 {
+    background-color: rgba(139, 181, 197, 0.6);
+    border-color: rgb(255, 255, 255);
+    border-radius: 10px;
+    position: relative;
+    margin-top: 20px;
+    color: white;
+  }
+  
+  .btn-custom2:hover,
+  .btn-custom2:focus,
+  .btn-custom2:active,
+  .btn-custom2.active,
+  .open .dropdown-toggle.btn-custom2 {
+  color: #ffffff;
+  background-color: #5c93ac;
+  }
+  
+  .btn-custom3 {
+    background-color: rgb(192, 192, 192);
+    border-color: rgb(0, 0, 0);
+    border-radius: 10px;
+    position: relative;
+    margin-top: 20px;
+    color: white;
+  }
+  
+  .btn-custom3:hover,
+  .btn-custom3:focus,
+  .btn-custom3:active,
+  .btn-custom3.active,
+  .open .dropdown-toggle.btn-custom2 {
+  color: #ffffff;
+  background-color: #bebebe;
+  }
+  
+  /*------------------------HOME------------------------*/
+  
+  .title {
+  color: rgb(209, 209, 209);
+  font-family: arial black;
+  font-weight: bold;
+  text-align: center;
+  }
+  
+  .form-label {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 500;
+  color: rgb(209, 209, 209);
+  }
+  
+  .homepage {
+    background-color: rgb(49, 48, 48);
+    background: linear-gradient(rgba(11, 11, 11, 0.5), rgba(10, 10, 10, 0.5));
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
+  }
+  
+  .users {
+    margin-top: 20px;
+  }
+  
+  .pb-1 {
+    color: rgb(0, 0, 0);
+  }
+  
+  .total {
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  /*------------------------TABLE------------------------*/
+  
+  .adminList {
+    color: rgb(0, 0, 0);
+    font-family: Arial black, Helvetica, sans-serif;
+  }
+  
+  .table {
+    color: rgba(2, 0, 2, 0.5);
+  }
+  
+  
+  
+  /*------------------------DASHBOARD------------------------*/
+  
+  .dbtitle {
+    font-family: Arial black, Helvetica, sans-serif;
+  }
+  
+  /*------------------------ADD STUDENT------------------------*/
+  
+  .studentForm {
+    padding-top: 10%;
+  }
+  
+  .addstud {
+    font-family: Arial black, Helvetica, sans-serif;
+  }
+  
+  .addStudenttitle {
+    font-family: Arial black, Helvetica, sans-serif;
+    color:rgb(49, 48, 48)
+  }
+  
+  .form-label-stud {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 500;
+    color: rgb(0, 0, 0);
+  }
+  
+  .form-control1 {
+    background-color: rgb(255, 255, 255);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  .addStudForm {
+    background-color: rgba(192, 192, 192, 0.6);
+    width: 400px;
+    border: none;
+    border-radius: 10px;
+    padding: 50px;
+  }
+  
+  .btn-custom2 {
+    background-color: rgba(139, 181, 197, 0.6);
+    border-color: rgb(255, 255, 255);
+    border-radius: 10px;
+    position: relative;
+    margin-top: 20px;
+    color: white;
+  }
+  
+  .btn-custom2:hover,
+  .btn-custom2:focus,
+  .btn-custom2:active,
+  .btn-custom2.active,
+  .open .dropdown-toggle.btn-custom2 {
+  color: #ffffff;
+  background-color: #5c93ac;
+  }
+  
+  .btn-custom3 {
+    background-color: rgb(192, 192, 192);
+    border-color: rgb(0, 0, 0);
+    border-radius: 10px;
+    position: relative;
+    margin-top: 20px;
+    color: white;
+  }
+  
+  .btn-custom3:hover,
+  .btn-custom3:focus,
+  .btn-custom3:active,
+  .btn-custom3.active,
+  .open .dropdown-toggle.btn-custom2 {
+  color: #ffffff;
+  background-color: #bebebe;
+  }
+  
+  /*------------------------ADD TEACHER------------------------*/
+  
+  .addtchr {
+    font-family: Arial black, Helvetica, sans-serif;
+  }
+  
+  .addTeacherTitle {
+    font-family: Arial black, Helvetica, sans-serif;
+    color:rgb(49, 48, 48)
+  }
+  
+  .form-label-teacher {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 500;
+    color: rgb(0, 0, 0);
+  }
+  
+  .btn-custom4 {
+    background-color: rgb(192, 192, 192);
+    border-color: none;
+    border-radius: 10px;
+    position: relative;
+    margin-top: 20px;
+    color: white;
+  }
+  
+  .btn-custom4:hover,
+  .btn-custom4:focus,
+  .btn-custom4:active,
+  .btn-custom4.active,
+  .open .dropdown-toggle.btn-custom2 {
+  color: #ffffff;
+  background-color: #bebebe;
+  }
+  
+  .btn-custom5 {
+    background-color: rgb(192, 192, 192);
+    border-color: rgb(53, 3, 3);;
+    border-radius: 10px;
+    position: relative;
+    margin-top: 20px;
+    color: white;
+  }
+  
+  .btn-custom5:hover,
+  .btn-custom5:focus,
+  .btn-custom5:active,
+  .btn-custom5.active,
+  .open .dropdown-toggle.btn-custom2 {
+  color: #d60a0a;
+  background-color: #bebebe;
+  }
+  
+  /*------------------------ADD DEPARTMENT------------------------*/
+  
+  .addDept {
+    font-family: Arial black, Helvetica, sans-serif;
+  }
+  
+  .addDeptTitle {
+    font-family: Arial black, Helvetica, sans-serif;
+    color:rgb(49, 48, 48);
+    text-align: center;
+  }
+  
+  .form-control1 {
+    background-color: rgb(255, 255, 255);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  .darkbtn {
+    color: #ffffff;
+  }
+  
+  /*------------------------EDIT STUDENT------------------------*/
+  
+  .editStudTitle {
+    font-family: Arial black, Helvetica, sans-serif;
+    color:rgb(49, 48, 48);
+    text-align: center;
+  }
+  
+  .form-control1 {
+    background-color: rgb(255, 255, 255);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  .editStudLabel {
+    color:rgb(49, 48, 48);
+  }
+  
+  /*------------------------EDIT TEACHER------------------------*/
+  
+  .editTchrTitle {
+    font-family: Arial black, Helvetica, sans-serif;
+    color:rgb(49, 48, 48);
+    text-align: center;
+  }
+  
+  .form-control1 {
+    background-color: rgb(255, 255, 255);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  .editTchrLabel {
+    color:rgb(49, 48, 48);
+  }
+  
+  /*------------------------TEACHER DETAIL------------------------*/
+  
+  .deetzTitle {
+    font-family: Arial black, Helvetica, sans-serif;
+  }
+  
+  .detailPage {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: white;
+  }
+  
+  .bold-label {
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .detail {
+    margin-top: 10%;
+  }
+  
+  /*------------------------STUDENT DETAIL------------------------*/
+  
+  .deetzTitle {
+    font-family: Arial black, Helvetica, sans-serif;
+  }
+  
+  .detailPage {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  .bold-label {
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .detail {
+    margin-top: 10%;
+  }
+  

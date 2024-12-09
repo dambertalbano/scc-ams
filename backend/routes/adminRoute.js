@@ -1,5 +1,5 @@
 import express from 'express';
-import { addAdministrator, addStudent, addTeacher, addUtility, adminDashboard, allAdministrators, allStudents, allTeachers, allUtilitys, appointmentCancel, appointmentsAdmin, deleteAdministrator, deleteStudent, deleteTeacher, deleteUtility, getStudentByCode, loginAdmin, updateAdministrator, updateStudent, updateTeacher, updateUtility } from '../controllers/adminController.js'; // Import deleteTeacher
+import { addAdministrator, addStudent, addTeacher, addUtility, adminDashboard, allAdministrators, allStudents, allTeachers, allUtilitys, appointmentCancel, appointmentsAdmin, deleteAdministrator, deleteStudent, deleteTeacher, deleteUtility, getStudentByCode, getUserByCode, loginAdmin, updateAdministrator, updateStudent, updateTeacher, updateUtility } from '../controllers/adminController.js'; // Import deleteTeacher
 import { changeAvailablity } from '../controllers/studentController.js';
 import authAdmin from '../middleware/authAdmin.js';
 import upload from '../middleware/multer.js';
@@ -29,6 +29,7 @@ adminRouter.put("/administrators/:id", authAdmin, updateAdministrator)
 adminRouter.delete("/administrators/:id", authAdmin, deleteAdministrator);
 adminRouter.put("/utilitys/:id", authAdmin, updateUtility)
 adminRouter.delete("/utilitys/:id", authAdmin, deleteUtility);
+adminRouter.get('/user/code/:code', authAdmin, getUserByCode);  // Add this route for getting user by code
 
 
 export default adminRouter;

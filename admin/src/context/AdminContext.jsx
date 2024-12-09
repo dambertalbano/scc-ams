@@ -35,7 +35,22 @@ import { toast } from "react-toastify";
             }
           };
 
-
+          const getUserByCode = async (code) => {
+            try {
+              const token = localStorage.getItem('adminToken');
+              const response = await axios.get(`/api/user/code/${code}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+        
+              if (response.data.success) {
+                setUserData(response.data.user);
+              } else {
+                console.error('User not found');
+              }
+            } catch (error) {
+              console.error('Error fetching user by code:', error);
+            }
+          };
 
         const getStudentByCode = async (code) => {
             try {
@@ -357,6 +372,7 @@ const deleteTeacher = async (teacherId) => {
             updateTeacher,
             getAllTeachers,
             getStudentByCode,
+            getUserByCode,
             deleteTeacher,
             updateStudent,
             deleteStudent,

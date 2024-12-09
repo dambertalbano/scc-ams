@@ -153,6 +153,36 @@ const adminDashboard = async (req, res) => {
         res.json({ success: false, message: error.message });
     }
 }
+// API to get user information by code
+// Controller to get user by code
+const getUserByCode = async (req, res) => {
+    try {
+        const { code } = req.params;
+        let user = await studentModel.findOne({ code }).select('-password');
+        
+        if (!user) {
+            user = await teacherModel.findOne({ code }).select('-password');
+        }
+
+        if (!user) {
+            user = await administratorModel.findOne({ code }).select('-password');
+        }
+
+        if (!user) {
+            user = await utilityModel.findOne({ code }).select('-password');
+        }
+
+        if (user) {
+            res.json({ success: true, user });
+        } else {
+            res.status(404).json({ success: false, message: 'User not found' });
+        }
+    } catch (error) {
+        console.error('Error fetching user:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 
 // API for adding Administrator
 const addAdministrator = async (req, res) => {
@@ -492,5 +522,5 @@ const allUtilitys = async (req, res) => {
 
 
 
-export { addAdministrator, addStudent, addTeacher, addUtility, adminDashboard, allAdministrators, allStudents, allTeachers, allUtilitys, appointmentCancel, appointmentsAdmin, deleteAdministrator, deleteStudent, deleteTeacher, deleteUtility, getStudentByCode, loginAdmin, updateAdministrator, updateStudent, updateTeacher, updateUtility };
+export { addAdministrator, addStudent, addTeacher, addUtility, adminDashboard, allAdministrators, allStudents, allTeachers, allUtilitys, appointmentCancel, appointmentsAdmin, deleteAdministrator, deleteStudent, deleteTeacher, deleteUtility, getStudentByCode, getUserByCode, loginAdmin, updateAdministrator, updateStudent, updateTeacher, updateUtility };
 

@@ -2,9 +2,9 @@ import { useContext, useState } from "react";
 import { AdminContext } from "../../context/AdminContext";
 
 const RFID_Scan = () => {
-    const { getStudentByCode } = useContext(AdminContext);
+    const { getUserByCode } = useContext(AdminContext);  // Ensure this is the correct function
     const [code, setCode] = useState('');
-    const [studentInfo, setStudentInfo] = useState(null);
+    const [userInfo, setUserInfo] = useState(null);
     const [error, setError] = useState('');
 
     const handleScan = async () => {
@@ -14,21 +14,27 @@ const RFID_Scan = () => {
         }
     
         console.log("Scanning code:", code);  // Log the code to check its value
-        const student = await getStudentByCode(code);
-        if (student) {
-            setStudentInfo(student);
-            setError('');
-        } else {
-            setStudentInfo(null);
-            setError('Student not found');
+        
+        try {
+            // Call getUserByCode function to get the user details based on the code
+            const user = await getUserByCode(code); 
+            if (user) {
+                setUserInfo(user);  // Set user info if found
+                setError('');  // Clear any error
+            } else {
+                setUserInfo(null);  // Clear previous user data
+                setError('No user found with this code');  // Display error if no user is found
+            }
+        } catch (err) {
+            setUserInfo(null);
+            setError('An error occurred while fetching user data.');
+            console.error(err);  // Log error for debugging
         }
     };
     
-    
-
     return (
         <div className="p-5">
-            <h2 className="text-xl font-bold mb-4">RFID Student Information</h2>
+            <h2 className="text-xl font-bold mb-4">RFID User Information</h2>
             <input
                 type="text"
                 placeholder="Scan RFID Code"
@@ -43,18 +49,20 @@ const RFID_Scan = () => {
                 Scan
             </button>
             <div className="mt-5">
-                {studentInfo ? (
+                {userInfo ? (
                     <div className="p-4 border rounded shadow">
-                        <p><strong>Name:</strong> {studentInfo.name}</p>
-                        <p><strong>Email:</strong> {studentInfo.email}</p>
-                        <p><strong>Number:</strong> {studentInfo.number}</p>
-                        <p><strong>Level:</strong> {studentInfo.level}</p>
-                        <p><strong>Address:</strong> {studentInfo.address.line1}, {studentInfo.address.line2}</p>
+                        <p><strong>Name:</strong> {userInfo.name}</p>
+                        <p><strong>Email:</strong> {userInfo.email}</p>
+                        <p><strong>Number:</strong> {userInfo.number}</p>
+                        <p><strong>Role:</strong> {userInfo.position}</p>
+                        {userInfo.address && (
+                            <p><strong>Address:</strong> {userInfo.address.line1}, {userInfo.address.line2}</p>
+                        )}
                     </div>
                 ) : error ? (
                     <p className="text-red-500">{error}</p>
                 ) : (
-                    <p className="text-gray-500">Scan an RFID to view student information.</p>
+                    <p className="text-gray-500">Scan an RFID to view user information.</p>
                 )}
             </div>
         </div>

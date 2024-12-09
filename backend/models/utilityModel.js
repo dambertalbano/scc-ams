@@ -8,7 +8,11 @@ const utilitySchema = new mongoose.Schema({
     number: { type: String, required: true },
     position: { type: String, required: true },
     address: { type: Object, required: true },
+    code: { type: String, required: true, unique: true }
+
+    
 }, { minimize: false });
 
 const utilityModel = mongoose.models.utility || mongoose.model("utility", utilitySchema);
 export default utilityModel;
+

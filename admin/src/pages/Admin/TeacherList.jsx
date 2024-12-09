@@ -144,11 +144,9 @@ const TeachersList = () => {
                 value={currentAdmin.position || ''}
                 onChange={handleChange}
               >
-                <option value="Academic Coordinator">Academic Coordinator</option>
-                <option value="Academic Adviser">Academic Adviser</option>
-                <option value="Guidance Counselor">Guidance Counselor</option>
-                <option value="Principal">Principal</option>
-                <option value="Vice Principal">Vice Principal</option>
+                <option value="Primary Education Teacher">Primary Education Teacher</option>
+                <option value="Secondary Education Teacher">Secondary Education Teacher</option>
+                <option value="High School Teacher">High School Teacher</option>
               </select>
             </div>
             <div className="mt-4 flex justify-end">

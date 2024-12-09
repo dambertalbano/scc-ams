@@ -9,6 +9,8 @@ const studentSchema = new mongoose.Schema({
     level: { type: String, required: true },
     address: { type: Object, required: true },
     code: { type: String, required: true, unique: true }
+
+    
 }, { minimize: false });
 
 const studentModel = mongoose.models.student || mongoose.model("student", studentSchema);

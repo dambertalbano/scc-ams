@@ -8,7 +8,11 @@ const administratorSchema = new mongoose.Schema({
     number: { type: String, required: true },
     position: { type: String, required: true },
     address: { type: Object, required: true },
-}, { minimize: false })
+    code: { type: String, required: true, unique: true }
+
+    
+}, { minimize: false });
 
 const administratorModel = mongoose.models.administrator || mongoose.model("administrator", administratorSchema);
 export default administratorModel;
+

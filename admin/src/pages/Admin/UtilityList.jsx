@@ -54,7 +54,7 @@ const UtilitysList = () => {
 
   return (
     <div className="m-5 max-h-[90vh] overflow-y-scroll">
-      <h1 className="text-lg font-medium">All Utilitys</h1>
+      <h1 className="text-lg font-medium">All Utilities</h1>
 
       {/* Table Layout */}
       <table className="min-w-full table-auto border-collapse mt-5">
@@ -144,11 +144,11 @@ const UtilitysList = () => {
                 value={currentAdmin.position || ''}
                 onChange={handleChange}
               >
-                <option value="Academic Coordinator">Academic Coordinator</option>
-                <option value="Academic Adviser">Academic Adviser</option>
-                <option value="Guidance Counselor">Guidance Counselor</option>
-                <option value="Principal">Principal</option>
-                <option value="Vice Principal">Vice Principal</option>
+                <option value="Reapir Man">Reapir Man</option>
+                <option value="Security Guard">Security Guard</option>
+                <option value="Janitor">Janitor</option>
+                <option value="Cook">Cook"</option>
+                <option value="Canteen Supervisor">Canteen Supervisor</option>
               </select>
             </div>
             <div className="mt-4 flex justify-end">

@@ -131,6 +131,8 @@ const getStudentByCode = async (req, res) => {
 const adminDashboard = async (req, res) => {
     try {
         const students = await studentModel.find({});
+        const teachers = await teacherModel.find({});
+        const utilitys = await utilityModel.find({});
         const administrators = await administratorModel.find({});
         const users = await userModel.find({});
         const appointments = await appointmentModel.find({});
@@ -138,6 +140,8 @@ const adminDashboard = async (req, res) => {
         const dashData = {
             administrators: administrators.length,
             students: students.length,
+            teachers: teachers.length,
+            utilitys: utilitys.length,
             appointments: appointments.length,
             patients: users.length,
             latestAppointments: appointments.reverse()
@@ -153,10 +157,10 @@ const adminDashboard = async (req, res) => {
 // API for adding Administrator
 const addAdministrator = async (req, res) => {
     try {
-        const { name, email, password, number, position, address } = req.body;
+        const { code, name, email, password, number, position, address } = req.body;
         const imageFile = req.file;
 
-        if (!name || !email || !password || !number || !position || !address) {
+        if (!name || !email || !password || !number || !position || !address || !code) {
             return res.json({ success: false, message: "Missing Details" });
         }
 
@@ -175,6 +179,7 @@ const addAdministrator = async (req, res) => {
         const imageUrl = imageUpload.secure_url;
 
         const administratorData = {
+            code,
             name,
             email,
             image: imageUrl,
@@ -210,10 +215,10 @@ const allAdministrators = async (req, res) => {
 // API for adding Teacher
 const addTeacher = async (req, res) => {
     try {
-        const { name, email, password, number, position, address } = req.body;
+        const { code, name, email, password, number, position, address } = req.body;
         const imageFile = req.file;
 
-        if (!name || !email || !password || !number || !position || !address) {
+        if (!name || !email || !password || !number || !position || !address || !code) {
             return res.json({ success: false, message: "Missing Details" });
         }
 
@@ -232,6 +237,7 @@ const addTeacher = async (req, res) => {
         const imageUrl = imageUpload.secure_url;
 
         const teacherData = {
+            code,
             name,
             email,
             image: imageUrl,
@@ -429,10 +435,10 @@ const updateAdministrator = async (req, res) => {
 // API for adding Utility
 const addUtility = async (req, res) => {
     try {
-        const { name, email, password, number, position, address } = req.body;
+        const { code, name, email, password, number, position, address } = req.body;
         const imageFile = req.file;
 
-        if (!name || !email || !password || !number || !position || !address) {
+        if (!name || !email || !password || !number || !position || !address || !code) {
             return res.json({ success: false, message: "Missing Details" });
         }
 
@@ -451,6 +457,7 @@ const addUtility = async (req, res) => {
         const imageUrl = imageUpload.secure_url;
 
         const utilityData = {
+            code,
             name,
             email,
             image: imageUrl,

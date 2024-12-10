@@ -5,11 +5,13 @@ import App from './App.jsx'
 import AdminContextProvider from './context/AdminContext.jsx'
 import AppContextProvider from './context/AppContext.jsx'
 import StudentContextProvider from './context/StudentContext.jsx'
+import TeacherContextProvider from './context/TeacherContext.jsx'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <AdminContextProvider>
+      <TeacherContextProvider>
       <StudentContextProvider>
         
         <AppContextProvider>
@@ -17,6 +19,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </AppContextProvider>
         
       </StudentContextProvider>
+      </TeacherContextProvider>
     </AdminContextProvider>
   </BrowserRouter>,
 )

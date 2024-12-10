@@ -11,7 +11,6 @@ const TeacherContextProvider = (props) => {
     const [dToken, setDToken] = useState(() => localStorage.getItem('dToken') || null);
     const [appointments, setAppointments] = useState([]);
     const [dashData, setDashData] = useState(null);
-    const [profileData, setProfileData] = useState(null);
 
     // Function to update the token and sync it with local storage
     const updateDToken = (token) => {
@@ -47,20 +46,7 @@ const TeacherContextProvider = (props) => {
         }
     };
 
-    // Fetch teacher profile data
-    const getProfileData = async () => {
-        if (!dToken) return handleUnauthorized();
-        try {
-            const { data } = await axios.get(`${backendUrl}/api/teacher/profile`, {
-                headers: { Authorization: `Bearer ${dToken}` }, // Use Authorization header
-            });
-            setProfileData(data.profileData);
-        } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || 'Error fetching profile data.');
-        }
-    };
-
+    // Value to provide context data and functions
     const value = {
         dToken,
         setDToken: updateDToken,
@@ -69,9 +55,6 @@ const TeacherContextProvider = (props) => {
         getAppointments,
         dashData,
         setDashData,
-        profileData,
-        setProfileData,
-        getProfileData,
     };
 
     return (

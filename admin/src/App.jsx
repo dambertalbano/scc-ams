@@ -7,7 +7,7 @@ import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import UserCard from './components/UserCard';
 import { AdminContext } from './context/AdminContext';
-import { StudentContext } from './context/StudentContext';
+import { TeacherContext } from './context/TeacherContext';
 import AddAdministrator from './pages/Admin/AddAdministrator';
 import AddStudent from './pages/Admin/AddStudent';
 import AddTeacher from './pages/Admin/AddTeacher';
@@ -15,6 +15,11 @@ import AddUsers from './pages/Admin/AddUsers';
 import AddUtility from './pages/Admin/AddUtility';
 import AdministratorsList from './pages/Admin/AdministratorList';
 import AllUsers from './pages/Admin/AllUsers';
+import Attendance from './pages/Admin/Attendance';
+import AttendaceAdministratorCard from './pages/Admin/AttendanceAdministratorCard';
+import AttendanceStudentCard from './pages/Admin/AttendanceStudentCard';
+import AttendanceTeacherCard from './pages/Admin/AttendanceTeacherCard';
+import AttendanceUtilityCard from './pages/Admin/AttendanceUtilityCard';
 import Dashboard from './pages/Admin/Dashboard';
 import EditUser from './pages/Admin/EditUser';
 import RFID_Scan from './pages/Admin/RFID_Scan';
@@ -36,7 +41,7 @@ import UtilityDashboard from './pages/Utility/UtilityDashboard';
 import UtilityProfile from './pages/Utility/UtilityProfile';
 
 const App = () => {
-  const { dToken } = useContext(StudentContext);
+  const { dToken } = useContext(TeacherContext);
   const { aToken } = useContext(AdminContext);
 
   console.log("Tokens:", { dToken, aToken});
@@ -61,6 +66,11 @@ const App = () => {
           <Route path='/utility-list' element={<UtilitysList />} />
           <Route path='/user-card' element={<UserCard />} />
           <Route path='/edit-card' element={<EditCard />} />
+          <Route path='/attendance' element={<Attendance />} />
+          <Route path='/attendance-admin' element={<AttendaceAdministratorCard />} />
+          <Route path='/attendance-teacher' element={<AttendanceTeacherCard />} />
+          <Route path='/attendance-student' element={<AttendanceStudentCard />} />
+          <Route path='/attendance-utility' element={<AttendanceUtilityCard />} />
           <Route path='/student-dashboard' element={<StudentDashboard />} />
           <Route path='/administrator-dashboard' element={<AdministratorDashboard />} />
           <Route path='/teacher-dashboard' element={<TeacherDashboard />} />

@@ -28,7 +28,7 @@ const Card = ({ title, buttonText, navigateTo }) => {
   );
 };
 
-// Specific Components (Cards)
+// All Users
 export const StudentCard = () => (
   <Card title="Students" buttonText="Student List" navigateTo="/student-list" />
 );
@@ -45,6 +45,7 @@ export const AdministratorCard = () => (
   <Card title="Administrator" buttonText="Administrator List" navigateTo="/administrator-list" />
 );
 
+// Add Users
 export const AddStudentCard = () => (
   <Card title="Student" buttonText="Add Student" navigateTo="/add-student" />
 );
@@ -53,13 +54,31 @@ export const AddAdministratorCard = () => (
   <Card title="Administrator" buttonText="Add Administrator" navigateTo="/add-administrator" />
 );
 
+export const AddTeachersCard = () => (
+  <Card title="Teacher" buttonText="Add Teacher" navigateTo="/add-teacher" />
+);
+
 export const AddUtilityCard = () => (
   <Card title="Utility" buttonText="Add Utility" navigateTo="/add-utility" />
 );
 
-export const AddTeachersCard = () => (
-  <Card title="Teacher" buttonText="Add Teacher" navigateTo="/add-teacher" />
+// Attendance
+export const AttendanceStudentCard = () => (
+  <Card title="Student" buttonText="Attendance Info" navigateTo="/attendance-student" />
 );
+
+export const AttendanceTeacherCard = () => (
+  <Card title="Teacher" buttonText="Attendance Info" navigateTo="/attendance-teacher" />
+);
+
+export const AttendanceAdministratorCard = () => (
+  <Card title="Administrator" buttonText="Attendance Info" navigateTo="/attendance-admin" />
+);
+
+export const AttendanceUtilityCard = () => (
+  <Card title="Utility" buttonText="Attendance Info" navigateTo="/attendance-utility" />
+);
+
 
 // Card Container Component with CSS Grid Layout
 const CardContainer = () => {
@@ -73,5 +92,5 @@ const CardContainer = () => {
   );
 };
 
-export default CardContainer;
+export default CardContainer
 

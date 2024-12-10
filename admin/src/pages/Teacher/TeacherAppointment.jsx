@@ -1,63 +1,152 @@
-import React, { useContext, useEffect } from 'react'
-import { assets } from '../../assets/assets'
-import { AppContext } from '../../context/AppContext'
-import { TeacherContext } from '../../context/TeacherContext'
+import React, { useContext, useEffect, useState } from 'react';
+import { TeacherContext } from '../../context/TeacherContext';
 
 const TeacherAppointments = () => {
+  const { dToken, getAppointments } = useContext(TeacherContext);
 
-  const { dToken, appointments, getAppointments, cancelAppointment, completeAppointment } = useContext(TeacherContext)
-  const { slotDateFormat, calculateAge, currency } = useContext(AppContext)
+  // Mock data: Simulating students enrolled in the teacher's subject
+  const mockStudents = [
+    { studentId: '1', name: 'Alice Johnson', grade: '10', section: 'A', timeIn: '08:00 AM', timeOut: '04:00 PM' },
+    { studentId: '2', name: 'Bob Smith', grade: '6', section: 'C', timeIn: '08:15 AM', timeOut: '04:15 PM' },
+    { studentId: '3', name: 'Charlie Brown', grade: '10', section: 'A', timeIn: '08:10 AM', timeOut: '04:10 PM' },
+    { studentId: '4', name: 'David Wilson', grade: '6', section: 'C', timeIn: '08:20 AM', timeOut: '04:20 PM' },
+  ];
 
+  const [students, setStudents] = useState(mockStudents);
+  const [filteredStudents, setFilteredStudents] = useState(mockStudents);
+  const [isViewingTimeIn, setIsViewingTimeIn] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [gradeFilter, setGradeFilter] = useState('');
+  const [sectionFilter, setSectionFilter] = useState('');
+
+  // Simulate fetching data for students
   useEffect(() => {
     if (dToken) {
-      getAppointments()
+      getAppointments();
     }
-  }, [dToken])
+    setFilteredStudents(mockStudents);
+  }, [dToken]);
+
+  const toggleView = (view) => {
+    setIsViewingTimeIn(view === 'timeIn');
+  };
+
+  // Handle search input
+  const handleSearch = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+    filterStudents(query, gradeFilter, sectionFilter);
+  };
+
+  // Handle grade filter
+  const handleGradeFilter = (e) => {
+    const grade = e.target.value;
+    setGradeFilter(grade);
+    filterStudents(searchQuery, grade, sectionFilter);
+  };
+
+  // Handle section filter
+  const handleSectionFilter = (e) => {
+    const section = e.target.value;
+    setSectionFilter(section);
+    filterStudents(searchQuery, gradeFilter, section);
+  };
+
+  // Filter students based on search and filters
+  const filterStudents = (search, grade, section) => {
+    const filtered = students.filter((student) => {
+      const matchesSearch = student.name.toLowerCase().includes(search);
+      const matchesGrade = grade ? student.grade === grade : true;
+      const matchesSection = section ? student.section === section : true;
+      return matchesSearch && matchesGrade && matchesSection;
+    });
+    setFilteredStudents(filtered);
+  };
 
   return (
-    <div className='w-full max-w-6xl m-5 '>
-
-      <p className='mb-3 text-lg font-medium'>All Appointments</p>
-
-      <div className='bg-white border rounded text-sm max-h-[80vh] overflow-y-scroll'>
-        <div className='max-sm:hidden grid grid-cols-[0.5fr_2fr_1fr_1fr_3fr_1fr_1fr] gap-1 py-3 px-6 border-b'>
-          <p>#</p>
-          <p>Patient</p>
-          <p>Payment</p>
-          <p>Age</p>
-          <p>Date & Time</p>
-          <p>Fees</p>
-          <p>Action</p>
-        </div>
-        {appointments.map((item, index) => (
-          <div className='flex flex-wrap justify-between max-sm:gap-5 max-sm:text-base sm:grid grid-cols-[0.5fr_2fr_1fr_1fr_3fr_1fr_1fr] gap-1 items-center text-gray-500 py-3 px-6 border-b hover:bg-gray-50' key={index}>
-            <p className='max-sm:hidden'>{index}</p>
-            <div className='flex items-center gap-2'>
-              <img src={item.userData.image} className='w-8 rounded-full' alt="" /> <p>{item.userData.name}</p>
-            </div>
-            <div>
-              <p className='text-xs inline border border-primary px-2 rounded-full'>
-                {item.payment?'Online':'CASH'}
-              </p>
-            </div>
-            <p className='max-sm:hidden'>{calculateAge(item.userData.dob)}</p>
-            <p>{slotDateFormat(item.slotDate)}, {item.slotTime}</p>
-            <p>{currency}{item.amount}</p>
-            {item.cancelled
-              ? <p className='text-red-400 text-xs font-medium'>Cancelled</p>
-              : item.isCompleted
-                ? <p className='text-green-500 text-xs font-medium'>Completed</p>
-                : <div className='flex'>
-                  <img onClick={() => cancelAppointment(item._id)} className='w-10 cursor-pointer' src={assets.cancel_icon} alt="" />
-                  <img onClick={() => completeAppointment(item._id)} className='w-10 cursor-pointer' src={assets.tick_icon} alt="" />
-                </div>
-            }
-          </div>
-        ))}
+    <div className="p-4 border rounded-lg shadow-lg w-full">
+      {/* Search and Filter Controls */}
+      <div className="mb-4 flex flex-wrap justify-end items-center gap-4">
+        <input
+          type="text"
+          placeholder="Search by name..."
+          className="border rounded px-4 py-2"
+          value={searchQuery}
+          onChange={handleSearch}
+        />
+        <select
+          className="border rounded px-4 py-2"
+          value={gradeFilter}
+          onChange={handleGradeFilter}
+        >
+          <option value="">Filter by Grade</option>
+          <option value="10">Grade 10</option>
+          <option value="6">Grade 6</option>
+        </select>
+        <select
+          className="border rounded px-4 py-2"
+          value={sectionFilter}
+          onChange={handleSectionFilter}
+        >
+          <option value="">Filter by Section</option>
+          <option value="A">Section A</option>
+          <option value="C">Section C</option>
+        </select>
       </div>
 
-    </div>
-  )
-}
+      {/* Toggle Buttons for Time-In and Time-Out */}
+      <div className="mb-4 flex justify-center">
+        <button
+          className="bg-black text-white text-sm font-medium py-2 px-4 rounded mr-2 hover:bg-gray-200 hover:text-black"
+          onClick={() => toggleView('timeIn')}
+        >
+          View Time-In
+        </button>
+        <button
+          className="bg-red-500 text-white text-sm font-medium py-2 px-4 rounded hover:bg-red-600"
+          onClick={() => toggleView('timeOut')}
+        >
+          View Time-Out
+        </button>
+      </div>
 
-export default TeacherAppointments
+      {/* Student Table */}
+      <div>
+        <table className="min-w-full table-auto border-collapse mt-5">
+          <thead>
+            <tr className="border-b">
+              <th className="px-4 py-2 text-left">Student ID</th>
+              <th className="px-4 py-2 text-left">Name</th>
+              <th className="px-4 py-2 text-left">Grade</th>
+              <th className="px-4 py-2 text-left">Section</th>
+              <th className="px-4 py-2 text-left">{isViewingTimeIn ? 'Time-In' : 'Time-Out'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredStudents.length > 0 ? (
+              filteredStudents.map((student) => (
+                <tr key={student.studentId} className="border-b hover:bg-gray-100">
+                  <td className="px-4 py-2">{student.studentId}</td>
+                  <td className="px-4 py-2">{student.name}</td>
+                  <td className="px-4 py-2">{student.grade}</td>
+                  <td className="px-4 py-2">{student.section}</td>
+                  <td className="px-4 py-2">
+                    {isViewingTimeIn ? student.timeIn : student.timeOut}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="text-center text-gray-500 py-4">
+                  No students found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default TeacherAppointments;

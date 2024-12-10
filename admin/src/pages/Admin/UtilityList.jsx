@@ -144,11 +144,11 @@ const UtilitysList = () => {
                 value={currentAdmin.position || ''}
                 onChange={handleChange}
               >
-                <option value="Reapir Man">Reapir Man</option>
-                <option value="Security Guard">Security Guard</option>
-                <option value="Janitor">Janitor</option>
-                <option value="Cook">Cook"</option>
-                <option value="Canteen Supervisor">Canteen Supervisor</option>
+                <option value="Academic Coordinator">Academic Coordinator</option>
+                <option value="Academic Adviser">Academic Adviser</option>
+                <option value="Guidance Counselor">Guidance Counselor</option>
+                <option value="Principal">Principal</option>
+                <option value="Vice Principal">Vice Principal</option>
               </select>
             </div>
             <div className="mt-4 flex justify-end">

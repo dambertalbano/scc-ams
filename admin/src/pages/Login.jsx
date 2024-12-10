@@ -1,29 +1,37 @@
 import axios from 'axios';
 import React, { useContext, useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate for redirecting
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AdminContext } from '../context/AdminContext';
 import { StudentContext } from '../context/StudentContext';
+import { TeacherContext } from '../context/TeacherContext';
 
 const Login = () => {
-  const [state, setState] = useState('Admin'); // Options: 'Admin', 'Administrator', 'Student'
+  const [state, setState] = useState('Admin'); // Options: 'Admin', 'Teacher'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  const { setDToken } = useContext(StudentContext);
-  const { setAToken } = useContext(AdminContext);
-  const navigate = useNavigate(); // Initialize navigate function
+  const { setDToken } = useContext(StudentContext); // Make sure this is correct for student token
+  const { setAToken } = useContext(AdminContext); 
+  const { setDToken: setTeacherToken } = useContext(TeacherContext); // Correct the name here
 
-  // Role configuration
+  const navigate = useNavigate();
+
   const roleConfig = {
     Admin: {
       endpoint: '/api/admin/login',
       tokenSetter: setAToken,
       localStorageKey: 'aToken',
-      redirectTo: '/admin-dashboard', // Add redirect path for Admin
+      redirectTo: '/admin-dashboard',
+    },
+    Teacher: {
+      endpoint: '/api/teacher/login',
+      tokenSetter: setTeacherToken, // Use the correct setter for teacher token
+      localStorageKey: 'dToken', // Ensure the key matches the one used in TeacherContext
+      redirectTo: '/teacher-dashboard',
     },
   };
 
@@ -37,10 +45,10 @@ const Login = () => {
       const { data } = await axios.post(backendUrl + endpoint, { email, password });
 
       if (data.success) {
-        tokenSetter(data.token);
+        tokenSetter(data.token); // Set the token in the appropriate context
         localStorage.setItem(localStorageKey, data.token);
         toast.success(`${state} logged in successfully!`);
-        navigate(redirectTo); // Navigate to the appropriate page after successful login
+        navigate(redirectTo);
       } else {
         toast.error(data.message || 'Invalid credentials.');
       }
@@ -59,13 +67,24 @@ const Login = () => {
           <span className="text-customRed">{state}</span> Log In
         </p>
         <div className="w-full">
+          <select
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            className="border border-[#DADADA] rounded w-full p-2 mt-1"
+            aria-label="Select Role"
+          >
+            <option value="Admin">Admin</option>
+            <option value="Teacher">Teacher</option>
+          </select>
+        </div>
+        <div className="w-full">
           <input
             id="email"
             onChange={(e) => setEmail(e.target.value)}
             value={email}
             className="border border-[#DADADA] rounded w-full p-2 mt-1"
             type="email"
-            placeholder='Email'
+            placeholder="Email"
             required
             aria-label={`${state} Email`}
           />
@@ -77,7 +96,7 @@ const Login = () => {
             value={password}
             className="border border-[#DADADA] rounded w-full p-2 mt-1"
             type="password"
-            placeholder='Password'
+            placeholder="Password"
             required
             aria-label={`${state} Password`}
           />

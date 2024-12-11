@@ -22,14 +22,14 @@ adminRouter.put("/update-administrator/:id", authAdmin, updateAdministrator)
 adminRouter.put("/teachers/:id", authAdmin, updateTeacher)
 adminRouter.put("/update-utility/:id", authAdmin, updateUtility)
 adminRouter.get("/rfid-scan/:code", authAdmin, getStudentByCode);
-adminRouter.delete("/teachers/:id", authAdmin, deleteTeacher);  // Add this route for deleting a teacher
+adminRouter.delete("/teachers/:id", authAdmin, deleteTeacher);
 adminRouter.put("/students/:id", authAdmin, updateStudent)
 adminRouter.delete("/students/:id", authAdmin, deleteStudent);
 adminRouter.put("/administrators/:id", authAdmin, updateAdministrator)
 adminRouter.delete("/administrators/:id", authAdmin, deleteAdministrator);
 adminRouter.put("/utilitys/:id", authAdmin, updateUtility)
 adminRouter.delete("/utilitys/:id", authAdmin, deleteUtility);
-adminRouter.get('/user/code/:code', authAdmin, getUserByCode);  // Add this route for getting user by code
+adminRouter.get('/user/code/:code', authAdmin, getUserByCode);
 
 
 export default adminRouter;

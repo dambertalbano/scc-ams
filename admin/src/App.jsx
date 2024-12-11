@@ -41,12 +41,12 @@ import UtilityDashboard from './pages/Utility/UtilityDashboard';
 import UtilityProfile from './pages/Utility/UtilityProfile';
 
 const App = () => {
-  const { dToken } = useContext(TeacherContext);
   const { aToken } = useContext(AdminContext);
+  const { dToken } = useContext(TeacherContext);
 
-  console.log("Tokens:", { dToken, aToken});
+  console.log("Tokens:", { aToken, dToken});
 
-  return dToken || aToken ? (
+  return aToken || dToken ? (
     <div className='bg-[#F8F9FD]'>
       <ToastContainer />
       <Navbar />
@@ -55,6 +55,7 @@ const App = () => {
         <Routes>
           <Route path='/' element={<Login/>} />
           <Route path='/admin-dashboard' element={<Dashboard />} />
+          <Route path='/teacher-dashboard' element={<TeacherDashboard />} />
           <Route path='/rfid-scan' element={<RFID_Scan />} />
           <Route path='/add-student' element={<AddStudent />} />
           <Route path='/add-administrator' element={<AddAdministrator />} />
@@ -73,7 +74,6 @@ const App = () => {
           <Route path='/attendance-utility' element={<AttendanceUtilityCard />} />
           <Route path='/student-dashboard' element={<StudentDashboard />} />
           <Route path='/administrator-dashboard' element={<AdministratorDashboard />} />
-          <Route path='/teacher-dashboard' element={<TeacherDashboard />} />
           <Route path='/utility-dashboard' element={<UtilityDashboard />} />
           <Route path='/administrator-appointments' element={<AdministratorAppointments />} />
           <Route path='/teacher-appointments' element={<TeacherAppointments />} />

@@ -10,7 +10,24 @@ const TeacherAppointments = () => {
     { studentId: '2', name: 'Bob Smith', grade: '6', section: 'C', timeIn: '08:15 AM', timeOut: '04:15 PM' },
     { studentId: '3', name: 'Charlie Brown', grade: '10', section: 'A', timeIn: '08:10 AM', timeOut: '04:10 PM' },
     { studentId: '4', name: 'David Wilson', grade: '6', section: 'C', timeIn: '08:20 AM', timeOut: '04:20 PM' },
-  ];
+    { studentId: '5', name: 'Eve Taylor', grade: '7', section: 'B', timeIn: '08:05 AM', timeOut: '03:55 PM' },
+    { studentId: '6', name: 'Frank Martin', grade: '8', section: 'D', timeIn: '08:30 AM', timeOut: '04:30 PM' },
+    { studentId: '7', name: 'Grace Lee', grade: '9', section: 'A', timeIn: '08:00 AM', timeOut: '04:00 PM' },
+    { studentId: '8', name: 'Hannah Moore', grade: '10', section: 'B', timeIn: '08:15 AM', timeOut: '04:15 PM' },
+    { studentId: '9', name: 'Ian Scott', grade: '6', section: 'D', timeIn: '08:25 AM', timeOut: '04:25 PM' },
+    { studentId: '10', name: 'Jack Evans', grade: '7', section: 'C', timeIn: '08:10 AM', timeOut: '04:10 PM' },
+    { studentId: '11', name: 'Kate Adams', grade: '9', section: 'B', timeIn: '08:00 AM', timeOut: '03:50 PM' },
+    { studentId: '12', name: 'Liam Carter', grade: '8', section: 'A', timeIn: '08:20 AM', timeOut: '04:20 PM' },
+    { studentId: '13', name: 'Mia Baker', grade: '10', section: 'C', timeIn: '08:15 AM', timeOut: '04:15 PM' },
+    { studentId: '14', name: 'Noah Sanchez', grade: '6', section: 'B', timeIn: '08:30 AM', timeOut: '04:30 PM' },
+    { studentId: '15', name: 'Olivia King', grade: '7', section: 'A', timeIn: '08:05 AM', timeOut: '03:55 PM' },
+    { studentId: '16', name: 'Paul Wright', grade: '8', section: 'C', timeIn: '08:25 AM', timeOut: '04:25 PM' },
+    { studentId: '17', name: 'Quinn Hall', grade: '9', section: 'D', timeIn: '08:10 AM', timeOut: '04:10 PM' },
+    { studentId: '18', name: 'Ruby Clark', grade: '10', section: 'A', timeIn: '08:00 AM', timeOut: '04:00 PM' },
+    { studentId: '19', name: 'Sophia Hill', grade: '6', section: 'A', timeIn: '08:20 AM', timeOut: '04:20 PM' },
+    { studentId: '20', name: 'Thomas Harris', grade: '7', section: 'D', timeIn: '08:15 AM', timeOut: '04:15 PM' }
+];
+
 
   const [students, setStudents] = useState(mockStudents);
   const [filteredStudents, setFilteredStudents] = useState(mockStudents);
@@ -96,8 +113,8 @@ const TeacherAppointments = () => {
 
       {/* Toggle Buttons for Time-In and Time-Out */}
       <div className="mb-4 flex justify-center">
-        <button
-          className="bg-black text-white text-sm font-medium py-2 px-4 rounded mr-2 hover:bg-gray-200 hover:text-black"
+      <button
+          className="bg-green-500 text-white text-sm font-medium py-2 px-4 rounded hover:bg-green-600"
           onClick={() => toggleView('timeIn')}
         >
           View Time-In

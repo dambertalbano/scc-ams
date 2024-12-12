@@ -1,27 +1,83 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const AttendanceAdministratorCard = () => {
-  // Mock data: Simulating administrators with ID, name, and time records
-  const mockAdministrators = [
-    { adminId: '1', name: 'Ada Wong', timeIn: '09:00 AM', timeOut: '05:00 PM' },
-    { adminId: '2', name: 'Chappelle Roan', timeIn: '09:15 AM', timeOut: '05:15 PM' },
-    { adminId: '3', name: 'Julia Fox', timeIn: '09:30 AM', timeOut: '05:30 PM' },
-  ];
+  // Hardcoded administrator data
+  const administrators = [
+    {
+        adminId: '1398612491',
+        name: 'Neil Briones',
+        timeIn: '7:43 AM',
+        timeOut: '5:30 PM',
+    },
+    {
+        adminId: '93213714',
+        name: 'Chester C. Muñez',
+        timeIn: '7:21 AM',
+        timeOut: '5:15 PM',
+    },
+    {
+        adminId: '46293811',
+        name: 'Marie S. Delgado',
+        timeIn: '8:00 AM',
+        timeOut: '6:00 PM',
+    },
+    {
+        adminId: '57329102',
+        name: 'John A. Santos',
+        timeIn: '7:35 AM',
+        timeOut: '5:25 PM',
+    },
+    {
+        adminId: '71829384',
+        name: 'Clarisse D. Ramos',
+        timeIn: '7:45 AM',
+        timeOut: '5:50 PM',
+    },
+    {
+        adminId: '83926145',
+        name: 'Gabriel R. Lim',
+        timeIn: '7:30 AM',
+        timeOut: '5:20 PM',
+    },
+    {
+        adminId: '92837465',
+        name: 'Sophia L. Cruz',
+        timeIn: '7:50 AM',
+        timeOut: '5:45 PM',
+    },
+    {
+        adminId: '49503827',
+        name: 'Michael E. Tan',
+        timeIn: '8:05 AM',
+        timeOut: '6:10 PM',
+    },
+    {
+        adminId: '76019384',
+        name: 'Andrea P. Guzman',
+        timeIn: '7:40 AM',
+        timeOut: '5:35 PM',
+    },
+    {
+        adminId: '65218473',
+        name: 'Victor C. Lopez',
+        timeIn: '7:55 AM',
+        timeOut: '5:40 PM',
+    },
+];
 
-  // States for storing administrators who have timed in and timed out
   const [timedInAdmins, setTimedInAdmins] = useState([]);
   const [timedOutAdmins, setTimedOutAdmins] = useState([]);
   const [isViewingTimeIn, setIsViewingTimeIn] = useState(true);
 
   // Simulate the data
   const simulateAdminData = () => {
-    const timedIn = mockAdministrators.map(admin => ({
+    const timedIn = administrators.map(admin => ({
       adminId: admin.adminId,
       name: admin.name,
       timeIn: admin.timeIn,
     }));
 
-    const timedOut = mockAdministrators.map(admin => ({
+    const timedOut = administrators.map(admin => ({
       adminId: admin.adminId,
       name: admin.name,
       timeOut: admin.timeOut,
@@ -44,7 +100,7 @@ const AttendanceAdministratorCard = () => {
     <div className="p-4 border rounded-lg shadow-lg w-full">
       <div className="mb-4 flex justify-center">
         <button
-          className="bg-black text-white text-sm font-medium py-2 px-4 rounded mr-2 hover:bg-gray-200 hover:text-black"
+          className="bg-green-500 text-white text-sm font-medium py-2 px-4 rounded hover:bg-green-600"
           onClick={() => toggleView('timeIn')}
         >
           View Time-In

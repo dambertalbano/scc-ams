@@ -1,27 +1,84 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 const AttendanceTeacherCard = () => {
-  // Mock data: Simulating teachers with ID, name, and time records
-  const mockTeachers = [
-    { teacherId: '001', name: 'Charli XCX', timeIn: '07:50 AM', timeOut: '03:50 PM' },
-    { teacherId: '002', name: 'Ariana Grande', timeIn: '08:00 AM', timeOut: '04:00 PM' },
-    { teacherId: '003', name: 'Imogen Heap', timeIn: '08:10 AM', timeOut: '04:10 PM' },
-  ];
+  // Hardcoded teacher data
+  const teachers = [
+    {
+        teacherId: '929317412',
+        name: 'Krystal Mariano',
+        timeIn: '6:00 AM',
+        timeOut: '5:00 PM',
+    },
+    {
+        teacherId: '003', // No ID was provided for Rhodalyn, using '003' here
+        name: 'Rhodalyn N. Baguan',
+        timeIn: '6:07 AM',
+        timeOut: '5:15 PM',
+    },
+    {
+        teacherId: '104857392',
+        name: 'Michael D. Cruz',
+        timeIn: '6:10 AM',
+        timeOut: '5:20 PM',
+    },
+    {
+        teacherId: '293847561',
+        name: 'Sandra L. Velasco',
+        timeIn: '6:05 AM',
+        timeOut: '5:10 PM',
+    },
+    {
+        teacherId: '384756192',
+        name: 'Arvin R. Santos',
+        timeIn: '6:15 AM',
+        timeOut: '5:25 PM',
+    },
+    {
+        teacherId: '475920384',
+        name: 'Cynthia P. Lopez',
+        timeIn: '6:30 AM',
+        timeOut: '5:45 PM',
+    },
+    {
+        teacherId: '592038471',
+        name: 'Jerome G. Dela Cruz',
+        timeIn: '6:20 AM',
+        timeOut: '5:35 PM',
+    },
+    {
+        teacherId: '672910384',
+        name: 'Diana S. Reyes',
+        timeIn: '6:12 AM',
+        timeOut: '5:18 PM',
+    },
+    {
+        teacherId: '748392010',
+        name: 'Nathaniel J. Garcia',
+        timeIn: '6:25 AM',
+        timeOut: '5:40 PM',
+    },
+    {
+        teacherId: '839204750',
+        name: 'Lucia H. Fernandez',
+        timeIn: '6:18 AM',
+        timeOut: '5:28 PM',
+    },
+];
 
-  // States for storing teachers who have timed in and timed out
+
   const [timedInTeachers, setTimedInTeachers] = useState([]);
   const [timedOutTeachers, setTimedOutTeachers] = useState([]);
   const [isViewingTimeIn, setIsViewingTimeIn] = useState(true);
 
   // Simulate the data
   const simulateTeacherData = () => {
-    const timedIn = mockTeachers.map(teacher => ({
+    const timedIn = teachers.map(teacher => ({
       teacherId: teacher.teacherId,
       name: teacher.name,
       timeIn: teacher.timeIn,
     }));
 
-    const timedOut = mockTeachers.map(teacher => ({
+    const timedOut = teachers.map(teacher => ({
       teacherId: teacher.teacherId,
       name: teacher.name,
       timeOut: teacher.timeOut,
@@ -36,7 +93,7 @@ const AttendanceTeacherCard = () => {
     setIsViewingTimeIn(view === 'timeIn');
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     simulateTeacherData();
   }, []);
 
@@ -44,7 +101,7 @@ const AttendanceTeacherCard = () => {
     <div className="p-4 border rounded-lg shadow-lg w-full">
       <div className="mb-4 flex justify-center">
         <button
-          className="bg-black text-white text-sm font-medium py-2 px-4 rounded mr-2 hover:bg-gray-200 hover:text-black"
+          className="bg-green-500 text-white text-sm font-medium py-2 px-4 rounded hover:bg-green-600"
           onClick={() => toggleView('timeIn')}
         >
           View Time-In

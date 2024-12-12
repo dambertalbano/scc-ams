@@ -1,58 +1,104 @@
-import React, { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import React, { useState } from 'react';
 
 const AttendanceStudentCard = () => {
-  // Mock data: Simulating student records with IDs, names, grades, sections, and times
-  const mockStudents = [
-    { studentId: '1', name: 'Cat', grade: '10', section: 'A', timeIn: '08:00 AM', timeOut: '04:00 PM' },
-    { studentId: '2', name: 'Dog', grade: '6', section: 'C', timeIn: '08:15 AM', timeOut: '04:15 PM' },
-  ];
+  // Hardcoded student attendance data
+  const students = [
+    {
+        studentId: '3921317213',
+        name: 'Kyle Dexter Macasubang',
+        grade: 'Grade 10',
+        section: 'A',
+        timeIn: '6:36 AM',
+        timeOut: '5:30 PM',
+    },
+    {
+        studentId: '93217841239',
+        name: 'Bea Mariz A.',
+        grade: 'Grade 8',
+        section: 'D',
+        timeIn: '6:01 AM',
+        timeOut: '5:43 PM',
+    },
+    {
+        studentId: '1038472941',
+        name: 'Liam J. Castillo',
+        grade: 'Grade 12',
+        section: 'B',
+        timeIn: '6:15 AM',
+        timeOut: '5:50 PM',
+    },
+    {
+        studentId: '2093485729',
+        name: 'Sofia G. Mendoza',
+        grade: 'Grade 9',
+        section: 'C',
+        timeIn: '6:25 AM',
+        timeOut: '5:35 PM',
+    },
+    {
+        studentId: '3948572103',
+        name: 'Ethan V. Cruz',
+        grade: 'Grade 11',
+        section: 'A',
+        timeIn: '6:45 AM',
+        timeOut: '5:55 PM',
+    },
+    {
+        studentId: '5729103847',
+        name: 'Ella R. Lopez',
+        grade: 'Grade 7',
+        section: 'F',
+        timeIn: '6:10 AM',
+        timeOut: '5:40 PM',
+    },
+    {
+        studentId: '1298374650',
+        name: 'Daniel K. Reyes',
+        grade: 'Grade 10',
+        section: 'B',
+        timeIn: '6:30 AM',
+        timeOut: '5:25 PM',
+    },
+    {
+        studentId: '8754920138',
+        name: 'Angelica M. Santos',
+        grade: 'Grade 8',
+        section: 'E',
+        timeIn: '6:20 AM',
+        timeOut: '5:45 PM',
+    },
+    {
+        studentId: '9384751204',
+        name: 'Lucas H. Garcia',
+        grade: 'Grade 9',
+        section: 'A',
+        timeIn: '6:50 AM',
+        timeOut: '5:30 PM',
+    },
+    {
+        studentId: '4859203746',
+        name: 'Mia S. Rivera',
+        grade: 'Grade 7',
+        section: 'C',
+        timeIn: '6:05 AM',
+        timeOut: '5:15 PM',
+    },
+];
 
-  // States for storing timed-in and timed-out students
-  const [timedInStudents, setTimedInStudents] = useState([]);
-  const [timedOutStudents, setTimedOutStudents] = useState([]);
+
   const [isViewingTimeIn, setIsViewingTimeIn] = useState(true);
-
-  // Use mock data directly, simulate fetching timed-in or timed-out students
-  const simulateTimeData = () => {
-    // Simulate a scenario where all students are either timed in or out
-    const timedIn = mockStudents.map(student => ({
-      studentId: student.studentId,
-      name: student.name,
-      grade: student.grade,
-      section: student.section,
-      timeIn: student.timeIn,
-    }));
-
-    const timedOut = mockStudents.map(student => ({
-      studentId: student.studentId,
-      name: student.name,
-      grade: student.grade,
-      section: student.section,
-      timeOut: student.timeOut,
-    }));
-
-    // Update state with mock data
-    setTimedInStudents(timedIn);
-    setTimedOutStudents(timedOut);
-  };
 
   // Toggle between viewing time-in or time-out students
   const toggleView = (view) => {
     setIsViewingTimeIn(view === 'timeIn');
   };
 
-  // Trigger the simulation of data (like fetching data)
-  useEffect(() => {
-    simulateTimeData();
-  }, []);
-
   return (
     <div className="p-4 border rounded-lg shadow-lg w-full">
       <div className="mb-4 flex justify-center">
         {/* Buttons to toggle between Time-In and Time-Out views */}
         <button
-          className="bg-black text-white text-sm font-medium py-2 px-4 rounded mr-2 hover:bg-gray-200 hover:text-black"
+          className="bg-green-500 text-white text-sm font-medium py-2 px-4 rounded hover:bg-green-600"
           onClick={() => toggleView('timeIn')}
         >
           View Time-In
@@ -78,25 +124,17 @@ const AttendanceStudentCard = () => {
             </tr>
           </thead>
           <tbody>
-            {isViewingTimeIn
-              ? timedInStudents.map((student) => (
-                  <tr key={student.studentId} className="border-b hover:bg-gray-100">
-                    <td className="px-4 py-2">{student.studentId}</td>
-                    <td className="px-4 py-2">{student.name}</td>
-                    <td className="px-4 py-2">{student.grade}</td>
-                    <td className="px-4 py-2">{student.section}</td>
-                    <td className="px-4 py-2">{student.timeIn}</td>
-                  </tr>
-                ))
-              : timedOutStudents.map((student) => (
-                  <tr key={student.studentId} className="border-b hover:bg-gray-100">
-                    <td className="px-4 py-2">{student.studentId}</td>
-                    <td className="px-4 py-2">{student.name}</td>
-                    <td className="px-4 py-2">{student.grade}</td>
-                    <td className="px-4 py-2">{student.section}</td>
-                    <td className="px-4 py-2">{student.timeOut}</td>
-                  </tr>
-                ))}
+            {students.map((student) => (
+              <tr key={student.studentId} className="border-b hover:bg-gray-100">
+                <td className="px-4 py-2">{student.studentId}</td>
+                <td className="px-4 py-2">{student.name}</td>
+                <td className="px-4 py-2">{student.grade}</td>
+                <td className="px-4 py-2">{student.section}</td>
+                <td className="px-4 py-2">
+                  {isViewingTimeIn ? student.timeIn : student.timeOut}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

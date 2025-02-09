@@ -1,0 +1,95 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
+// Generic Card Component
+const Card = ({ title, buttonText, navigateTo }) => {
+  const navigate = useNavigate();
+
+  const handleNavigate = () => {
+    navigate(navigateTo);
+  };
+
+  return (
+    <div className='flex items-center justify-center'>
+      <div className="bg-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-all w-full max-w-xs cursor-pointer transform hover:scale-105">
+        <h5 className="text-xl font-semibold text-gray-800 mb-5 text-center">
+          {title}
+        </h5>
+        <div className="border-t pt-5">
+          <button
+            className="bg-customRed text-white text-sm font-medium py-2 px-4 rounded w-full hover:bg-customRed-600"
+            onClick={handleNavigate}
+          >
+            {buttonText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// All Users
+export const StudentCard = () => (
+  <Card title="Students" buttonText="Student List" navigateTo="/student-list" />
+);
+
+export const TeacherCard = () => (
+  <Card title="Teachers" buttonText="Teacher List" navigateTo="/teacher-list" />
+);
+
+export const UtilityCard = () => (
+  <Card title="Utility" buttonText="Utility List" navigateTo="/utility-list" />
+);
+
+export const AdministratorCard = () => (
+  <Card title="Administrator" buttonText="Administrator List" navigateTo="/administrator-list" />
+);
+
+// Add Users
+export const AddStudentCard = () => (
+  <Card title="Student" buttonText="Add Student" navigateTo="/add-student" />
+);
+
+export const AddAdministratorCard = () => (
+  <Card title="Administrator" buttonText="Add Administrator" navigateTo="/add-administrator" />
+);
+
+export const AddTeachersCard = () => (
+  <Card title="Teacher" buttonText="Add Teacher" navigateTo="/add-teacher" />
+);
+
+export const AddUtilityCard = () => (
+  <Card title="Utility" buttonText="Add Utility" navigateTo="/add-utility" />
+);
+
+// Attendance
+export const AttendanceStudentCard = () => (
+  <Card title="Student" buttonText="Attendance Info" navigateTo="/attendance-student" />
+);
+
+export const AttendanceTeacherCard = () => (
+  <Card title="Teacher" buttonText="Attendance Info" navigateTo="/attendance-teacher" />
+);
+
+export const AttendanceAdministratorCard = () => (
+  <Card title="Administrator" buttonText="Attendance Info" navigateTo="/attendance-admin" />
+);
+
+export const AttendanceUtilityCard = () => (
+  <Card title="Utility" buttonText="Attendance Info" navigateTo="/attendance-utility" />
+);
+
+
+// Card Container Component with CSS Grid Layout
+const CardContainer = () => {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+      <StudentCard />
+      <TeacherCard />
+      <AdministratorCard />
+      <UtilityCard />
+    </div>
+  );
+};
+
+export default CardContainer;

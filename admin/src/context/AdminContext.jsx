@@ -377,8 +377,5 @@ const deleteTeacher = async (teacherId) => {
         return <AdminContext.Provider value={value}>{props.children}</AdminContext.Provider>;
     };
 
-<<<<<<< HEAD
     export const useAdminContext = () => useContext(AdminContext);
-=======
->>>>>>> 8d8e3cbd6ddf19656e2ad889de6ccaba4669e966
     export default AdminContextProvider;

@@ -17,7 +17,7 @@ const AttendanceTeacherCard = () => {
     },
     {
         teacherId: '104857392',
-        name: 'Michael D. Cruz',
+        name: 'Michael Jackson D. Cruz',
         timeIn: '6:10 AM',
         timeOut: '5:20 PM',
     },

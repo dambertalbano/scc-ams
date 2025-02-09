@@ -17,7 +17,7 @@ const AttendanceAdministratorCard = () => {
     },
     {
         adminId: '46293811',
-        name: 'Marie S. Delgado',
+        name: 'Cat S. Delgado',
         timeIn: '8:00 AM',
         timeOut: '6:00 PM',
     },

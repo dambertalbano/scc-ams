@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { FaCalendarAlt, FaSearch, FaTimes } from 'react-icons/fa';
+import { FaCalendarAlt, FaFileExcel, FaSearch, FaTimes } from 'react-icons/fa';
+import * as XLSX from 'xlsx';
 import { useAdminContext } from '../../context/AdminContext';
 
 const AttendanceStudentCard = () => {
-    const { students, aToken, fetchAttendanceRecords } = useAdminContext();
-    const [isViewingTimeIn, setIsViewingTimeIn] = useState(true);
+    const { fetchAttendanceRecords } = useAdminContext();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -47,28 +47,28 @@ const AttendanceStudentCard = () => {
             const records = await fetchAttendanceRecords(currentDate);
             if (!records || !Array.isArray(records)) {
                 console.error("fetchAttendanceRecords did not return an array:", records);
+                setAttendanceRecords([]);
+                return;
             }
 
-            // Filter records to only include students
             const studentRecords = records.filter(record => record.userType === 'Student');
-
             setAttendanceRecords(studentRecords);
         } catch (err) {
             console.error('Error fetching attendance records:', err);
-            setError(err.message || 'Failed to fetch attendance records');
+            if (err.response && err.response.status === 500) {
+                setError("No attendance records found for the selected date.");
+            } else {
+                setError(err.message || 'Failed to fetch attendance records');
+            }
             setAttendanceRecords([]);
         } finally {
             setLoading(false);
         }
-    }, [aToken, fetchAttendanceRecords, currentDate]);
+    }, [fetchAttendanceRecords, currentDate]);
 
     useEffect(() => {
-        if (aToken) {
-            fetchData();
-        } else {
-            console.warn('aToken is missing. Skipping fetchData.');
-        }
-    }, [aToken, fetchData]);
+        fetchData();
+    }, [fetchData]);
 
     useEffect(() => {
         const lowerSearchTerm = searchTerm.toLowerCase();
@@ -80,8 +80,7 @@ const AttendanceStudentCard = () => {
             }
 
             const fullName = `${record.user.firstName} ${record.user.middleName || ''} ${record.user.lastName}`.toLowerCase();
-            const include = fullName.includes(lowerSearchTerm);
-            return include;
+            return fullName.includes(lowerSearchTerm);
         });
 
         setFilteredAttendanceRecords(filtered);
@@ -89,16 +88,49 @@ const AttendanceStudentCard = () => {
 
     const handleSearch = useCallback((e) => {
         setSearchTerm(e.target.value);
-    }, [setSearchTerm]);
+    }, []);
 
     const handleDateChange = useCallback((date) => {
         setCurrentDate(date);
         setIsCalendarOpen(false);
-    }, [setCurrentDate]);
+    }, []);
 
     const toggleCalendar = useCallback(() => {
         setIsCalendarOpen(prev => !prev);
-    }, [setIsCalendarOpen]);
+    }, []);
+
+    const generateExcel = useCallback(() => {
+        if (filteredAttendanceRecords.length === 0) {
+            alert("No attendance records to export.");
+            return;
+        }
+
+        const data = filteredAttendanceRecords.map(record => ({
+            "Student Number": record.user.studentNumber,
+            "Name": formatFullName(record.user),
+            "Event Type": record.eventType === 'sign-in' ? 'Sign-In' : 'Sign-Out',
+            "Date": formatDate(record.timestamp),
+            "Time": formatTime(record.timestamp),
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(data);
+
+        // Adjust column widths
+        const columnWidths = [
+            { wch: 15 }, // Student Number
+            { wch: 25 }, // Name
+            { wch: 15 }, // Event Type
+            { wch: 15 }, // Date
+            { wch: 10 }, // Time
+        ];
+        worksheet['!cols'] = columnWidths;
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+
+        const fileName = `Attendance_${currentDate.toLocaleDateString().replace(/\//g, '-')}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+    }, [filteredAttendanceRecords, currentDate, formatDate, formatFullName, formatTime]);
 
     const mergedRows = useMemo(() => {
         const rows = filteredAttendanceRecords.map((record) => {
@@ -121,10 +153,6 @@ const AttendanceStudentCard = () => {
         return rows;
     }, [filteredAttendanceRecords, formatDate, formatTime]);
 
-    const toggleView = useCallback((view) => {
-        setIsViewingTimeIn(view === 'timeIn');
-    }, [setIsViewingTimeIn]);
-
     if (loading) {
         return <div className="flex justify-center items-center h-full">Loading...</div>;
     }
@@ -146,6 +174,12 @@ const AttendanceStudentCard = () => {
                     />
                     <FaSearch className="absolute top-3 right-3 text-gray-400" />
                 </div>
+                <button
+                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center"
+                    onClick={generateExcel}
+                >
+                    <FaFileExcel className="mr-2" /> Export to Excel
+                </button>
             </div>
 
             {/* Date Navigation */}

@@ -416,30 +416,30 @@ const TeacherContextProvider = (props) => {
         }
     }, [backendUrl, dToken]);
 
-    const fetchAttendanceRecords = useCallback(async (date, userType = 'Teacher') => {
+    const fetchAttendanceRecords = useCallback(async (startDate, endDate, userType = 'Teacher') => {
         try {
-            let isoDate;
-            if (date instanceof Date) {
-                isoDate = date.toISOString();
-            } else if (typeof date === 'string') {
-                isoDate = date; // Use the date string directly
-            } else {
-                console.error("Invalid date provided:", date);
-                return null;
-            }
-            const response = await axios.get(`${backendUrl}/api/teacher/attendance?date=${isoDate}&userType=${userType}`, {
+            // Ensure startDate and endDate are valid ISO strings
+            const startIsoDate = new Date(startDate).toISOString();
+            const endIsoDate = new Date(endDate).toISOString();
+
+            const response = await axios.get(`${backendUrl}/api/teacher/attendance`, {
+                params: {
+                    startDate: startIsoDate,
+                    endDate: endIsoDate,
+                    userType,
+                },
                 headers: { Authorization: `Bearer ${dToken}` },
             });
 
             if (response.data.success) {
-                return response.data.attendanceRecords;
+                return response.data.attendance; // Return the attendance records
             } else {
                 toast.error(response.data.message || "Failed to fetch attendance records");
-                return null; // Indicate failure
+                return []; // Return an empty array on failure
             }
         } catch (error) {
             handleApiError(error, 'Error fetching attendance records');
-            return null; // Indicate failure
+            return []; // Return an empty array on failure
         }
     }, [dToken, backendUrl, handleApiError]);
 

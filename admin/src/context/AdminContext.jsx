@@ -299,10 +299,17 @@ const AdminContextProvider = (props) => {
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const fetchAttendanceRecords = useCallback(async (date, userType = 'Teacher') => {
+    const fetchAttendanceRecords = useCallback(async (date, userType) => {
         try {
-            const isoDate = date.toISOString();
-            const response = await axios.get(`${backendUrl}/api/admin/attendance?date=${isoDate}&userType=${userType}`, {
+            const isoDate = new Date(date).toISOString();
+            console.log("Fetching attendance records for date:", isoDate, "and userType:", userType);
+
+            const queryParams = new URLSearchParams({ date: isoDate });
+            if (userType) {
+                queryParams.append('userType', userType);
+            }
+
+            const response = await axios.get(`${backendUrl}/api/admin/attendance?${queryParams.toString()}`, {
                 headers: { Authorization: `Bearer ${aToken}` },
             });
 
@@ -313,8 +320,8 @@ const AdminContextProvider = (props) => {
                 return [];
             }
         } catch (error) {
-            handleApiError(error, 'Error fetching attendance records');
-            return [];
+            console.error("Error fetching attendance records:", error);
+            throw error;
         }
     }, [aToken, backendUrl, handleApiError]);
 

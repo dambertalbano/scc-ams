@@ -11,6 +11,7 @@ const TeacherAttendance = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [teacherId, setTeacherId] = useState(null);
+    const [teacherInfo, setTeacherInfo] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filteredStudents, setFilteredStudents] = useState([]);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -37,6 +38,7 @@ const TeacherAttendance = () => {
 
             if (data.success) {
                 setTeacherId(data.profileData._id);
+                setTeacherInfo(data.profileData);
                 setTeachingAssignments(data.profileData.teachingAssignments || []);
             } else {
                 setError(data.message || 'Failed to fetch teacher profile.');
@@ -51,14 +53,14 @@ const TeacherAttendance = () => {
 
     const fetchStudents = useCallback(async () => {
         if (!selectedAssignment) {
-            console.log('Missing assignmentId:', { selectedAssignment });
+            console.log("Missing assignmentId:", { selectedAssignment });
             return;
         }
 
         setLoading(true);
         setError(null);
         try {
-            const formattedDate = currentDate.toISOString().split('T')[0];
+            const formattedDate = currentDate.toISOString().split("T")[0];
             const response = await fetch(
                 `${backendUrl}/api/teacher/students/${selectedAssignment._id}?date=${formattedDate}`,
                 {
@@ -70,15 +72,15 @@ const TeacherAttendance = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('Students data from API:', data.students);
-                setStudents(data.students);
+                console.log("API Response:", data); // Debug log
+                setStudents(data.students || []);
             } else {
-                setError('Failed to fetch students.');
+                setError("Failed to fetch students.");
                 setStudents([]);
             }
         } catch (err) {
-            console.error('Error fetching students:', err);
-            setError(err.message || 'Failed to fetch students.');
+            console.error("Error fetching students:", err);
+            setError(err.message || "Failed to fetch students.");
             setStudents([]);
         } finally {
             setLoading(false);
@@ -100,26 +102,6 @@ const TeacherAttendance = () => {
             fetchStudents();
         }
     }, [fetchStudents, selectedAssignment, currentDate]);
-
-    useEffect(() => {
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        const filtered = students
-            .filter(student => {
-                const fullName = `${student.firstName} ${student.middleName || ''} ${student.lastName}`.toLowerCase();
-                return (
-                    fullName.includes(lowerSearchTerm) ||
-                    student.studentNumber.toLowerCase().includes(lowerSearchTerm)
-                );
-            })
-            .sort((a, b) => {
-                const lastNameA = a.lastName.toLowerCase();
-                const lastNameB = b.lastName.toLowerCase();
-                if (lastNameA < lastNameB) return -1;
-                if (lastNameA > lastNameB) return 1;
-                return 0;
-            });
-        setFilteredStudents(filtered);
-    }, [students, searchTerm]);
 
     useEffect(() => {
         const selectedDate = currentDate.toISOString().split('T')[0];
@@ -179,26 +161,42 @@ const TeacherAttendance = () => {
             alert("Please select a teaching assignment before generating the report.");
             return;
         }
-
+    
         const reader = new FileReader();
-
+    
         reader.onload = async (e) => {
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.load(e.target.result);
-
-            const worksheet = workbook.getWorksheet(1); // Assuming the first sheet
-
+    
+            const worksheet = workbook.getWorksheet(1);
+    
             const month = currentDate.toLocaleString('default', { month: 'long' });
             const gradeLevel = selectedAssignment.gradeYearLevel;
             const section = selectedAssignment.section;
-
-            // Update report data
-            worksheet.getCell("AA6").value = `${month}`;
-            worksheet.getCell("W8").value = `${gradeLevel}`;
-            worksheet.getCell("AD8").value = `${section}`;
-
-            // Extract header dates from row 11
-            const headerDates = [];
+    
+            const formatTeacherName = (teacher) => {
+                if (!teacher) return "N/A";
+                const lastName = teacher.lastName
+                    ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase()
+                    : "";
+                const firstName = teacher.firstName
+                    ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase()
+                    : "";
+                const middleInitial = teacher.middleName
+                    ? `${teacher.middleName.charAt(0).toUpperCase()}.`
+                    : "";
+                return `${lastName}, ${firstName} ${middleInitial}`;
+            };
+    
+            const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
+    
+            worksheet.getCell("AF86").value = teacherName;
+            worksheet.getCell("AB6").value = `${month}`;
+            worksheet.getCell("X8").value = `${gradeLevel}`;
+            worksheet.getCell("AE8").value = `${section}`;
+    
+            // ✅ Fixed header mapping
+            const dateToColumnMap = {};
             worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
                 if (colNumber >= 4 && colNumber <= 29) {
                     let raw = cell.value;
@@ -214,51 +212,53 @@ const TeacherAttendance = () => {
                     const parsed = raw !== null ? parseInt(String(raw).trim(), 10) : NaN;
                     if (!isNaN(parsed)) {
                         const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), parsed);
-                        headerDates[colNumber] = date.toISOString().split("T")[0];
+                        const isoDate = date.toISOString().split("T")[0];
+                        dateToColumnMap[isoDate] = colNumber;
                     }
                 }
             });
-
-            // Sort students alphabetically by last name
+    
+            const selectedDate = currentDate.toISOString().split("T")[0];
+            const selectedColumn = dateToColumnMap[selectedDate];
+    
+            if (!selectedColumn) {
+                alert("Selected date is not in the header dates.");
+                return;
+            }
+    
             const sortedStudents = [...students].sort((a, b) => {
                 const lastNameA = a.lastName.toLowerCase();
                 const lastNameB = b.lastName.toLowerCase();
-                if (lastNameA < lastNameB) return -1;
-                if (lastNameA > lastNameB) return 1;
-                return 0;
+                return lastNameA.localeCompare(lastNameB);
             });
-
-            // Add student data starting at row 14
+    
             const startRow = 14;
+            let totalPresent = 0;
+    
             sortedStudents.forEach((student, index) => {
                 const row = worksheet.getRow(startRow + index);
-
-                // Write student name in column B
                 row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
-
-                // Mark attendance for all students
-                headerDates.forEach((headerDate, columnIndex) => {
-                    if (columnIndex >= 4) {
-                        const selectedDate = currentDate.toISOString().split("T")[0];
-                        const signInDate = student.signInTime
-                            ? new Date(student.signInTime).toISOString().split("T")[0]
-                            : null;
-                        const signOutDate = student.signOutTime
-                            ? new Date(student.signOutTime).toISOString().split("T")[0]
-                            : null;
-
-                        // Mark "P" if the student has a sign-in or sign-out time for the selected date
-                        if (headerDate === selectedDate && (headerDate === signInDate || headerDate === signOutDate)) {
-                            row.getCell(columnIndex).value = "P";
-                        } else if (headerDate === selectedDate) {
-                            row.getCell(columnIndex).value = "A";
-                        }
-                    }
-                });
-
+    
+                const signInDate = student.signInTime
+                    ? new Date(student.signInTime).toISOString().split("T")[0]
+                    : null;
+                const signOutDate = student.signOutTime
+                    ? new Date(student.signOutTime).toISOString().split("T")[0]
+                    : null;
+    
+                if (selectedDate === signInDate || selectedDate === signOutDate) {
+                    row.getCell(selectedColumn).value = "P";
+                    totalPresent++;
+                } else {
+                    row.getCell(selectedColumn).value = "A";
+                }
+    
                 row.commit();
             });
-
+    
+            const totalRow = 62;
+            worksheet.getCell(totalRow, selectedColumn).value = totalPresent;
+    
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], {
                 type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -268,9 +268,10 @@ const TeacherAttendance = () => {
             link.download = "Attendance_Report.xlsx";
             link.click();
         };
-
+    
         reader.readAsArrayBuffer(templateFile);
     };
+    
 
     if (loading) {
         return (
@@ -400,4 +401,4 @@ const TeacherAttendance = () => {
     );
 };
 
-export default TeacherAttendance;
+export default TeacherAttendance; 

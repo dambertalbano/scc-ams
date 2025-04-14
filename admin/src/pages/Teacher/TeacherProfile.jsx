@@ -225,132 +225,188 @@ const TeacherProfile = () => {
     }
   };
 
-  const generateExcel = async () => {
-    if (!templateFile) {
-        alert("Please upload the SF2 Excel template first.");
-        return;
-    }
-    if (!selectedAssignment) {
-        alert("Please select a teaching assignment before generating the report.");
-        return;
-    }
-    if (!startDate || !endDate) {
-        alert("Please fill in both Start Date and End Date.");
-        return;
-    }
+  const addMonthlyTotals = (worksheet, students, headerDates) => {
+    const startRow = 14; // Starting row for student data
+    const absentColumn = 30; // Column AD (Absent)
+    const tardyColumn = 31; // Column AE (Tardy)
 
-    setLoading(true);
-    setError(null);
-    try {
-        const response = await fetch(
-            `${backendUrl}/api/teacher/students/${selectedAssignment._id}?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
-            {
-                headers: { Authorization: `Bearer ${dToken}` },
+    students.forEach((student, index) => {
+        const row = worksheet.getRow(startRow + index);
+
+        let totalAbsent = 0;
+        let totalTardy = 0;
+
+        // Iterate through headerDates to calculate totals
+        headerDates.forEach((headerDate, columnIndex) => {
+            if (columnIndex >= 4) {
+                const signInDate = student.signInTime
+                    ? new Date(student.signInTime).toISOString().split("T")[0]
+                    : null;
+                const signOutDate = student.signOutTime
+                    ? new Date(student.signOutTime).toISOString().split("T")[0]
+                    : null;
+
+                // Count as absent if no sign-in or sign-out matches the date
+                if (headerDate && headerDate !== signInDate && headerDate !== signOutDate) {
+                    totalAbsent++;
+                }
+
+                // Example logic for tardy (if applicable)
+                if (student.isTardy && headerDate === signInDate) {
+                    totalTardy++;
+                }
             }
-        );
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.message || "Failed to fetch attendance data.");
-        }
-
-        // Sort students alphabetically by last name
-        const students = data.students.sort((a, b) => {
-            const lastNameA = a.lastName.toLowerCase();
-            const lastNameB = b.lastName.toLowerCase();
-            if (lastNameA < lastNameB) return -1;
-            if (lastNameA > lastNameB) return 1;
-            return 0;
         });
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const workbook = new ExcelJS.Workbook();
-            await workbook.xlsx.load(e.target.result);
+        // Write totals to the respective columns
+        row.getCell(absentColumn).value = totalAbsent; // Total Absent
+        row.getCell(tardyColumn).value = totalTardy; // Total Tardy
 
-            const worksheet = workbook.getWorksheet(1); // Assuming the first sheet
+        row.commit();
+    });
 
-            const month = startDate.toLocaleString("default", { month: "long" });
-            const gradeLevel = selectedAssignment.gradeYearLevel;
-            const section = selectedAssignment.section;
+    console.log("Monthly Totals Added: Absent and Tardy");
+};
 
-            // Update report data
-            worksheet.getCell("AA6").value = `${month}`;
-            worksheet.getCell("W8").value = `${gradeLevel}`;
-            worksheet.getCell("AD8").value = `${section}`;
+const generateExcel = async () => {
+  if (!templateFile) {
+    alert("Please upload the SF2 Excel template first.");
+    return;
+  }
+  if (!selectedAssignment) {
+    alert("Please select a teaching assignment before generating the report.");
+    return;
+  }
+  if (!startDate || !endDate) {
+    alert("Please fill in both Start Date and End Date.");
+    return;
+  }
 
-            // Extract header dates from row 11
-            const headerDates = [];
-            worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                if (colNumber >= 4 && colNumber <= 29) {
-                    let raw = cell.value;
-                    if (typeof raw === "object" && raw !== null) {
-                        if (raw.richText) {
-                            raw = raw.richText.map((rt) => rt.text).join("");
-                        } else if (raw.result) {
-                            raw = raw.result;
-                        } else {
-                            raw = null;
-                        }
-                    }
-                    const parsed = raw !== null ? parseInt(String(raw).trim(), 10) : NaN;
-                    if (!isNaN(parsed)) {
-                        const date = new Date(startDate);
-                        date.setDate(parsed);
-                        const formattedDate = date.toISOString().split("T")[0];
-
-                        // Only include dates within the selected range
-                        if (date >= startDate && date <= endDate) {
-                            headerDates[colNumber] = formattedDate;
-                        }
-                    }
-                }
-            });
-
-            // Add student data starting at row 14
-            const startRow = 14;
-            students.forEach((student, index) => {
-                const row = worksheet.getRow(startRow + index);
-                row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
-
-                // Mark attendance only for dates within the selected range
-                headerDates.forEach((headerDate, columnIndex) => {
-                    if (columnIndex >= 4) {
-                        const signInDate = student.signInTime
-                            ? new Date(student.signInTime).toISOString().split("T")[0]
-                            : null;
-                        const signOutDate = student.signOutTime
-                            ? new Date(student.signOutTime).toISOString().split("T")[0]
-                            : null;
-
-                        // Mark "P" if the student has a sign-in or sign-out time for the header date
-                        if (headerDate === signInDate || headerDate === signOutDate) {
-                            row.getCell(columnIndex).value = "P";
-                        } else if (headerDate) {
-                            row.getCell(columnIndex).value = "A";
-                        }
-                    }
-                });
-
-                row.commit();
-            });
-
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "Attendance_Report.xlsx";
-            link.click();
-        };
-
-        reader.readAsArrayBuffer(templateFile);
-    } catch (err) {
-        console.error("Error generating Excel file:", err);
-        setError(err.message || "Failed to generate Excel file.");
-    } finally {
-        setLoading(false);
+  setLoading(true);
+  setError(null);
+  try {
+    const response = await fetch(
+      `${backendUrl}/api/teacher/students/${selectedAssignment._id}?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
+      {
+        headers: { Authorization: `Bearer ${dToken}` },
+      }
+    );
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.message || "Failed to fetch attendance data.");
     }
+
+    const students = data.students.sort((a, b) =>
+      a.lastName.localeCompare(b.lastName)
+    );
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(e.target.result);
+
+      const worksheet = workbook.getWorksheet(1);
+
+      const month = startDate.toLocaleString("default", { month: "long" });
+      const gradeLevel = selectedAssignment.gradeYearLevel;
+      const section = selectedAssignment.section;
+      
+      const formatTeacherName = (teacher) => {
+        if (!teacher) return "N/A";
+        const lastName = teacher.lastName
+            ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase()
+            : "";
+        const firstName = teacher.firstName
+            ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase()
+            : "";
+        const middleInitial = teacher.middleName
+            ? `${teacher.middleName.charAt(0).toUpperCase()}.`
+            : "";
+        return `${lastName}, ${firstName} ${middleInitial}`;
+    };
+
+    const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
+      worksheet.getCell("AF86").value = teacherName;
+      worksheet.getCell("AB6").value = `${month}`;
+      worksheet.getCell("X8").value = `${gradeLevel}`;
+      worksheet.getCell("AE8").value = `${section}`;
+
+      const headerDates = [];
+      worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        if (colNumber >= 4 && colNumber <= 29) {
+          let raw = cell.value;
+          if (typeof raw === "object" && raw !== null) {
+            if (raw.richText) {
+              raw = raw.richText.map((rt) => rt.text).join("");
+            } else if (raw.result) {
+              raw = raw.result;
+            } else {
+              raw = null;
+            }
+          }
+          const parsed = raw !== null ? parseInt(String(raw).trim(), 10) : NaN;
+          if (!isNaN(parsed)) {
+            const date = new Date(startDate);
+            date.setDate(parsed);
+            const formattedDate = date.toISOString().split("T")[0];
+
+            if (date >= startDate && date <= endDate) {
+              headerDates[colNumber] = formattedDate;
+            }
+          }
+        }
+      });
+
+      const startRow = 14;
+      const dailyTotals = Array(26).fill(0);
+
+      students.forEach((student, index) => {
+        const row = worksheet.getRow(startRow + index);
+        row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
+
+        headerDates.forEach((headerDate, columnIndex) => {
+          if (columnIndex >= 4) {
+            const signInDate = student.signInTime
+              ? new Date(student.signInTime).toISOString().split("T")[0]
+              : null;
+            const signOutDate = student.signOutTime
+              ? new Date(student.signOutTime).toISOString().split("T")[0]
+              : null;
+
+            if (headerDate === signInDate || headerDate === signOutDate) {
+              row.getCell(columnIndex).value = "P";
+              dailyTotals[columnIndex - 4]++;
+            } else if (headerDate) {
+              row.getCell(columnIndex).value = "A";
+            }
+          }
+        });
+
+        row.commit();
+      });
+
+      const totalRow = 62;
+      dailyTotals.forEach((total, index) => {
+        worksheet.getCell(totalRow, index + 4).value = total;
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "Attendance_Report.xlsx";
+      link.click();
+    };
+
+    reader.readAsArrayBuffer(templateFile);
+  } catch (err) {
+    console.error("Error generating Excel file:", err);
+    setError(err.message || "Failed to generate Excel file.");
+  } finally {
+    setLoading(false);
+  }
 };
 
   if (loading) return <div className="h-screen flex items-center justify-center text-lg">Loading profile...</div>;

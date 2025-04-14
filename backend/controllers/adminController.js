@@ -398,14 +398,18 @@ const getAttendanceRecords = async (req, res) => {
         }
 
         const isoDate = new Date(date);
+        if (isNaN(isoDate.getTime())) {
+            return res.status(400).json({ success: false, message: "Invalid date format" });
+        }
+
         const startOfDay = new Date(isoDate.getFullYear(), isoDate.getMonth(), isoDate.getDate());
         const endOfDay = new Date(isoDate.getFullYear(), isoDate.getMonth(), isoDate.getDate() + 1);
 
         let query = {
             timestamp: {
                 $gte: startOfDay,
-                $lt: endOfDay
-            }
+                $lt: endOfDay,
+            },
         };
 
         if (userType) {
@@ -414,12 +418,18 @@ const getAttendanceRecords = async (req, res) => {
 
         const attendanceRecords = await attendanceModel.find(query).populate({
             path: 'user',
-            select: 'firstName lastName middleName studentNumber position'
+            select: 'firstName lastName middleName studentNumber position',
         });
+
+        // Return an empty array if no records are found
+        if (!attendanceRecords || attendanceRecords.length === 0) {
+            return res.status(200).json({ success: true, attendanceRecords: [] });
+        }
 
         res.status(200).json({ success: true, attendanceRecords });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error("Error fetching attendance records:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
 

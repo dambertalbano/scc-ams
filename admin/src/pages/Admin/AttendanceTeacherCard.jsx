@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { FaCalendarAlt, FaSearch, FaTimes } from 'react-icons/fa';
+import { FaCalendarAlt, FaFileExcel, FaSearch, FaTimes } from 'react-icons/fa';
+import * as XLSX from 'xlsx';
 import { useAdminContext } from '../../context/AdminContext';
 
 const AttendanceTeacherCard = () => {
-    const { teachers, aToken, fetchAttendanceRecords } = useAdminContext();
+    const { fetchAttendanceRecords } = useAdminContext();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -28,39 +29,45 @@ const AttendanceTeacherCard = () => {
         return `${lastName}, ${firstName} ${middleInitial}`;
     };
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const records = await fetchAttendanceRecords(currentDate);
-                if (!records || !Array.isArray(records)) {
-                    console.error("fetchAttendanceRecords did not return an array:", records);
-                }
+    const formatDate = useCallback((date) => {
+        if (!date) return 'N/A';
+        return new Date(date).toLocaleDateString();
+    }, []);
 
-                // Filter records to only include teachers
-                const teacherRecords = records.filter(record => record.userType === 'Teacher');
+    const formatTime = useCallback((date) => {
+        if (!date) return 'N/A';
+        return new Date(date).toLocaleTimeString();
+    }, []);
 
-                setAttendanceRecords(teacherRecords);
-            } catch (err) {
-                console.error('Error fetching attendance records:', err);
-                setError(err.message || 'Failed to fetch attendance records');
-                setAttendanceRecords([]);
-            } finally {
-                setLoading(false);
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const records = await fetchAttendanceRecords(currentDate);
+            if (!records || !Array.isArray(records)) {
+                console.error("fetchAttendanceRecords did not return an array:", records);
             }
-        };
 
-        if (aToken) {
-            fetchData();
-        } else {
-            console.warn('aToken is missing. Skipping fetchData.');
+            // Filter records to only include teachers
+            const teacherRecords = records.filter(record => record.userType === 'Teacher');
+
+            setAttendanceRecords(teacherRecords);
+        } catch (err) {
+            console.error('Error fetching attendance records:', err);
+            setError(err.message || 'Failed to fetch attendance records');
+            setAttendanceRecords([]);
+        } finally {
+            setLoading(false);
         }
-    }, [aToken, fetchAttendanceRecords, currentDate]);
+    }, [fetchAttendanceRecords, currentDate]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const handleSearch = useCallback((e) => {
         setSearchTerm(e.target.value);
-    }, [setSearchTerm]);
+    }, []);
 
     const filteredAttendanceRecords = useMemo(() => {
         const lowerSearchTerm = searchTerm.toLowerCase();
@@ -76,24 +83,47 @@ const AttendanceTeacherCard = () => {
         });
     }, [attendanceRecords, searchTerm]);
 
-    const formatDate = useCallback((date) => {
-        if (!date) return 'N/A';
-        return new Date(date).toLocaleDateString();
-    }, []);
-
-    const formatTime = useCallback((date) => {
-        if (!date) return 'N/A';
-        return new Date(date).toLocaleTimeString();
-    }, []);
-
     const handleDateChange = useCallback((date) => {
         setCurrentDate(date);
         setIsCalendarOpen(false);
-    }, [setCurrentDate]);
+    }, []);
 
     const toggleCalendar = useCallback(() => {
         setIsCalendarOpen(prev => !prev);
-    }, [setIsCalendarOpen]);
+    }, []);
+
+    const generateExcel = useCallback(() => {
+        if (filteredAttendanceRecords.length === 0) {
+            alert("No attendance records to export.");
+            return;
+        }
+
+        const data = filteredAttendanceRecords.map(record => ({
+            "Name": formatFullName(record.user),
+            "Role": "Teacher",
+            "Event Type": record.eventType === 'sign-in' ? 'Sign-In' : 'Sign-Out',
+            "Date": formatDate(record.timestamp),
+            "Time": formatTime(record.timestamp),
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(data);
+
+        // Adjust column widths
+        const columnWidths = [
+            { wch: 25 }, // Name
+            { wch: 10 }, // Role
+            { wch: 15 }, // Event Type
+            { wch: 15 }, // Date
+            { wch: 10 }, // Time
+        ];
+        worksheet['!cols'] = columnWidths;
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+
+        const fileName = `Teacher_Attendance_${currentDate.toLocaleDateString().replace(/\//g, '-')}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+    }, [filteredAttendanceRecords, currentDate, formatDate, formatFullName, formatTime]);
 
     const mergedRows = useMemo(() => {
         const rows = filteredAttendanceRecords.map((record) => {
@@ -137,6 +167,12 @@ const AttendanceTeacherCard = () => {
                     />
                     <FaSearch className="absolute top-3 right-3 text-gray-400" />
                 </div>
+                <button
+                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center"
+                    onClick={generateExcel}
+                >
+                    <FaFileExcel className="mr-2" /> Export to Excel
+                </button>
             </div>
 
             {/* Date Navigation */}

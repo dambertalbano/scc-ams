@@ -23,9 +23,9 @@ const AdminContextProvider = (props) => {
     const updateAToken = useCallback((token) => {
         setAToken(token);
         if (token) {
-            localStorage.setItem('aToken', token); // Synchronous persistence
+            localStorage.setItem('aToken', token);
         } else {
-            localStorage.removeItem('aToken'); // Synchronous removal
+            localStorage.removeItem('aToken');
         }
     }, [setAToken]);
 
@@ -340,290 +340,149 @@ const AdminContextProvider = (props) => {
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const addTeacherClassSchedule = useCallback(async (teacherId, classSchedule) => {
+    // Subject APIs
+    const getAllSubjects = useCallback(async () => {
         try {
-            const response = await axios.post(`${backendUrl}/api/admin/teachers/${teacherId}/class-schedule`, { classSchedule }, {
+            const { data } = await axios.get(`${backendUrl}/api/admin/subjects`, {
                 headers: { Authorization: `Bearer ${aToken}` },
             });
+            if (data.success) {
+                return data.subjects;
+            } else {
+                toast.error(data.message || "Failed to fetch subjects");
+                return [];
+            }
+        } catch (error) {
+            handleApiError(error, "Error fetching subjects");
+            return [];
+        }
+    }, [aToken, backendUrl, handleApiError]);
 
-            if (response.data.success) {
-                toast.success("Class schedule added successfully");
-                getAllTeachers();
+    const createSubject = useCallback(async (subjectData) => {
+        try {
+            const { data } = await axios.post(`${backendUrl}/api/admin/subjects`, subjectData, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (data.success) {
+                toast.success("Subject created successfully");
+                return data.subject;
+            } else {
+                toast.error(data.message || "Failed to create subject");
+                return null;
+            }
+        } catch (error) {
+            handleApiError(error, "Error creating subject");
+            return null;
+        }
+    }, [aToken, backendUrl, handleApiError]);
+
+    const updateSubject = useCallback(async (subjectId, updates) => {
+        try {
+            const { data } = await axios.put(`${backendUrl}/api/admin/subjects/${subjectId}`, updates, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (data.success) {
+                toast.success("Subject updated successfully");
+                return data.subject;
+            } else {
+                toast.error(data.message || "Failed to update subject");
+                return null;
+            }
+        } catch (error) {
+            handleApiError(error, "Error updating subject");
+            return null;
+        }
+    }, [aToken, backendUrl, handleApiError]);
+
+    const deleteSubject = useCallback(async (subjectId) => {
+        try {
+            const { data } = await axios.delete(`${backendUrl}/api/admin/subjects/${subjectId}`, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (data.success) {
+                toast.success("Subject deleted successfully");
                 return true;
             } else {
-                toast.error(response.data.message || "Failed to add class schedule");
+                toast.error(data.message || "Failed to delete subject");
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Error adding class schedule');
+            handleApiError(error, "Error deleting subject");
             return false;
         }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
+    }, [aToken, backendUrl, handleApiError]);
 
-    const removeTeacherClassSchedule = useCallback(async (teacherId, classSchedule) => {
+    // Schedule APIs
+    const getAllSchedules = useCallback(async () => {
         try {
-            const response = await axios.delete(`${backendUrl}/api/admin/teachers/${teacherId}/class-schedule`, {
+            const { data } = await axios.get(`${backendUrl}/api/admin/schedules`, {
                 headers: { Authorization: `Bearer ${aToken}` },
-                data: { classSchedule }
             });
+            if (data.success) {
+                return data.schedules;
+            } else {
+                toast.error(data.message || "Failed to fetch schedules");
+                return [];
+            }
+        } catch (error) {
+            handleApiError(error, "Error fetching schedules");
+            return [];
+        }
+    }, [aToken, backendUrl, handleApiError]);
 
-            if (response.data.success) {
-                toast.success("Class schedule removed successfully");
-                getAllTeachers();
+    const createSchedule = useCallback(async (scheduleData) => {
+        try {
+            const { data } = await axios.post(`${backendUrl}/api/admin/schedules`, scheduleData, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (data.success) {
+                toast.success("Schedule created successfully");
+                return data.schedule;
+            } else {
+                toast.error(data.message || "Failed to create schedule");
+                return null;
+            }
+        } catch (error) {
+            handleApiError(error, "Error creating schedule");
+            return null;
+        }
+    }, [aToken, backendUrl, handleApiError]);
+
+    const updateSchedule = useCallback(async (scheduleId, updates) => {
+        try {
+            const { data } = await axios.put(`${backendUrl}/api/admin/schedules/${scheduleId}`, updates, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (data.success) {
+                toast.success("Schedule updated successfully");
+                return data.schedule;
+            } else {
+                toast.error(data.message || "Failed to update schedule");
+                return null;
+            }
+        } catch (error) {
+            handleApiError(error, "Error updating schedule");
+            return null;
+        }
+    }, [aToken, backendUrl, handleApiError]);
+
+    const deleteSchedule = useCallback(async (scheduleId) => {
+        try {
+            const { data } = await axios.delete(`${backendUrl}/api/admin/schedules/${scheduleId}`, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (data.success) {
+                toast.success("Schedule deleted successfully");
                 return true;
             } else {
-                toast.error(response.data.message || "Failed to remove class schedule");
+                toast.error(data.message || "Failed to delete schedule");
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Error removing class schedule');
+            handleApiError(error, "Error deleting schedule");
             return false;
         }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const editTeacherClassSchedule = useCallback(async (teacherId, oldClassSchedule, newClassSchedule) => {
-        try {
-            const response = await axios.put(`${backendUrl}/api/admin/teachers/${teacherId}/class-schedule`, { oldClassSchedule, newClassSchedule }, {
-                headers: { Authorization: `Bearer ${aToken}` },
-            });
-
-            if (response.data.success) {
-                toast.success("Class schedule updated successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to update class schedule");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error editing class schedule');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const addTeacherEducationLevel = useCallback(async (teacherId, educationLevel) => {
-        try {
-            const response = await axios.post(`${backendUrl}/api/admin/teachers/${teacherId}/education-level`, { educationLevel }, {
-                headers: { Authorization: `Bearer ${aToken}` },
-            });
-
-            if (response.data.success) {
-                toast.success("Education level added successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to add education level");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error adding education level');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const removeTeacherEducationLevel = useCallback(async (teacherId, educationLevel) => {
-        try {
-            const response = await axios.delete(`${backendUrl}/api/admin/teachers/${teacherId}/education-level`, {
-                headers: { Authorization: `Bearer ${aToken}` },
-                data: { educationLevel }
-            });
-
-            if (response.data.success) {
-                toast.success("Education level removed successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to remove education level");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error removing education level');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const editTeacherEducationLevel = useCallback(async (teacherId, oldEducationLevel, newEducationLevel) => {
-        try {
-            const response = await axios.put(`${backendUrl}/api/admin/teachers/${teacherId}/education-level`, { oldEducationLevel, newEducationLevel }, {
-                headers: { Authorization: `Bearer ${aToken}` },
-            });
-
-            if (response.data.success) {
-                toast.success("Education level updated successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to update education level");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error editing education level');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const addTeacherGradeYearLevel = useCallback(async (teacherId, gradeYearLevel) => {
-        try {
-            const response = await axios.post(`${backendUrl}/api/admin/teachers/${teacherId}/grade-year-level`, { gradeYearLevel }, {
-                headers: { Authorization: `Bearer ${aToken}` },
-            });
-
-            if (response.data.success) {
-                toast.success("Grade year level added successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to add grade year level");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error adding grade year level');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const removeTeacherGradeYearLevel = useCallback(async (teacherId, gradeYearLevel) => {
-        try {
-            const response = await axios.delete(`${backendUrl}/api/admin/teachers/${teacherId}/grade-year-level`, {
-                headers: { Authorization: `Bearer ${aToken}` },
-                data: { gradeYearLevel }
-            });
-
-            if (response.data.success) {
-                toast.success("Grade year level removed successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to remove grade year level");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error removing grade year level');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const editTeacherGradeYearLevel = useCallback(async (teacherId, oldGradeYearLevel, newGradeYearLevel) => {
-        try {
-            const response = await axios.put(`${backendUrl}/api/admin/teachers/${teacherId}/grade-year-level`, { oldGradeYearLevel, newGradeYearLevel }, {
-                headers: { Authorization: `Bearer ${aToken}` },
-            });
-
-            if (response.data.success) {
-                toast.success("Grade year level updated successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to update grade year level");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error editing grade year level');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const addTeacherSection = useCallback(async (teacherId, section) => {
-        try {
-            const response = await axios.post(`${backendUrl}/api/admin/teachers/${teacherId}/section`, { section }, {
-                headers: { Authorization: `Bearer ${aToken}` },
-            });
-
-            if (response.data.success) {
-                toast.success("Section added successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to add section");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error adding section');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const removeTeacherSection = useCallback(async (teacherId, section) => {
-        try {
-            const response = await axios.delete(`${backendUrl}/api/admin/teachers/${teacherId}/section`, {
-                headers: { Authorization: `Bearer ${aToken}` },
-                data: { section }
-            });
-
-            if (response.data.success) {
-                toast.success("Section removed successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to remove section");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error removing section');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const addTeacherSubjects = useCallback(async (teacherId, subjects) => {
-        try {
-            const response = await axios.post(`${backendUrl}/api/admin/teachers/${teacherId}/subjects`, { subjects }, {
-                headers: { Authorization: `Bearer ${aToken}` },
-            });
-
-            if (response.data.success) {
-                toast.success("Subjects added successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to add subjects");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error adding subjects');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const removeTeacherSubjects = useCallback(async (teacherId, subjects) => {
-        try {
-            const response = await axios.delete(`${backendUrl}/api/admin/teachers/${teacherId}/subjects`, {
-                headers: { Authorization: `Bearer ${aToken}` },
-                data: { subjects }
-            });
-
-            if (response.data.success) {
-                toast.success("Subjects removed successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to remove subjects");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error removing subjects');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
-
-    const editTeacherSubjects = useCallback(async (teacherId, oldSubjects, newSubjects) => {
-        try {
-            const response = await axios.put(`${backendUrl}/api/admin/teachers/${teacherId}/subjects`, { oldSubjects, newSubjects }, {
-                headers: { Authorization: `Bearer ${aToken}` },
-            });
-
-            if (response.data.success) {
-                toast.success("Subjects updated successfully");
-                getAllTeachers();
-                return true;
-            } else {
-                toast.error(response.data.message || "Failed to update subjects");
-                return false;
-            }
-        } catch (error) {
-            handleApiError(error, 'Error updating subjects');
-            return false;
-        }
-    }, [aToken, backendUrl, getAllTeachers, handleApiError]);
+    }, [aToken, backendUrl, handleApiError]);
 
     const value = {
         aToken,
@@ -646,22 +505,17 @@ const AdminContextProvider = (props) => {
         fetchAttendanceRecords,
         getDashData,
         dashData,
-        addTeacherClassSchedule,
-        removeTeacherClassSchedule,
-        editTeacherClassSchedule,
-        addTeacherEducationLevel,
-        removeTeacherEducationLevel,
-        editTeacherEducationLevel,
-        addTeacherGradeYearLevel,
-        removeTeacherGradeYearLevel,
-        editTeacherGradeYearLevel,
-        addTeacherSection,
-        removeTeacherSection,
-        addTeacherSubjects,
-        removeTeacherSubjects,
-        editTeacherSubjects,
+        // Subject APIs
+        getAllSubjects,
+        createSubject,
+        updateSubject,
+        deleteSubject,
+        // Schedule APIs
+        getAllSchedules,
+        createSchedule,
+        updateSchedule,
+        deleteSchedule,
     };
-
     return <AdminContext.Provider value={value}>{props.children}</AdminContext.Provider>;
 };
 

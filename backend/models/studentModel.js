@@ -40,21 +40,6 @@ const studentSchema = new mongoose.Schema(
       start: { type: Date, required: true, default: new Date("2024-08-15") }, // Default start date for 1st Sem
       end: { type: Date, required: true, default: new Date("2024-12-15") }, // Default end date for 1st Sem
     },
-
-    subjects: [
-      {
-        name: { type: String, required: true, trim: true },
-        teacher: { type: String, required: true, trim: true },
-      },
-    ],
-    schedule: [
-      {
-        day: { type: String, required: true, trim: true },
-        time: { type: String, required: true, trim: true },
-        subject: { type: String, required: true, trim: true },
-        teacher: { type: String, required: true, trim: true },
-      },
-    ],
   },
   { timestamps: true }
 );

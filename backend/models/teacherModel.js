@@ -22,10 +22,6 @@ const teacherSchema = new mongoose.Schema({
     code: { type: String, required: true, unique: true, trim: true },
     signInTime: { type: Date },
     signOutTime: { type: Date },
-    classSchedule: { type: [String], trim: true },
-    subjects: {
-        type: [String],
-    },
     role: { type: String, default: "Teacher" },
     status: { type: String, default: "active" },
     educationLevel: {

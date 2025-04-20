@@ -2,11 +2,6 @@ import express from 'express';
 import {
     addStudent,
     addTeacher,
-    addTeacherClassSchedule,
-    addTeacherEducationLevel,
-    addTeacherGradeYearLevel,
-    addTeacherSection,
-    addTeacherSubjects,
     adminDashboard,
     adminSignIn,
     adminSignOut,
@@ -14,22 +9,27 @@ import {
     allTeachers,
     deleteStudent,
     deleteTeacher,
-    editTeacherClassSchedule,
-    editTeacherEducationLevel,
-    editTeacherGradeYearLevel,
-    editTeacherSubjects,
     getAttendanceByDate,
     getStudentByCode,
     getUserByCode,
     loginAdmin,
-    removeTeacherClassSchedule,
-    removeTeacherEducationLevel,
-    removeTeacherGradeYearLevel,
-    removeTeacherSection,
-    removeTeacherSubjects,
     updateStudent,
     updateTeacher
 } from '../controllers/adminController.js';
+import {
+    createSchedule,
+    deleteSchedule,
+    getAllSchedules,
+    getScheduleById,
+    updateSchedule
+} from '../controllers/scheduleController.js';
+import {
+    createSubject,
+    deleteSubject,
+    getAllSubjects,
+    getSubjectById,
+    updateSubject
+} from '../controllers/subjectController.js';
 import authAdmin from '../middleware/authAdmin.js';
 import upload from '../middleware/multer.js';
 
@@ -60,23 +60,16 @@ adminRouter.post("/sign-out/:code", authAdmin, adminSignOut);
 adminRouter.put("/sign-in/:code", authAdmin, adminSignIn);
 adminRouter.put("/sign-out/:code", authAdmin, adminSignOut);
 
-adminRouter.post("/teachers/:teacherId/class-schedule", authAdmin, addTeacherClassSchedule);
-adminRouter.delete("/teachers/:teacherId/class-schedule", authAdmin, removeTeacherClassSchedule);
-adminRouter.put("/teachers/:teacherId/class-schedule", authAdmin, editTeacherClassSchedule);
+adminRouter.get("/subjects", authAdmin, getAllSubjects);
+adminRouter.get("/subjects/:id", authAdmin, getSubjectById);
+adminRouter.post("/subjects", authAdmin, createSubject);
+adminRouter.put("/subjects/:id", authAdmin, updateSubject);
+adminRouter.delete("/subjects/:id", authAdmin, deleteSubject);
 
-adminRouter.post("/teachers/:teacherId/education-level", authAdmin, addTeacherEducationLevel);
-adminRouter.delete("/teachers/:teacherId/education-level", authAdmin, removeTeacherEducationLevel);
-adminRouter.put("/teachers/:teacherId/education-level", authAdmin, editTeacherEducationLevel);
-
-adminRouter.post("/teachers/:teacherId/grade-year-level", authAdmin, addTeacherGradeYearLevel);
-adminRouter.delete("/teachers/:teacherId/grade-year-level", authAdmin, removeTeacherGradeYearLevel);
-adminRouter.put("/teachers/:teacherId/grade-year-level", authAdmin, editTeacherGradeYearLevel);
-
-adminRouter.post("/teachers/:teacherId/section", authAdmin, addTeacherSection);
-adminRouter.delete("/teachers/:teacherId/section", authAdmin, removeTeacherSection);
-
-adminRouter.post("/teachers/:teacherId/subjects", authAdmin, addTeacherSubjects);
-adminRouter.delete("/teachers/:teacherId/subjects", authAdmin, removeTeacherSubjects);
-adminRouter.put("/teachers/:teacherId/subjects", authAdmin, editTeacherSubjects);
+adminRouter.get("/schedules", authAdmin, getAllSchedules);
+adminRouter.get("/schedules/:id", authAdmin, getScheduleById);
+adminRouter.post("/schedules", authAdmin, createSchedule);
+adminRouter.put("/schedules/:id", authAdmin, updateSchedule);
+adminRouter.delete("/schedules/:id", authAdmin, deleteSchedule);
 
 export default adminRouter;

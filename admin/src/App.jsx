@@ -19,7 +19,9 @@ import AttendanceTeacherCard from './pages/Admin/AttendanceTeacherCard';
 import Dashboard from './pages/Admin/Dashboard';
 import EditUser from './pages/Admin/EditUser';
 import RFID_Scan from './pages/Admin/RFID_Scan';
+import Schedules from './pages/Admin/Schedules';
 import StudentsList from './pages/Admin/StudentsList';
+import Subjects from './pages/Admin/Subjects';
 import TeachersList from './pages/Admin/TeacherList';
 import AdminLogin from './pages/AdminLogin';
 import LandingPage from './pages/LandingPage';
@@ -124,6 +126,8 @@ const App = () => {
                     <Route path='/all-users' element={aToken ? <AllUsers /> : <LandingPage />} />
                     <Route path='/add-users' element={aToken ? <AddUsers /> : <LandingPage />} />
                     <Route path='/edit-users' element={aToken ? <EditUser /> : <LandingPage />} />
+                    <Route path='/subjects' element={aToken ? <Subjects /> : <LandingPage />} />
+                    <Route path='/schedules' element={aToken ? <Schedules /> : <LandingPage />} />
                 </Routes>
             </div>
         </>

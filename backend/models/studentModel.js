@@ -29,6 +29,18 @@ const studentSchema = new mongoose.Schema(
     gradeYearLevel: { type: String, required: true, trim: true },
     section: { type: String, required: true, trim: true },
 
+    // New fields for semester and semesterDates
+    semester: {
+      type: String,
+      required: true,
+      enum: ["1st Sem", "2nd Sem"], // Restrict to "1st Sem" or "2nd Sem"
+      default: "1st Sem", // Default value
+    },
+    semesterDates: {
+      start: { type: Date, required: true, default: new Date("2024-08-15") }, // Default start date for 1st Sem
+      end: { type: Date, required: true, default: new Date("2024-12-15") }, // Default end date for 1st Sem
+    },
+
     subjects: [
       {
         name: { type: String, required: true, trim: true },

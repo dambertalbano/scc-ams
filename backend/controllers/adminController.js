@@ -89,7 +89,26 @@ const adminSignOut = async (req, res) => {
 
 const addStudent = async (req, res) => {
     try {
-        const { studentNumber, code, firstName, middleName, lastName, email, password, number, address, educationLevel, gradeYearLevel, section } = req.body;
+        const {
+            studentNumber,
+            code,
+            firstName,
+            middleName,
+            lastName,
+            email,
+            password,
+            number,
+            address,
+            educationLevel,
+            gradeYearLevel,
+            section,
+            semester = "1st Sem", // Default to "1st Sem"
+            semesterDates = {
+                start: new Date("2024-08-15"),
+                end: new Date("2024-12-15"),
+            }, // Default dates for "1st Sem"
+        } = req.body;
+
         const imageFile = req.file;
 
         if (!imageFile) {
@@ -128,19 +147,21 @@ const addStudent = async (req, res) => {
             educationLevel,
             gradeYearLevel,
             section,
-            date: Date.now()
+            semester,
+            semesterDates,
+            date: Date.now(),
         };
 
         const newStudent = new studentModel(userData);
         await newStudent.save();
         res.status(201).json({ success: true, message: `Student Added` });
     } catch (error) {
-        if (error.name === 'ValidationError') {
+        if (error.name === "ValidationError") {
             const errors = {};
             for (const field in error.errors) {
                 errors[field] = error.errors[field].message;
             }
-            return res.status(400).json({ success: false, message: 'Validation error', errors });
+            return res.status(400).json({ success: false, message: "Validation error", errors });
         }
         res.status(500).json({ success: false, message: error.message });
     }
@@ -355,7 +376,35 @@ const deleteStudent = async (req, res) => {
 };
 
 const updateStudent = async (req, res) => {
-    updateUser(req, res, studentModel, "Student");
+    try {
+        const userId = req.params.id;
+        const updatedData = req.body;
+
+        // Validate semesterDates if provided
+        if (updatedData.semesterDates) {
+            if (!updatedData.semesterDates.start || !updatedData.semesterDates.end) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Both start and end dates are required for semesterDates",
+                });
+            }
+            updatedData.semesterDates.start = new Date(updatedData.semesterDates.start);
+            updatedData.semesterDates.end = new Date(updatedData.semesterDates.end);
+        }
+
+        const updatedStudent = await studentModel.findByIdAndUpdate(userId, updatedData, {
+            new: true,
+            runValidators: true, // Ensure validation rules are applied
+        });
+
+        if (!updatedStudent) {
+            return res.status(404).json({ success: false, message: "Student not found" });
+        }
+
+        res.status(200).json({ success: true, student: updatedStudent });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 

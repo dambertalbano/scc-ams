@@ -59,7 +59,10 @@ const studentProfile = async (req, res) => {
 
 const studentList = async (req, res) => {
     try {
-        const students = await studentModel.find({}).select(['-password', '-email']).lean();
+        const students = await studentModel.find({})
+            .select(['-password', '-email', 'semester', 'semesterDates'])
+            .lean();
+
         res.json({ success: true, students });
     } catch (error) {
         handleControllerError(res, error, 'Error getting student list');
@@ -71,9 +74,21 @@ const updateStudentProfile = async (req, res) => {
         const { id } = req.student;
         const updates = req.body;
 
+        // Validate semesterDates if provided
+        if (updates.semesterDates) {
+            if (!updates.semesterDates.start || !updates.semesterDates.end) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Both start and end dates are required for semesterDates",
+                });
+            }
+            updates.semesterDates.start = new Date(updates.semesterDates.start);
+            updates.semesterDates.end = new Date(updates.semesterDates.end);
+        }
+
         const updatedStudent = await studentModel.findByIdAndUpdate(id, updates, {
             new: true,
-            runValidators: true
+            runValidators: true,
         }).select('-password').lean();
 
         if (!updatedStudent) {
@@ -81,7 +96,6 @@ const updateStudentProfile = async (req, res) => {
         }
 
         res.json({ success: true, message: 'Profile updated successfully', student: updatedStudent });
-
     } catch (error) {
         handleControllerError(res, error, 'Error updating student profile');
     }
@@ -165,4 +179,27 @@ const getStudentAttendance = async (req, res) => {
     }
 };
 
-export { getStudentAttendance, getStudentsByStudent, loginStudent, studentList, studentProfile, updateStudentProfile };
+const getStudentsBySemester = async (req, res) => {
+    try {
+        const { semester } = req.params;
+
+        if (!["1st Sem", "2nd Sem"].includes(semester)) {
+            return res.status(400).json({ success: false, message: "Invalid semester value" });
+        }
+
+        const students = await studentModel.find({ semester })
+            .select(['-password', '-email', 'semester', 'semesterDates'])
+            .lean();
+
+        if (!students || students.length === 0) {
+            return res.status(404).json({ success: false, message: "No students found for the specified semester" });
+        }
+
+        res.json({ success: true, students });
+    } catch (error) {
+        handleControllerError(res, error, 'Error getting students by semester');
+    }
+};
+
+export { getStudentAttendance, getStudentsBySemester, getStudentsByStudent, loginStudent, studentList, studentProfile, updateStudentProfile };
+

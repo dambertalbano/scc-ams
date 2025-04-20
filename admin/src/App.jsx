@@ -1,5 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import EditCard from './components/EditCard';
 import Navbar from './components/Navbar';
 import UserCard from './components/UserCard';
@@ -92,8 +94,8 @@ const App = () => {
     return (
         <>
             <Navbar ref={navbarRef} />
+            <ToastContainer />
             <div style={{ paddingTop: `${navbarHeight}px` }}>
-                
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/admin-login" element={<AdminLogin />} />

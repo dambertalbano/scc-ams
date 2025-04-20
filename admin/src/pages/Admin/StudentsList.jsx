@@ -275,7 +275,7 @@ const StudentsList = () => {
 
             {isEditing && currentStudent && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-                    <div className="bg-white p-6 rounded shadow-lg w-1/3">
+                    <div className="bg-white p-6 rounded shadow-lg w-1/3 max-h-[90vh] overflow-y-auto">
                         <h2 className="text-2xl font-semibold mb-4">Edit Student</h2>
                         <div className="mt-4">
                             <label className="block text-sm font-medium text-gray-700">First Name</label>
@@ -356,6 +356,56 @@ const StudentsList = () => {
                                 name="address"
                                 value={currentStudent.address || ''}
                                 onChange={handleChange}
+                            />
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700">Semester</label>
+                            <select
+                                className="border w-full p-2 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                name="semester"
+                                value={currentStudent.semester || ''}
+                                onChange={handleChange}
+                            >
+                                <option value="1st Sem">1st Sem</option>
+                                <option value="2nd Sem">2nd Sem</option>
+                            </select>
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700">Semester Start Date</label>
+                            <input
+                                type="date"
+                                className="border w-full p-2 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                name="semesterDates.start"
+                                value={currentStudent.semesterDates?.start?.split('T')[0] || ''}
+                                onChange={(e) => {
+                                    const { value } = e.target;
+                                    setCurrentStudent((prev) => ({
+                                        ...prev,
+                                        semesterDates: {
+                                            ...prev.semesterDates,
+                                            start: value,
+                                        },
+                                    }));
+                                }}
+                            />
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700">Semester End Date</label>
+                            <input
+                                type="date"
+                                className="border w-full p-2 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                name="semesterDates.end"
+                                value={currentStudent.semesterDates?.end?.split('T')[0] || ''}
+                                onChange={(e) => {
+                                    const { value } = e.target;
+                                    setCurrentStudent((prev) => ({
+                                        ...prev,
+                                        semesterDates: {
+                                            ...prev.semesterDates,
+                                            end: value,
+                                        },
+                                    }));
+                                }}
                             />
                         </div>
                         <div className="mt-4 flex justify-end">

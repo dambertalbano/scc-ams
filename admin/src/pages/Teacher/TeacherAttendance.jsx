@@ -161,19 +161,19 @@ const TeacherAttendance = () => {
             alert("Please select a teaching assignment before generating the report.");
             return;
         }
-    
+
         const reader = new FileReader();
-    
+
         reader.onload = async (e) => {
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.load(e.target.result);
-    
+
             const worksheet = workbook.getWorksheet(1);
-    
+
             const month = currentDate.toLocaleString('default', { month: 'long' });
             const gradeLevel = selectedAssignment.gradeYearLevel;
             const section = selectedAssignment.section;
-    
+
             const formatTeacherName = (teacher) => {
                 if (!teacher) return "N/A";
                 const lastName = teacher.lastName
@@ -187,14 +187,14 @@ const TeacherAttendance = () => {
                     : "";
                 return `${lastName}, ${firstName} ${middleInitial}`;
             };
-    
+
             const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
-    
-            worksheet.getCell("AF86").value = teacherName;
-            worksheet.getCell("AB6").value = `${month}`;
-            worksheet.getCell("X8").value = `${gradeLevel}`;
-            worksheet.getCell("AE8").value = `${section}`;
-    
+
+            worksheet.getCell("AE86").value = teacherName;
+            worksheet.getCell("AA6").value = `${month}`;
+            worksheet.getCell("W8").value = `${gradeLevel}`;
+            worksheet.getCell("AD8").value = `${section}`;
+
             // ✅ Fixed header mapping
             const dateToColumnMap = {};
             worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
@@ -217,48 +217,49 @@ const TeacherAttendance = () => {
                     }
                 }
             });
-    
+
             const selectedDate = currentDate.toISOString().split("T")[0];
             const selectedColumn = dateToColumnMap[selectedDate];
-    
+
             if (!selectedColumn) {
                 alert("Selected date is not in the header dates.");
                 return;
             }
-    
+
             const sortedStudents = [...students].sort((a, b) => {
                 const lastNameA = a.lastName.toLowerCase();
                 const lastNameB = b.lastName.toLowerCase();
                 return lastNameA.localeCompare(lastNameB);
             });
-    
+
             const startRow = 14;
             let totalPresent = 0;
-    
+
             sortedStudents.forEach((student, index) => {
                 const row = worksheet.getRow(startRow + index);
                 row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
-    
+
+                // Normalize dates to ISO format without time
                 const signInDate = student.signInTime
                     ? new Date(student.signInTime).toISOString().split("T")[0]
                     : null;
                 const signOutDate = student.signOutTime
                     ? new Date(student.signOutTime).toISOString().split("T")[0]
                     : null;
-    
+
                 if (selectedDate === signInDate || selectedDate === signOutDate) {
                     row.getCell(selectedColumn).value = "P";
                     totalPresent++;
                 } else {
                     row.getCell(selectedColumn).value = "A";
                 }
-    
+
                 row.commit();
             });
-    
+
             const totalRow = 62;
             worksheet.getCell(totalRow, selectedColumn).value = totalPresent;
-    
+
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], {
                 type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -268,10 +269,9 @@ const TeacherAttendance = () => {
             link.download = "Attendance_Report.xlsx";
             link.click();
         };
-    
+
         reader.readAsArrayBuffer(templateFile);
     };
-    
 
     if (loading) {
         return (
@@ -394,11 +394,11 @@ const TeacherAttendance = () => {
                 </div>
             ) : (
                 <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gray-100 p-6">
-                    <p className="text-gray-500">No students found for this teacher.</p>
+                    <p className="text-gray-500">No students found for this date.</p>
                 </div>
             )}
         </div>
     );
 };
 
-export default TeacherAttendance; 
+export default TeacherAttendance;

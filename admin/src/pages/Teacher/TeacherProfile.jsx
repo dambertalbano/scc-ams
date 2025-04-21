@@ -310,22 +310,22 @@ const generateExcel = async () => {
       const month = startDate.toLocaleString("default", { month: "long" });
       const gradeLevel = selectedAssignment.gradeYearLevel;
       const section = selectedAssignment.section;
-      
+
       const formatTeacherName = (teacher) => {
         if (!teacher) return "N/A";
         const lastName = teacher.lastName
-            ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase()
-            : "";
+          ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase()
+          : "";
         const firstName = teacher.firstName
-            ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase()
-            : "";
+          ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase()
+          : "";
         const middleInitial = teacher.middleName
-            ? `${teacher.middleName.charAt(0).toUpperCase()}.`
-            : "";
+          ? `${teacher.middleName.charAt(0).toUpperCase()}.`
+          : "";
         return `${lastName}, ${firstName} ${middleInitial}`;
-    };
+      };
 
-    const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
+      const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
       worksheet.getCell("AF86").value = teacherName;
       worksheet.getCell("AB6").value = `${month}`;
       worksheet.getCell("X8").value = `${gradeLevel}`;
@@ -360,29 +360,50 @@ const generateExcel = async () => {
       const startRow = 14;
       const dailyTotals = Array(26).fill(0);
 
-      students.forEach((student, index) => {
-        const row = worksheet.getRow(startRow + index);
-        row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
+      headerDates.forEach((headerDate, columnIndex) => {
+        if (headerDate) {
+          const currentDate = new Date();
+          const isFutureDate = new Date(headerDate) > currentDate;
 
-        headerDates.forEach((headerDate, columnIndex) => {
-          if (columnIndex >= 4) {
-            const signInDate = student.signInTime
-              ? new Date(student.signInTime).toISOString().split("T")[0]
-              : null;
-            const signOutDate = student.signOutTime
-              ? new Date(student.signOutTime).toISOString().split("T")[0]
-              : null;
+          if (isFutureDate) {
+            // Leave the column empty for future dates
+            worksheet.getColumn(columnIndex).eachCell((cell, rowNumber) => {
+              if (rowNumber >= startRow && rowNumber <= startRow + students.length) {
+                cell.value = null;
+              }
+            });
+            dailyTotals[columnIndex - 4] = null; // Leave total empty
+          } else {
+            let hasPresent = false;
 
-            if (headerDate === signInDate || headerDate === signOutDate) {
-              row.getCell(columnIndex).value = "P";
-              dailyTotals[columnIndex - 4]++;
-            } else if (headerDate) {
-              row.getCell(columnIndex).value = "A";
+            students.forEach((student, index) => {
+              const row = worksheet.getRow(startRow + index);
+              row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
+              const signInDate = student.signInTime
+                ? new Date(student.signInTime).toISOString().split("T")[0]
+                : null;
+              const signOutDate = student.signOutTime
+                ? new Date(student.signOutTime).toISOString().split("T")[0]
+                : null;
+
+              if (headerDate === signInDate || headerDate === signOutDate) {
+                row.getCell(columnIndex).value = "P";
+                hasPresent = true;
+                dailyTotals[columnIndex - 4]++;
+              }
+            });
+
+            // If there is at least one "P", mark the rest as "A"
+            if (hasPresent) {
+              students.forEach((student, index) => {
+                const row = worksheet.getRow(startRow + index);
+                if (!row.getCell(columnIndex).value) {
+                  row.getCell(columnIndex).value = "A";
+                }
+              });
             }
           }
-        });
-
-        row.commit();
+        }
       });
 
       const totalRow = 62;

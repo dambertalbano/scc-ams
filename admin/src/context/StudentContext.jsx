@@ -12,7 +12,8 @@ const StudentContextProvider = (props) => {
     const [dashData, setDashData] = useState(null);
     const [profileData, setProfileData] = useState(null);
     const [students, setStudents] = useState([]);
-    const [attendanceRecords, setAttendanceRecords] = useState([]); // Add attendanceRecords state
+    const [attendanceRecords, setAttendanceRecords] = useState([]);
+    const [totalAbsences, setTotalAbsences] = useState(0); // Add totalAbsences state
 
     // Helper function to check for token and display error
     const checkToken = () => {
@@ -194,8 +195,13 @@ const StudentContextProvider = (props) => {
             const { data } = await axios.get(`${backendUrl}/api/student/attendance`, {
                 headers: { Authorization: `Bearer ${sToken}` }
             });
+
             if (data.success) {
                 setAttendanceRecords(data.attendance);
+
+                // Calculate total absences
+                const { absentDates } = data;
+                setTotalAbsences(absentDates.length);
             } else {
                 toast.error(data.message);
             }
@@ -222,6 +228,7 @@ const StudentContextProvider = (props) => {
         students,
         getStudentsByStudent,
         attendanceRecords, // Add attendanceRecords to the context value
+        totalAbsences, // Add totalAbsences to the context value
         getStudentAttendance, // Add getStudentAttendance to the context value
     };
 

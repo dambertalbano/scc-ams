@@ -135,47 +135,54 @@ const getStudentAttendance = async (req, res) => {
     try {
         const studentId = req.student.id;
 
+        // Validate studentId
         if (!mongoose.Types.ObjectId.isValid(studentId)) {
             return res.status(400).json({ success: false, message: 'Invalid student ID' });
         }
 
+        // Fetch the student's semesterDates
+        const student = await studentModel.findById(studentId).select('semesterDates').lean();
+        console.log('Student:', student);
+
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student not found' });
+        }
+
+        const semesterDates = student.semesterDates;
+        console.log('Semester Dates:', semesterDates);
+
+        if (!semesterDates || !semesterDates.start || !semesterDates.end) {
+            return res.status(400).json({
+                success: false,
+                message: 'Semester dates are missing or invalid. Please contact the administrator to update the student profile.'
+            });
+        }
+
+        const startDate = new Date(semesterDates.start);
+        const endDate = new Date(semesterDates.end);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            return res.status(400).json({ success: false, message: 'Invalid semester dates.' });
+        }
+
+        // Fetch attendance records within the semesterDates range
         const attendance = await attendanceModel.find({
             user: studentId,
-            userType: 'Student'
+            userType: 'Student',
+            timestamp: { $gte: startDate, $lte: endDate }
         })
             .populate('user', 'firstName middleName lastName educationLevel gradeYearLevel section')
             .sort({ timestamp: 1 })
             .lean();
 
-        if (!attendance) {
-            return res.status(404).json({ success: false, message: 'No attendance records found for this student' });
-        }
-
-        const groupedAttendance = attendance.reduce((acc, record) => {
-            const date = new Date(record.timestamp).toLocaleDateString();
-            const existingRecord = acc.find(item => new Date(item.timestamp).toLocaleDateString() === date);
-
-            if (existingRecord) {
-                if (record.eventType === 'sign-in' && !existingRecord.signInTime) {
-                    existingRecord.signInTime = record.timestamp;
-                } else if (record.eventType === 'sign-out' && !existingRecord.signOutTime) {
-                    existingRecord.signOutTime = record.timestamp;
-                }
-            } else {
-                acc.push({
-                    user: record.user,
-                    date: record.timestamp,
-                    signInTime: record.eventType === 'sign-in' ? record.timestamp : null,
-                    signOutTime: record.eventType === 'sign-out' ? record.timestamp : null
-                });
-            }
-
-            return acc;
-        }, []);
-
-        res.json({ success: true, attendance: groupedAttendance });
+        res.json({
+            success: true,
+            attendance,
+            semesterDates, // Include semesterDates in the response
+        });
     } catch (error) {
-        handleControllerError(res, error, 'Error getting student attendance');
+        console.error('Error fetching student attendance:', error);
+        res.status(500).json({ success: false, message: 'Internal server error.' });
     }
 };
 

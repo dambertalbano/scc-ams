@@ -1,66 +1,43 @@
-import axios from 'axios';
-import React, { useContext, useEffect, useState } from 'react';
-import { FaFileExcel } from 'react-icons/fa';
-import { toast } from 'react-toastify';
+import React, { useEffect, useState } from 'react';
+import { FaBell, FaFileExcel } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
-import { StudentContext } from '../../context/StudentContext';
 
 const StudentAttendance = () => {
     const [attendanceRecords, setAttendanceRecords] = useState([]);
-    const { sToken, backendUrl } = useContext(StudentContext);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false); // No need to fetch data, so loading is false
+    const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
+    const [totalAbsences, setTotalAbsences] = useState(4); // Mock absences set to 4
+    const [exporting, setExporting] = useState(false);
 
-    useEffect(() => {
-        const fetchAttendanceRecords = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const response = await axios.get(`${backendUrl}/api/student/attendance`, {
-                    headers: {
-                        Authorization: `Bearer ${sToken}`,
-                    },
-                });
-                if (response.data.success) {
-                    // Merge records
-                    const mergedRecords = [];
-                    const recordMap = {};
-
-                    response.data.attendance.forEach(record => {
-                        const key = `${record.user._id}-${new Date(record.date).toDateString()}`;
-
-                        if (!recordMap[key]) {
-                            recordMap[key] = { ...record };
-                        } else {
-                            if (record.signInTime) {
-                                recordMap[key].signInTime = record.signInTime;
-                            }
-                            if (record.signOutTime) {
-                                recordMap[key].signOutTime = record.signOutTime;
-                            }
-                        }
-                    });
-
-                    for (const key in recordMap) {
-                        mergedRecords.push(recordMap[key]);
-                    }
-
-                    setAttendanceRecords(mergedRecords);
-                    console.log('attendanceRecords:', mergedRecords); // Add this line
-                } else {
-                    toast.error(response.data.message);
-                    setError(response.data.message);
-                }
-            } catch (err) {
-                setError(err.message);
-                toast.error(err.message);
-            } finally {
-                setLoading(false);
+    // Mock data for attendance and semester dates
+    const mockResponse = {
+        success: true,
+        attendance: [
+            {
+                user: {
+                    _id: "67ee1ff0f034a7a8631c592d",
+                    firstName: "Dave Gabriel",
+                    middleName: "Viral",
+                    lastName: "Galang",
+                    educationLevel: "Primary",
+                    gradeYearLevel: "Grade 5",
+                    section: "1"
+                },
+                date: "2025-04-03T05:43:14.680Z",
+                signInTime: "2025-04-03T05:43:14.680Z",
+                signOutTime: null
             }
-        };
+        ],
+        semesterDates: {
+            start: "2025-01-05T00:00:00.000Z",
+            end: "2025-05-15T23:59:59.999Z"
+        }
+    };
 
-        fetchAttendanceRecords();
-    }, [sToken, backendUrl]);
+    // Set attendance records from mock data using useEffect
+    useEffect(() => {
+        setAttendanceRecords(mockResponse.attendance);
+    }, []); // Empty dependency array ensures this runs only once
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
@@ -73,20 +50,20 @@ const StudentAttendance = () => {
     };
 
     const generateExcel = () => {
+        setExporting(true);
         const wb = XLSX.utils.book_new();
 
-        // User Information for the Excel Sheet
-        const userInfo = [
+        const userInfo = attendanceRecords.length > 0 ? [
             ['Name:', `${attendanceRecords[0]?.user.firstName} ${attendanceRecords[0]?.user.middleName ? attendanceRecords[0]?.user.middleName.charAt(0) + '.' : ''} ${attendanceRecords[0]?.user.lastName}`],
             ['Education Level:', attendanceRecords[0]?.user.educationLevel],
             ['Grade Year Level:', attendanceRecords[0]?.user.gradeYearLevel],
             ['Section:', attendanceRecords[0]?.user.section],
             [], // Add a blank row for spacing
-        ];
+        ] : [['No attendance records available']];
 
         const wsData = [
-            ...userInfo, // Add user info at the top
-            ['Date', 'Sign In Time', 'Sign Out Time'], // Table Headers
+            ...userInfo,
+            ['Date', 'Sign In Time', 'Sign Out Time'],
             ...attendanceRecords.map(record => [
                 formatDate(record.date),
                 record.signInTime ? formatTime(record.signInTime) : 'N/A',
@@ -97,29 +74,54 @@ const StudentAttendance = () => {
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         XLSX.utils.book_append_sheet(wb, ws, 'Attendance Records');
         XLSX.writeFile(wb, 'Student Attendance Records.xlsx');
+        setExporting(false);
     };
 
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center h-screen">
-                <div className="text-lg font-semibold text-gray-700">Loading attendance records...</div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="container mx-auto p-4 pt-36">
-                <div className="text-red-500 text-center">Error: {error}</div>
-            </div>
-        );
-    }
-
     return (
-        <div className="container mx-auto px-4 py-10 md:pt-36 bg-gray-50 min-h-screen">
+        <div className="container mx-auto px-4 py-10 md:pt-36 bg-gray-50 min-h-screen relative">
             <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
                 📋 Attendance Records
             </h1>
+
+            {/* Warning Message */}
+            {totalAbsences >= 4 && (
+                <div className="mb-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 max-w-3xl mx-auto rounded-lg">
+                    <p>
+                        Warning: The student has accumulated <strong>{totalAbsences}</strong> absences. If this continues, the student will be reprimanded.
+                    </p>
+                </div>
+            )}
+
+            {/* Notification Button */}
+            <div className="absolute top-4 right-4">
+                <button
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center gap-2"
+                    onClick={() => setIsModalOpen(true)}
+                >
+                    <FaBell className="text-xl" />
+                    Notifications
+                </button>
+            </div>
+
+            {/* Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4">Total Absences</h2>
+                        <p className="text-gray-700 text-lg">
+                            You have a total of <strong>{totalAbsences}</strong> absences since the semester started.
+                        </p>
+                        <div className="mt-6 flex justify-end">
+                            <button
+                                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out"
+                                onClick={() => setIsModalOpen(false)}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* User Information Card */}
             <div className="mb-10 p-6 bg-white rounded-lg shadow-lg max-w-3xl mx-auto space-y-2">
@@ -140,11 +142,12 @@ const StudentAttendance = () => {
             {/* Export Button */}
             <div className="flex justify-end max-w-3xl mx-auto mb-6">
                 <button
-                    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center gap-2"
+                    className={`bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center gap-2 ${exporting ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={generateExcel}
+                    disabled={exporting}
                 >
                     <FaFileExcel className="text-xl" />
-                    Export to Excel
+                    {exporting ? 'Exporting...' : 'Export to Excel'}
                 </button>
             </div>
 

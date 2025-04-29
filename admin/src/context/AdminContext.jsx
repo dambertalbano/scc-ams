@@ -314,7 +314,8 @@ const AdminContextProvider = (props) => {
             });
 
             if (response.data.success) {
-                return response.data.attendanceRecords;
+                // Sort the records by timestamp in ascending order on the frontend
+                return response.data.attendanceRecords.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             } else {
                 toast.error(response.data.message || "Failed to fetch attendance records");
                 return [];

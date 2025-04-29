@@ -37,4 +37,16 @@ const startServer = async () => {
     }
 };
 
+const allowedOrigins = [
+    'https://stclareonline-ams.live',
+    'https://www.stclareonline-ams.live',
+    'https://scc-ams-frontend.onrender.com'
+  ];
+  
+  app.use(cors({
+    origin: allowedOrigins,
+    credentials: true
+  }));
+
+  
 startServer();

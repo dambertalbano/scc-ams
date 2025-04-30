@@ -153,12 +153,12 @@ const AttendanceTeacherCard = () => {
     }
 
     return (
-        <div className="p-6 bg-white w-full">
-            <div className="mb-6 flex justify-between items-center">
-                <div className="relative">
+        <div className="p-4 sm:p-6 md:p-10 bg-white w-full">
+            <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="relative w-full sm:w-auto">
                     <input
                         type="text"
-                        className="border rounded px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="border rounded px-4 py-2 w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Search by Name"
                         value={searchTerm}
                         onChange={handleSearch}
@@ -174,7 +174,7 @@ const AttendanceTeacherCard = () => {
             </div>
 
             {/* Date Navigation */}
-            <div className="flex justify-center items-center mb-4">
+            <div className="flex justify-center items-center mb-4 relative">
                 <button
                     className="bg-gray-200 hover:bg-gray-300 rounded-full p-2"
                     onClick={toggleCalendar}
@@ -205,11 +205,11 @@ const AttendanceTeacherCard = () => {
                 <table className="min-w-full table-auto border-collapse mt-5">
                     <thead>
                         <tr className="border-b bg-gray-100">
-                            <th className="px-4 py-2 text-left text-gray-600">Name</th>
-                            <th className="px-4 py-2 text-left text-gray-600">Role</th>
-                            <th className="px-4 py-2 text-left text-gray-600">Event Type</th>
-                            <th className="px-4 py-2 text-left text-gray-600">Date</th>
-                            <th className="px-4 py-2 text-left text-gray-600">Time</th>
+                            <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Name</th>
+                            <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Role</th>
+                            <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Event Type</th>
+                            <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Date</th>
+                            <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Time</th>
                         </tr>
                     </thead>
                     <tbody>

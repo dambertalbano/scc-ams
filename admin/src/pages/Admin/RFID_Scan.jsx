@@ -46,13 +46,10 @@ const RFID_Scan = () => {
         setError('');
 
         try {
-            console.log(`Scanning RFID code: ${code}`);
             const response = await getUserByCode(code);
-            console.log('User fetched:', response);
 
             if (response && response.success && response.user) {
                 setUserInfo(response.user);
-                console.log('User info set:', response.user);
 
                 const user = response.user;
 
@@ -102,7 +99,6 @@ const RFID_Scan = () => {
             }
         } catch (err) {
             setError('An error occurred while fetching user data.');
-            console.error('Error fetching user data:', err);
             setUserInfo(null);
         } finally {
             setLoading(false);
@@ -128,7 +124,6 @@ const RFID_Scan = () => {
             }
         } catch (error) {
             setError('Failed to sign in.');
-            console.error(error);
         }
     };
 
@@ -143,46 +138,46 @@ const RFID_Scan = () => {
             }
         } catch (error) {
             setError('Failed to sign out.');
-            console.error(error);
         }
     };
 
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.9 }} 
-            animate={{ opacity: 1, scale: 1, transition: { duration: 0.5, ease: "easeOut" } }} 
-            className="flex justify-center items-center min-h-screen w-full bg-gray-100 p-4">
-                <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-2xl w-full">
-                    {!loading && (
-                        <div className="flex items-center justify-center mb-4 text-customRed">
-                            <FiInfo className="w-8 h-8" />
-                            <h2 className="text-3xl font-bold ml-2">User Information</h2>
-                        </div>
-                    )}
-                    {loading ? (
-                        <div className="flex justify-center items-center">
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1, transition: { duration: 0.5, ease: "easeOut" } }}
+            className="flex justify-center items-center min-h-screen w-full bg-gray-100 p-4 sm:p-6 md:p-10"
+        >
+            <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-2xl w-full">
+                {!loading && (
+                    <div className="flex items-center justify-center mb-4 text-customRed">
+                        <FiInfo className="w-8 h-8" />
+                        <h2 className="text-3xl font-bold ml-2">User Information</h2>
+                    </div>
+                )}
+                {loading ? (
+                    <div className="flex justify-center items-center">
                         <Loader className="w-5 h-5 text-customRed animate-spin mr-2" />
                         <span className="text-customRed">Scanning ...</span>
                     </div>
-                    ) : error ? (
-                        <>
-                            <p className="text-red-500 text-center">{error}</p>
-                            {userInfo ? (
-                                userInfo.position !== 'Teacher' ? (
-                                    <UserInfoDisplay userInfo={userInfo} formatName={formatName} />
-                                ) : null
-                            ) : (
-                                <BlankUserInfo />
-                            )}
-                        </>
-                    ) : userInfo ? (
-                        userInfo.position !== 'Teacher' ? (
-                            <UserInfoDisplay userInfo={userInfo} formatName={formatName} />
-                        ) : null
-                    ) : (
-                        <BlankUserInfo />
-                    )}
-                </div>
+                ) : error ? (
+                    <>
+                        <p className="text-red-500 text-center">{error}</p>
+                        {userInfo ? (
+                            userInfo.position !== 'Teacher' ? (
+                                <UserInfoDisplay userInfo={userInfo} formatName={formatName} />
+                            ) : null
+                        ) : (
+                            <BlankUserInfo />
+                        )}
+                    </>
+                ) : userInfo ? (
+                    userInfo.position !== 'Teacher' ? (
+                        <UserInfoDisplay userInfo={userInfo} formatName={formatName} />
+                    ) : null
+                ) : (
+                    <BlankUserInfo />
+                )}
+            </div>
         </motion.div>
     );
 };
@@ -201,7 +196,6 @@ const UserInfoDisplay = ({ userInfo, formatName }) => {
                 second: 'numeric',
             });
         } catch (error) {
-            console.error("Error formatting date:", error);
             return 'Invalid Date';
         }
     };

@@ -77,6 +77,10 @@ const Navbar = forwardRef((props, ref) => {
                 {
                     title: 'Attendance',
                     path: '/attendance',
+                    subMenu: [
+                        { name: 'Student', path: '/attendance-student' },
+                        { name: 'Teacher', path: '/attendance-teacher' },
+                    ],
                 },
                 {
                     title: 'User List',

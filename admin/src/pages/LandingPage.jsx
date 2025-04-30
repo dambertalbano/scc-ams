@@ -27,21 +27,21 @@ export default function LandingPage() {
   const handleClosePrivacy = () => setShowPrivacy(false);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex flex-col md:flex-row h-screen">
       {/* Left Side - Building Image */}
       <div
-        className="w-7/12 bg-cover bg-center"
+        className="hidden md:block w-full md:w-7/12 h-1/3 md:h-full bg-cover bg-center"
         style={{ backgroundImage: `url(${scc_bg})` }}
       ></div>
 
       {/* Right Side - Login Section */}
       <div
-        className="w-5/12 bg-gray-100 flex flex-col justify-center items-center p-10 shadow-lg"
+        className="w-full md:w-5/12 h-full bg-gray-100 flex flex-col justify-center items-center p-6 md:p-10 shadow-lg"
         style={{ backgroundImage: `url(${bgSolid})` }}
       >
-        <img src={admin_logo} alt="SCC Logo" className="w-20 h-20 mb-4" />
-        <h1 className="text-3xl font-bold text-white">Hi, Clareans!</h1>
-        <p className="text-white mb-6">Please click or tap your destination.</p>
+        <img src={admin_logo} alt="SCC Logo" className="w-16 h-16 md:w-20 md:h-20 mb-4" />
+        <h1 className="text-2xl md:text-3xl font-bold text-white text-center">Hi, Clareans!</h1>
+        <p className="text-white mb-6 text-center">Please click or tap your destination.</p>
 
         <Link
           to="/student-login"
@@ -74,7 +74,7 @@ export default function LandingPage() {
       {showTerms && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-md p-6 w-11/12 md:w-1/2 max-h-[80vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Terms of Use</h2>
+            <h2 className="text-xl md:text-2xl font-bold mb-4">Terms of Use</h2>
             <p className="mb-4">
               Welcome to SCC AMS (St. Clare College Attendance Management System). By accessing or using this system, you agree to be bound by these Terms of Use. Please read them carefully.
             </p>
@@ -117,7 +117,7 @@ export default function LandingPage() {
       {showPrivacy && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-md p-6 w-11/12 md:w-1/2 max-h-[80vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Privacy Statement</h2>
+            <h2 className="text-xl md:text-2xl font-bold mb-4">Privacy Statement</h2>
             <p className="mb-4">
               At SCC AMS, we are committed to protecting the privacy and personal information of all users, including students, faculty, and staff. This Privacy Statement outlines how we collect, use, store, and protect your data.
             </p>

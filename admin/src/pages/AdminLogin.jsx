@@ -68,27 +68,38 @@ const AdminLogin = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${bgSolid})` }}>
+        <div
+            className="min-h-screen flex items-center justify-center bg-cover bg-center p-4 sm:p-6 md:p-10"
+            style={{ backgroundImage: `url(${bgSolid})` }}
+        >
             <motion.form
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5 }}
                 onSubmit={onSubmitHandler}
-                className="w-full max-w-2xl p-14 bg-white rounded-2xl shadow-2xl"
+                className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl p-6 sm:p-10 md:p-14 bg-white rounded-lg sm:rounded-xl md:rounded-2xl shadow-lg sm:shadow-xl md:shadow-2xl"
             >
                 <div className="flex flex-col gap-6">
-                    <p className="text-4xl font-bold m-auto text-gray-800">
+                    <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-gray-800">
                         Welcome <span className="text-customRed">Admin</span>!
                     </p>
 
                     {error && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                        <div
+                            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm sm:text-base"
+                            role="alert"
+                        >
                             <span className="block sm:inline">{error}</span>
                         </div>
                     )}
 
                     <div className="w-full">
-                        <label htmlFor="email" className="block text-md font-medium text-gray-700">E-mail</label>
+                        <label
+                            htmlFor="email"
+                            className="block text-sm sm:text-md font-medium text-gray-700"
+                        >
+                            E-mail
+                        </label>
                         <input
                             id="email"
                             onChange={(e) => setEmail(e.target.value)}
@@ -101,7 +112,10 @@ const AdminLogin = () => {
                         />
                     </div>
                     <div className="w-full relative">
-                        <label htmlFor="password" className="block text-md font-medium text-gray-700">
+                        <label
+                            htmlFor="password"
+                            className="block text-sm sm:text-md font-medium text-gray-700"
+                        >
                             Password
                         </label>
                         <div className="relative mt-1">
@@ -121,16 +135,22 @@ const AdminLogin = () => {
                                 onClick={() => setShowPassword(!showPassword)}
                                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                             >
-                                {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                                {showPassword ? (
+                                    <EyeSlashIcon className="h-5 w-5" />
+                                ) : (
+                                    <EyeIcon className="h-5 w-5" />
+                                )}
                             </button>
                         </div>
                     </div>
                     <button
-                        className={`bg-customRed hover:text-navbar hover:bg-red-800 text-white w-full py-3 rounded-md text-base transition-all duration-300 shadow-md hover:shadow-lg hover:translate-y-[-2px] ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`bg-customRed hover:text-navbar hover:bg-red-800 text-white w-full py-3 rounded-md text-sm sm:text-base transition-all duration-300 shadow-md hover:shadow-lg hover:translate-y-[-2px] ${
+                            loading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                         disabled={loading}
                         aria-label="Login Button"
                     >
-                        {loading ? 'Sign In' : 'Login'}
+                        {loading ? 'Signing In...' : 'Login'}
                     </button>
                 </div>
             </motion.form>

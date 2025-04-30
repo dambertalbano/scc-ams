@@ -11,7 +11,7 @@ const RFID_Scan = () => {
     const [userInfo, setUserInfo] = useState(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [lastScannedTimes, setLastScannedTimes] = useState({}); // Store last scanned time per user
+    const [lastScannedTimes, setLastScannedTimes] = useState({});
 
     useEffect(() => {
         document.title = 'Scan';
@@ -23,7 +23,6 @@ const RFID_Scan = () => {
                 if (scannedCode.trim() !== '') {
                     handleScan(scannedCode.trim());
                 }
-                // Clear the scannedCode after processing the Enter key
                 setScannedCode('');
             } else {
                 setScannedCode((prevCode) => prevCode + event.key);
@@ -57,7 +56,6 @@ const RFID_Scan = () => {
 
                 const user = response.user;
 
-                // Prevent double scanning within the same minute for this user
                 const now = new Date();
                 if (lastScannedTimes[code] && now.getTime() - lastScannedTimes[code].getTime() < 60000) {
                     setError('Please wait at least one minute before scanning again.');
@@ -65,7 +63,6 @@ const RFID_Scan = () => {
                     return;
                 }
 
-                // Check if sign-in and sign-out already recorded for *today*
                 const today = new Date();
                 const signInDate = user.signInTime ? new Date(user.signInTime) : null;
                 const signOutDate = user.signOutTime ? new Date(user.signOutTime) : null;
@@ -88,7 +85,6 @@ const RFID_Scan = () => {
                     return;
                 }
 
-                // Determine whether to sign in or sign out
                 if (!user.signInTime || (user.signOutTime && user.signOutTime > user.signInTime)) {
                     await handleSignIn(code);
                 } else if (user.signInTime && (!user.signOutTime || user.signOutTime < user.signInTime)) {
@@ -99,7 +95,6 @@ const RFID_Scan = () => {
                     return;
                 }
 
-                // Update last scanned time for this user
                 setLastScannedTimes(prevTimes => ({ ...prevTimes, [code]: now }));
             } else {
                 setError('No user found with this code');
@@ -125,7 +120,6 @@ const RFID_Scan = () => {
     const handleSignIn = async (code) => {
         try {
             await adminSignIn(code);
-            // Refresh user info after sign-in
             const response = await getUserByCode(code);
             if (response && response.success && response.user) {
                 setUserInfo(response.user);
@@ -141,7 +135,6 @@ const RFID_Scan = () => {
     const handleSignOut = async (code) => {
         try {
             await adminSignOut(code);
-            // Refresh user info after sign-out
             const response = await getUserByCode(code);
             if (response && response.success && response.user) {
                 setUserInfo(response.user);
@@ -195,7 +188,6 @@ const RFID_Scan = () => {
 };
 
 const UserInfoDisplay = ({ userInfo, formatName }) => {
-    // Function to format the date and time
     const formatDateTime = (dateTimeString) => {
         if (!dateTimeString) return 'No Data';
         try {

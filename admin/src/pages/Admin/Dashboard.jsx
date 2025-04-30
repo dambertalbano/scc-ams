@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import React, { useContext, useEffect } from 'react';
-import { FiUsers } from "react-icons/fi"; // All cards use this icon
+import { FiUsers } from "react-icons/fi";
 import { useNavigate } from 'react-router-dom';
 import { AdminContext } from '../../context/AdminContext';
 
@@ -67,7 +67,7 @@ const Card = ({ name, count, onClick }) => {
             transition={{ type: "spring", mass: 3, stiffness: 400, damping: 50 }}
             whileHover={{ scale: 1.05 }}
             onClick={onClick}
-            className="relative w-full p-14 rounded-lg border border-gray-300 cursor-pointer bg-white overflow-hidden group shadow-md" // Increased padding from p-8 to p-12
+            className="relative w-full p-14 rounded-lg border border-gray-300 cursor-pointer bg-white overflow-hidden group shadow-md"
         >
             {/* Background */}
             <div className="absolute inset-0 translate-y-[100%] group-hover:translate-y-[0%] transition-transform duration-300"

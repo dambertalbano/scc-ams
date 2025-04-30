@@ -5,7 +5,7 @@ import { useAdminContext } from "../../context/AdminContext";
 const Schedules = () => {
     const { getAllSchedules, createSchedule, updateSchedule, deleteSchedule, getAllTeachers } = useAdminContext();
     const [schedules, setSchedules] = useState([]);
-    const [teachers, setTeachers] = useState([]); // Store all teacher objects
+    const [teachers, setTeachers] = useState([]);
     const [formData, setFormData] = useState({
         subjectId: "",
         teacherName: "",
@@ -26,15 +26,15 @@ const Schedules = () => {
 
         const fetchTeachers = async () => {
             try {
-                const data = await getAllTeachers(); // Fetch all teachers
+                const data = await getAllTeachers();
                 if (Array.isArray(data)) {
-                    setTeachers(data); // Store teacher objects
+                    setTeachers(data);
                 } else {
-                    setTeachers([]); // Set an empty array if data is not an array
+                    setTeachers([]);
                 }
             } catch (error) {
                 console.error("Error fetching teachers:", error);
-                setTeachers([]); // Set an empty array in case of an error
+                setTeachers([]);
             }
         };
 
@@ -103,7 +103,7 @@ const Schedules = () => {
                         required
                     />
                     <input
-                        list="teacherNames" // Use a datalist for autofill
+                        list="teacherNames"
                         placeholder="Teacher Name"
                         value={formData.teacherName}
                         onChange={(e) => setFormData({ ...formData, teacherName: e.target.value })}

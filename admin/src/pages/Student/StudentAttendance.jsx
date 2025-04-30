@@ -4,12 +4,11 @@ import * as XLSX from 'xlsx';
 
 const StudentAttendance = () => {
     const [attendanceRecords, setAttendanceRecords] = useState([]);
-    const [loading, setLoading] = useState(false); // No need to fetch data, so loading is false
-    const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
-    const [totalAbsences, setTotalAbsences] = useState(4); // Mock absences set to 4
+    const [loading, setLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [totalAbsences, setTotalAbsences] = useState(4);
     const [exporting, setExporting] = useState(false);
 
-    // Mock data for attendance and semester dates
     const mockResponse = {
         success: true,
         attendance: [
@@ -34,10 +33,9 @@ const StudentAttendance = () => {
         }
     };
 
-    // Set attendance records from mock data using useEffect
     useEffect(() => {
         setAttendanceRecords(mockResponse.attendance);
-    }, []); // Empty dependency array ensures this runs only once
+    }, []);
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
@@ -58,7 +56,7 @@ const StudentAttendance = () => {
             ['Education Level:', attendanceRecords[0]?.user.educationLevel],
             ['Grade Year Level:', attendanceRecords[0]?.user.gradeYearLevel],
             ['Section:', attendanceRecords[0]?.user.section],
-            [], // Add a blank row for spacing
+            [],
         ] : [['No attendance records available']];
 
         const wsData = [

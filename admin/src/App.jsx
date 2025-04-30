@@ -51,10 +51,8 @@ const App = () => {
             }
         };
 
-        // Initial update
         updateNavbarHeight();
 
-        // Update on resize
         window.addEventListener('resize', updateNavbarHeight);
 
         return () => {
@@ -63,12 +61,6 @@ const App = () => {
     }, []);
 
     useEffect(() => {
-        console.log('App.jsx useEffect triggered');
-        console.log('aToken:', aToken);
-        console.log('dToken:', dToken);
-        console.log('sToken:', sToken);
-        console.log('location.pathname:', location.pathname);
-
         if (location.pathname === '/') {
             if (aToken) {
                 navigate('/admin-dashboard', { replace: true });
@@ -81,16 +73,13 @@ const App = () => {
     }, [aToken, dToken, sToken, navigate, location.pathname]);
 
     const handleLogout = () => {
-        console.log('handleLogout triggered');
-        // Centralized logout logic (clear tokens in all contexts)
         setAToken(null);
         setDToken(null);
         setSToken(null);
         localStorage.removeItem('aToken');
         localStorage.removeItem('dToken');
         localStorage.removeItem('sToken');
-        // Force a re-render to trigger the useEffect
-        navigate(0); // This forces a full re-render
+        navigate(0);
     };
 
     return (

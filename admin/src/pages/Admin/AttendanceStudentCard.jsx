@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { FaCalendarAlt, FaFileExcel, FaSearch, FaTimes } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import { useAdminContext } from '../../context/AdminContext';
 
@@ -101,7 +102,7 @@ const AttendanceStudentCard = () => {
 
     const generateExcel = useCallback(() => {
         if (filteredAttendanceRecords.length === 0) {
-            alert("No attendance records to export.");
+            toast.error("No attendance records to export.");
             return;
         }
 
@@ -115,7 +116,6 @@ const AttendanceStudentCard = () => {
 
         const worksheet = XLSX.utils.json_to_sheet(data);
 
-        // Adjust column widths
         const columnWidths = [
             { wch: 15 }, // Student Number
             { wch: 25 }, // Name
@@ -130,12 +130,14 @@ const AttendanceStudentCard = () => {
 
         const fileName = `Attendance_${currentDate.toLocaleDateString().replace(/\//g, '-')}.xlsx`;
         XLSX.writeFile(workbook, fileName);
+
+        toast.success("Excel file generated successfully!");
     }, [filteredAttendanceRecords, currentDate, formatDate, formatFullName, formatTime]);
 
     const mergedRows = useMemo(() => {
         const rows = filteredAttendanceRecords.map((record) => {
             if (!record.user) {
-                console.warn(`User data missing for record: ${record._id}`);
+                toast.error(`User data missing for record: ${record._id}`);
                 return null;
             }
 

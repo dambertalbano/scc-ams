@@ -72,7 +72,7 @@ const TeacherAttendance = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                console.log("API Response:", data); // Debug log
+                console.log("API Response:", data);
                 setStudents(data.students || []);
             } else {
                 setError("Failed to fetch students.");
@@ -115,7 +115,7 @@ const TeacherAttendance = () => {
 
             return signInDate === selectedDate || signOutDate === selectedDate;
         });
-        console.log("Filtered Students by Attendance:", filtered); // Debugging log
+        console.log("Filtered Students by Attendance:", filtered);
         setFilteredStudents(filtered);
     }, [students, currentDate]);
 
@@ -195,7 +195,6 @@ const TeacherAttendance = () => {
             worksheet.getCell("W8").value = `${gradeLevel}`;
             worksheet.getCell("AD8").value = `${section}`;
 
-            // ✅ Fixed header mapping
             const dateToColumnMap = {};
             worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
                 if (colNumber >= 4 && colNumber <= 29) {
@@ -239,7 +238,6 @@ const TeacherAttendance = () => {
                 const row = worksheet.getRow(startRow + index);
                 row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
 
-                // Normalize dates to ISO format without time
                 const signInDate = student.signInTime
                     ? new Date(student.signInTime).toISOString().split("T")[0]
                     : null;
@@ -334,11 +332,11 @@ const TeacherAttendance = () => {
                     className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={selectedAssignment?._id || ""}
                     onChange={(e) => {
-                        e.preventDefault(); // Prevent the default form submission behavior
+                        e.preventDefault();
                         const assignment = teachingAssignments.find(
                             (ta) => ta._id === e.target.value
                         );
-                        console.log("Selected Assignment:", assignment); // Debugging log
+                        console.log("Selected Assignment:", assignment);
                         setSelectedAssignment(assignment);
                     }}
                 >

@@ -17,7 +17,7 @@ const ProfileHeader = ({ studentInfo }) => {
           className="w-32 h-32 rounded-full border-2 border-white shadow-md"
           onError={(e) => {
             e.target.onerror = null;
-            e.target.src = studentInfo.image; // Use user image as fallback
+            e.target.src = studentInfo.image;
           }}
         />
       )}

@@ -48,7 +48,6 @@ const AttendanceTeacherCard = () => {
                 console.error("fetchAttendanceRecords did not return an array:", records);
             }
 
-            // Filter records to only include teachers
             const teacherRecords = records.filter(record => record.userType === 'Teacher');
 
             setAttendanceRecords(teacherRecords);
@@ -108,7 +107,6 @@ const AttendanceTeacherCard = () => {
 
         const worksheet = XLSX.utils.json_to_sheet(data);
 
-        // Adjust column widths
         const columnWidths = [
             { wch: 25 }, // Name
             { wch: 10 }, // Role

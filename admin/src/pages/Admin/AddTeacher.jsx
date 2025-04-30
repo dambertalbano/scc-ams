@@ -70,6 +70,8 @@ const AddTeacher = () => {
                 setAddress('');
                 setNumber('');
                 setCode('');
+
+                toast.success('Teacher added successfully!');
             }
         } catch (error) {
             console.error("Error Response:", error.response);

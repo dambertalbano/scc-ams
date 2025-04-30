@@ -13,7 +13,7 @@ export default function LandingPage() {
   const handleOpenTerms = () => {
     setShowTerms(true);
     setTermsButtonEnabled(false);
-    setTimeout(() => setTermsButtonEnabled(true), 5000); // Enable button after 5 seconds
+    setTimeout(() => setTermsButtonEnabled(true), 5000);
   };
 
   const handleCloseTerms = () => setShowTerms(false);
@@ -21,7 +21,7 @@ export default function LandingPage() {
   const handleOpenPrivacy = () => {
     setShowPrivacy(true);
     setPrivacyButtonEnabled(false);
-    setTimeout(() => setPrivacyButtonEnabled(true), 5000); // Enable button after 5 seconds
+    setTimeout(() => setPrivacyButtonEnabled(true), 5000);
   };
 
   const handleClosePrivacy = () => setShowPrivacy(false);

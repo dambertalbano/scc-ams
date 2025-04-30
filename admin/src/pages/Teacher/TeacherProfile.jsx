@@ -210,12 +210,12 @@ const TeacherProfile = () => {
   };
 
   const handleUpdateProfile = async (e) => {
-    e.preventDefault(); // Prevent the default form submission behavior
+    e.preventDefault();
     try {
-      const success = await updateTeacherByProfile(formData); // Call the function with the updated form data
+      const success = await updateTeacherByProfile(formData);
       if (success) {
         alert("Profile updated successfully!");
-        fetchTeacherProfile(); // Refresh the profile data after a successful update
+        fetchTeacherProfile();
       } else {
         alert("Failed to update profile.");
       }
@@ -226,9 +226,9 @@ const TeacherProfile = () => {
   };
 
   const addMonthlyTotals = (worksheet, students, headerDates) => {
-    const startRow = 14; // Starting row for student data
-    const absentColumn = 30; // Column AD (Absent)
-    const tardyColumn = 31; // Column AE (Tardy)
+    const startRow = 14;
+    const absentColumn = 30;
+    const tardyColumn = 31;
 
     students.forEach((student, index) => {
         const row = worksheet.getRow(startRow + index);
@@ -236,7 +236,6 @@ const TeacherProfile = () => {
         let totalAbsent = 0;
         let totalTardy = 0;
 
-        // Iterate through headerDates to calculate totals
         headerDates.forEach((headerDate, columnIndex) => {
             if (columnIndex >= 4) {
                 const signInDate = student.signInTime
@@ -246,21 +245,18 @@ const TeacherProfile = () => {
                     ? new Date(student.signOutTime).toISOString().split("T")[0]
                     : null;
 
-                // Count as absent if no sign-in or sign-out matches the date
                 if (headerDate && headerDate !== signInDate && headerDate !== signOutDate) {
                     totalAbsent++;
                 }
 
-                // Example logic for tardy (if applicable)
                 if (student.isTardy && headerDate === signInDate) {
                     totalTardy++;
                 }
             }
         });
 
-        // Write totals to the respective columns
-        row.getCell(absentColumn).value = totalAbsent; // Total Absent
-        row.getCell(tardyColumn).value = totalTardy; // Total Tardy
+        row.getCell(absentColumn).value = totalAbsent;
+        row.getCell(tardyColumn).value = totalTardy;
 
         row.commit();
     });
@@ -366,13 +362,12 @@ const generateExcel = async () => {
           const isFutureDate = new Date(headerDate) > currentDate;
 
           if (isFutureDate) {
-            // Leave the column empty for future dates
             worksheet.getColumn(columnIndex).eachCell((cell, rowNumber) => {
               if (rowNumber >= startRow && rowNumber <= startRow + students.length) {
                 cell.value = null;
               }
             });
-            dailyTotals[columnIndex - 4] = null; // Leave total empty
+            dailyTotals[columnIndex - 4] = null;
           } else {
             let hasPresent = false;
 
@@ -393,7 +388,6 @@ const generateExcel = async () => {
               }
             });
 
-            // If there is at least one "P", mark the rest as "A"
             if (hasPresent) {
               students.forEach((student, index) => {
                 const row = worksheet.getRow(startRow + index);
@@ -514,7 +508,7 @@ const generateExcel = async () => {
               const assignment = teachingAssignments.find(
                 (ta) => ta._id === e.target.value
               );
-              console.log("Selected Assignment:", assignment); // Debugging log
+              console.log("Selected Assignment:", assignment);
               setSelectedAssignment(assignment);
             }}
           >
@@ -568,7 +562,7 @@ const generateExcel = async () => {
         <button
           className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg w-full md:w-auto"
           onClick={(e) => {
-            e.preventDefault(); // Prevent the default form submission behavior
+            e.preventDefault();
             generateExcel();
           }}
           disabled={loading}

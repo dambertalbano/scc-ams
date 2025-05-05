@@ -173,21 +173,50 @@ const getStudentsByTeacher = async (req, res) => {
 };
 
 const getStudentsByTeachingAssignment = async (req, res) => {
+    console.log("<<<<< ENTERED getStudentsByTeachingAssignment >>>>>"); // Add entry log
     try {
         const { assignmentId } = req.params;
-        const { date } = req.query;
+        // Get all potential date parameters
+        const { date, startDate, endDate } = req.query;
 
-        if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-            return res.status(400).json({ success: false, message: "Date is required in YYYY-MM-DD format" });
+        let startQueryDate;
+        let endQueryDate;
+        let isDateRange = false;
+
+        // --- Logic to handle single date OR date range ---
+        if (date) {
+            // Single date scenario (Teacher Attendance page)
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                return res.status(400).json({ success: false, message: "Date parameter requires YYYY-MM-DD format" });
+            }
+            startQueryDate = new Date(`${date}T00:00:00.000Z`);
+            endQueryDate = new Date(`${date}T23:59:59.999Z`);
+            console.log("--- Backend: Handling Single Date ---");
+            console.log("Requested Date:", date);
+        } else if (startDate && endDate) {
+            // Date range scenario (Excel Export)
+            isDateRange = true;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+                return res.status(400).json({ success: false, message: "startDate and endDate parameters require YYYY-MM-DD format" });
+            }
+            startQueryDate = new Date(`${startDate}T00:00:00.000Z`);
+            endQueryDate = new Date(`${endDate}T23:59:59.999Z`);
+            console.log("--- Backend: Handling Date Range ---");
+            console.log("Requested Start Date:", startDate);
+            console.log("Requested End Date:", endDate);
+        } else {
+            // Neither date nor startDate/endDate provided
+            return res.status(400).json({ success: false, message: "Either 'date' or both 'startDate' and 'endDate' query parameters are required (YYYY-MM-DD)" });
         }
 
-        const startOfDay = new Date(`${date}T00:00:00.000Z`);
-        const endOfDay = new Date(`${date}T23:59:59.999Z`);
-
-        if (isNaN(startOfDay.getTime()) || isNaN(endOfDay.getTime())) {
+        // Validate parsed dates
+        if (isNaN(startQueryDate.getTime()) || isNaN(endQueryDate.getTime())) {
             return res.status(400).json({ success: false, message: "Invalid date provided" });
         }
+        // --- End date handling logic ---
 
+
+        // --- Fetch assignment and students (remains the same) ---
         const teacherWithAssignment = await teacherModel.findOne({
             "teachingAssignments._id": assignmentId,
         });
@@ -195,61 +224,71 @@ const getStudentsByTeachingAssignment = async (req, res) => {
         if (!teacherWithAssignment) {
             return res.status(404).json({ success: false, message: "Assignment not found" });
         }
-
+        // ... (rest of assignment/student fetching logic is the same) ...
         const assignmentDetails = teacherWithAssignment.teachingAssignments.find(
             (ta) => ta._id.toString() === assignmentId
         );
-
         if (!assignmentDetails) {
-            return res.status(404).json({ success: false, message: "Assignment details not found within teacher record" });
+             return res.status(404).json({ success: false, message: "Assignment details not found within teacher record" });
         }
-
         const { educationLevel, gradeYearLevel, section } = assignmentDetails;
-
         const students = await studentModel.find({
             educationLevel,
             gradeYearLevel,
             section,
         }).lean();
-
         const studentIds = students.map((student) => student._id);
+        // --- End fetching assignment/students ---
 
-        const attendanceRecords = await attendanceModel.find({
+
+        // --- Fetch attendance based on calculated date range ---
+        const attendanceQuery = {
             user: { $in: studentIds },
-            timestamp: { $gte: startOfDay, $lte: endOfDay },
-        }).lean();
+            timestamp: { $gte: startQueryDate, $lte: endQueryDate },
+        };
+        const attendanceRecords = await attendanceModel.find(attendanceQuery).lean();
+        // --- End fetching attendance ---
 
-        console.log("--- Backend: getStudentsByTeachingAssignment ---");
-        console.log("Requested Date:", date);
+
+        // --- Logging ---
         console.log("Assignment ID:", assignmentId);
-        console.log("Query Start Date (UTC):", startOfDay.toISOString());
-        console.log("Query End Date (UTC):", endOfDay.toISOString());
+        console.log("Query Start Date (UTC):", startQueryDate.toISOString());
+        console.log("Query End Date (UTC):", endQueryDate.toISOString());
         console.log("Found Students Count:", students.length);
         console.log("Student IDs for Query:", studentIds);
-        console.log("Attendance Query:", {
-            user: { $in: studentIds },
-            timestamp: { $gte: startOfDay, $lte: endOfDay },
-        });
+        console.log("Attendance Query:", attendanceQuery);
         console.log("Fetched Attendance Records Count:", attendanceRecords.length);
+        // --- End Logging ---
 
+
+        // --- Process and return data ---
+        // Modify the structure slightly for date range to include all records
         const studentsWithAttendance = students.map((student) => {
             const studentAttendance = attendanceRecords.filter(
                 (record) => record.user.toString() === student._id.toString()
             );
+            studentAttendance.sort((a, b) => a.timestamp - b.timestamp); // Sort records chronologically
 
-            studentAttendance.sort((a, b) => a.timestamp - b.timestamp);
-
-            const signInRecord = studentAttendance.find((record) => record.eventType === "sign-in");
-            const signOutRecord = studentAttendance.slice().reverse().find((record) => record.eventType === "sign-out");
-
-            return {
-                ...student,
-                signInTime: signInRecord ? signInRecord.timestamp : null,
-                signOutTime: signOutRecord ? signOutRecord.timestamp : null,
-            };
+            if (isDateRange) {
+                // For Excel/date range, return all records for the student in the range
+                 return {
+                    ...student,
+                    attendanceInRange: studentAttendance, // Embed all records
+                };
+            } else {
+                 // For single date, find first sign-in and last sign-out
+                const signInRecord = studentAttendance.find((record) => record.eventType === "sign-in");
+                const signOutRecord = studentAttendance.slice().reverse().find((record) => record.eventType === "sign-out");
+                return {
+                    ...student,
+                    signInTime: signInRecord ? signInRecord.timestamp : null,
+                    signOutTime: signOutRecord ? signOutRecord.timestamp : null,
+                };
+            }
         });
 
         res.status(200).json({ success: true, students: studentsWithAttendance });
+        // --- End processing and return ---
 
     } catch (error) {
         console.error("Error fetching students by teaching assignment:", error);

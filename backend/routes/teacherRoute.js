@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { addTeacherClassSchedule, addTeacherEducationLevel, addTeacherGradeYearLevel, addTeacherSection, addTeacherSubjects, editTeacherClassSchedule, editTeacherEducationLevel, editTeacherGradeYearLevel, editTeacherSubjects, getAttendance, getAttendanceRecords, getStudentsByTeacher, loginTeacher, logoutTeacher, removeTeacherClassSchedule, removeTeacherEducationLevel, removeTeacherGradeYearLevel, removeTeacherSection, removeTeacherSubjects, teacherProfile, updateTeacher, updateTeacherProfile } from '../controllers/teacherController.js'; // Import all controller functions
+import { addTeacherClassSchedule, addTeacherEducationLevel, addTeacherGradeYearLevel, addTeacherSection, addTeacherSubjects, editTeacherClassSchedule, editTeacherEducationLevel, editTeacherGradeYearLevel, editTeacherSubjects, getAttendance, getAttendanceRecords, getStudentsByTeachingAssignment, loginTeacher, logoutTeacher, removeTeacherClassSchedule, removeTeacherEducationLevel, removeTeacherGradeYearLevel, removeTeacherSection, removeTeacherSubjects, teacherProfile, updateTeacher, updateTeacherProfile } from '../controllers/teacherController.js'; // Import all controller functions
 import authTeacher from '../middleware/authTeacher.js'; // Import auth middleware
 import teacherModel from '../models/teacherModel.js';
 
@@ -18,7 +18,21 @@ router.put("/profile", authTeacher, [
     body('address').optional().trim().escape(),
     body('code').optional().trim().escape(),
 ], updateTeacherProfile);
-router.get("/students/:assignmentId", authTeacher, getStudentsByTeacher);
+
+router.get("/students/:assignmentId",
+    (req, res, next) => { // 1. Initial Log
+        console.log(`***** Route /students/:assignmentId matched! ID: ${req.params.assignmentId}, Date: ${req.query.date} *****`);
+        next();
+    },
+    authTeacher, // 2. Authentication Middleware
+    (req, res, next) => { // 3. Log AFTER authTeacher
+        // --- ADD THIS LOG ---
+        console.log(`***** AFTER authTeacher. Teacher ID: ${req.teacher?._id} *****`);
+        // --- END ADDED LOG ---
+        next();
+    },
+    getStudentsByTeachingAssignment // 4. Final Controller
+);
 
 router.put('/:id', authTeacher, [  // Route for updating a teacher by ID
     body('firstName').optional().trim().escape(),

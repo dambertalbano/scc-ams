@@ -51,16 +51,20 @@ const TeacherAttendance = () => {
         }
     }, [dToken, backendUrl]);
 
-    const fetchStudents = useCallback(async () => {
+    useEffect(() => {
+        fetchTeacherInfo();
+    }, [fetchTeacherInfo]);
+
+    useEffect(() => {
         if (!selectedAssignment) {
             console.log("Missing assignmentId:", { selectedAssignment });
             return;
         }
 
-        setLoading(true);
-        setError(null);
-        try {
+        const fetchStudents = async () => {
             const formattedDate = currentDate.toISOString().split("T")[0];
+            console.log("Fetching students for date:", formattedDate);
+
             const response = await fetch(
                 `${backendUrl}/api/teacher/students/${selectedAssignment._id}?date=${formattedDate}`,
                 {
@@ -70,41 +74,18 @@ const TeacherAttendance = () => {
                 }
             );
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log("API Response:", data);
-                setStudents(data.students || []);
-            } else {
-                setError("Failed to fetch students.");
-                setStudents([]);
-            }
-        } catch (err) {
-            console.error("Error fetching students:", err);
-            setError(err.message || "Failed to fetch students.");
-            setStudents([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [selectedAssignment, dToken, backendUrl, currentDate]);
+            const data = await response.json();
+            console.log("API Response:", data);
+            setStudents(data.students || []);
+        };
 
-    useEffect(() => {
-        fetchTeacherInfo();
-    }, [fetchTeacherInfo]);
-
-    useEffect(() => {
-        if (teacherId) {
-            fetchStudents();
-        }
-    }, [fetchStudents, teacherId, currentDate]);
-
-    useEffect(() => {
-        if (selectedAssignment) {
-            fetchStudents();
-        }
-    }, [fetchStudents, selectedAssignment, currentDate]);
+        fetchStudents();
+    }, [selectedAssignment, currentDate]);
 
     useEffect(() => {
         const selectedDate = currentDate.toISOString().split('T')[0];
+        console.log("Selected Date:", selectedDate);
+
         const filtered = students.filter(student => {
             const signInDate = student.signInTime
                 ? new Date(student.signInTime).toISOString().split('T')[0]
@@ -113,9 +94,13 @@ const TeacherAttendance = () => {
                 ? new Date(student.signOutTime).toISOString().split('T')[0]
                 : null;
 
+            console.log("Student:", student);
+            console.log("Sign-In Date:", signInDate, "Sign-Out Date:", signOutDate);
+
             return signInDate === selectedDate || signOutDate === selectedDate;
         });
-        console.log("Filtered Students by Attendance:", filtered);
+
+        console.log("Filtered Students:", filtered);
         setFilteredStudents(filtered);
     }, [students, currentDate]);
 

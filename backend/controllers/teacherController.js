@@ -3,7 +3,7 @@ import { validationResult } from 'express-validator';
 import jwt from "jsonwebtoken";
 import mongoose from 'mongoose';
 import cloudinary from "../config/cloudinary.js";
-import { default as Attendance, default as attendanceModel } from "../models/attendanceModel.js";
+import attendanceModel from "../models/attendanceModel.js";
 import studentModel from "../models/studentModel.js";
 import teacherModel from "../models/teacherModel.js";
 
@@ -146,7 +146,20 @@ const getStudentsByTeacher = async (req, res) => {
         const attendance = attendanceRecords.filter(
           (record) => record.user.toString() === student._id.toString()
         );
-        return { ...student.toObject(), attendance };
+
+        const signInRecord = attendance.find((record) => record.eventType === "sign-in");
+        const signOutRecord = attendance.find((record) => record.eventType === "sign-out");
+
+        console.log("Student:", student._id);
+        console.log("Attendance:", attendance);
+        console.log("Sign-In Record:", signInRecord);
+        console.log("Sign-Out Record:", signOutRecord);
+
+        return {
+          ...student.toObject(),
+          signInTime: signInRecord ? signInRecord.timestamp : null,
+          signOutTime: signOutRecord ? signOutRecord.timestamp : null,
+        };
       });
 
       return res.json({ success: true, students: studentsWithAttendance });
@@ -157,6 +170,91 @@ const getStudentsByTeacher = async (req, res) => {
     console.error("Error in getStudentsByTeacher:", error);
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+const getStudentsByTeachingAssignment = async (req, res) => {
+    try {
+        const { assignmentId } = req.params;
+        const { date } = req.query;
+
+        if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            return res.status(400).json({ success: false, message: "Date is required in YYYY-MM-DD format" });
+        }
+
+        const startOfDay = new Date(`${date}T00:00:00.000Z`);
+        const endOfDay = new Date(`${date}T23:59:59.999Z`);
+
+        if (isNaN(startOfDay.getTime()) || isNaN(endOfDay.getTime())) {
+            return res.status(400).json({ success: false, message: "Invalid date provided" });
+        }
+
+        const teacherWithAssignment = await teacherModel.findOne({
+            "teachingAssignments._id": assignmentId,
+        });
+
+        if (!teacherWithAssignment) {
+            return res.status(404).json({ success: false, message: "Assignment not found" });
+        }
+
+        const assignmentDetails = teacherWithAssignment.teachingAssignments.find(
+            (ta) => ta._id.toString() === assignmentId
+        );
+
+        if (!assignmentDetails) {
+            return res.status(404).json({ success: false, message: "Assignment details not found within teacher record" });
+        }
+
+        const { educationLevel, gradeYearLevel, section } = assignmentDetails;
+
+        const students = await studentModel.find({
+            educationLevel,
+            gradeYearLevel,
+            section,
+        }).lean();
+
+        const studentIds = students.map((student) => student._id);
+
+        const attendanceRecords = await attendanceModel.find({
+            user: { $in: studentIds },
+            timestamp: { $gte: startOfDay, $lte: endOfDay },
+        }).lean();
+
+        console.log("--- Backend: getStudentsByTeachingAssignment ---");
+        console.log("Requested Date:", date);
+        console.log("Assignment ID:", assignmentId);
+        console.log("Query Start Date (UTC):", startOfDay.toISOString());
+        console.log("Query End Date (UTC):", endOfDay.toISOString());
+        console.log("Found Students Count:", students.length);
+        console.log("Student IDs for Query:", studentIds);
+        console.log("Attendance Query:", {
+            user: { $in: studentIds },
+            timestamp: { $gte: startOfDay, $lte: endOfDay },
+        });
+        console.log("Fetched Attendance Records Count:", attendanceRecords.length);
+
+        const studentsWithAttendance = students.map((student) => {
+            const studentAttendance = attendanceRecords.filter(
+                (record) => record.user.toString() === student._id.toString()
+            );
+
+            studentAttendance.sort((a, b) => a.timestamp - b.timestamp);
+
+            const signInRecord = studentAttendance.find((record) => record.eventType === "sign-in");
+            const signOutRecord = studentAttendance.slice().reverse().find((record) => record.eventType === "sign-out");
+
+            return {
+                ...student,
+                signInTime: signInRecord ? signInRecord.timestamp : null,
+                signOutTime: signOutRecord ? signOutRecord.timestamp : null,
+            };
+        });
+
+        res.status(200).json({ success: true, students: studentsWithAttendance });
+
+    } catch (error) {
+        console.error("Error fetching students by teaching assignment:", error);
+        res.status(500).json({ success: false, message: `Failed to fetch students. Error: ${error.message}` });
+    }
 };
 
 const updateTeacher = async (req, res) => {
@@ -582,7 +680,7 @@ const getAttendanceRecords = async (req, res) => {
             select: 'firstName lastName middleName studentNumber position'
         });
 
-        console.log("Attendance Records:", attendanceRecords);
+        console.log("Filtered Attendance Records:", attendanceRecords);
 
         res.status(200).json({ success: true, attendanceRecords });
     } catch (error) {
@@ -594,11 +692,9 @@ const getAttendance = async (req, res) => {
   const { startDate, endDate, userType } = req.query;
 
   try {
-    // Normalize startDate to the beginning of the day
     const startOfDay = new Date(startDate);
     startOfDay.setHours(0, 0, 0, 0);
 
-    // Normalize endDate to the end of the day
     const endOfDay = new Date(endDate);
     endOfDay.setHours(23, 59, 59, 999);
 
@@ -618,12 +714,12 @@ const getAttendance = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch attendance records.",
-    });
+    });getAttendance
   }
 };
 
 export {
     addTeacherClassSchedule, addTeacherEducationLevel, addTeacherGradeYearLevel, addTeacherSection, addTeacherSubjects, editTeacherClassSchedule, editTeacherEducationLevel, editTeacherGradeYearLevel, editTeacherSubjects, getAttendance, getAttendanceByDate,
-    getAttendanceRecords, getStudentsByTeacher, loginTeacher, logoutTeacher, removeTeacherClassSchedule, removeTeacherEducationLevel, removeTeacherGradeYearLevel, removeTeacherSection, removeTeacherSubjects, teacherList, teacherProfile, updateTeacher, updateTeacherProfile, updateTeacherTeachingAssignments
+    getAttendanceRecords, getStudentsByTeacher, getStudentsByTeachingAssignment, loginTeacher, logoutTeacher, removeTeacherClassSchedule, removeTeacherEducationLevel, removeTeacherGradeYearLevel, removeTeacherSection, removeTeacherSubjects, teacherList, teacherProfile, updateTeacher, updateTeacherProfile, updateTeacherTeachingAssignments
 };
 

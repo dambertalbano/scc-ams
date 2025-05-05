@@ -57,52 +57,72 @@ const TeacherAttendance = () => {
 
     useEffect(() => {
         if (!selectedAssignment) {
-            console.log("Missing assignmentId:", { selectedAssignment });
             return;
         }
 
+        const formatLocalDate = (date) => {
+            if (!date) return '';
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
         const fetchStudents = async () => {
-            const formattedDate = currentDate.toISOString().split("T")[0];
-            console.log("Fetching students for date:", formattedDate);
+            const formattedDate = formatLocalDate(currentDate);
 
-            const response = await fetch(
-                `${backendUrl}/api/teacher/students/${selectedAssignment._id}?date=${formattedDate}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${dToken}`,
-                    },
+            try {
+                const response = await fetch(
+                    `${backendUrl}/api/teacher/students/${selectedAssignment._id}?date=${formattedDate}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${dToken}`,
+                        },
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
                 }
-            );
 
-            const data = await response.json();
-            console.log("API Response:", data);
-            setStudents(data.students || []);
+                const data = await response.json();
+                setStudents(data.students || []);
+                setError(null);
+            } catch (fetchError) {
+                console.error("Error fetching students:", fetchError);
+                setError(fetchError.message || "Failed to fetch student data.");
+                setStudents([]);
+            }
         };
 
         fetchStudents();
-    }, [selectedAssignment, currentDate]);
+    }, [selectedAssignment, currentDate, backendUrl, dToken]);
 
     useEffect(() => {
-        const selectedDate = currentDate.toISOString().split('T')[0];
-        console.log("Selected Date:", selectedDate);
+        // 1. Filter the raw student list to include only those with attendance data for the fetched date
+        //    (The backend ensures signInTime/signOutTime are only present for the requested date)
+        const presentStudents = students.filter(student => student.signInTime || student.signOutTime);
 
-        const filtered = students.filter(student => {
-            const signInDate = student.signInTime
-                ? new Date(student.signInTime).toISOString().split('T')[0]
-                : null;
-            const signOutDate = student.signOutTime
-                ? new Date(student.signOutTime).toISOString().split('T')[0]
-                : null;
+        // 2. Start the final filtered list with only present students
+        let filtered = presentStudents;
 
-            console.log("Student:", student);
-            console.log("Sign-In Date:", signInDate, "Sign-Out Date:", signOutDate);
+        // 3. Apply search term filtering *only* to the present students
+        if (searchTerm) {
+            const lowerCaseSearchTerm = searchTerm.toLowerCase();
+            filtered = presentStudents.filter(student => // Filter presentStudents, not the original students list
+                (student.firstName?.toLowerCase() || '').includes(lowerCaseSearchTerm) ||
+                (student.lastName?.toLowerCase() || '').includes(lowerCaseSearchTerm) ||
+                (student.studentNumber?.toLowerCase() || '').includes(lowerCaseSearchTerm) ||
+                (student.educationLevel?.toLowerCase() || '').includes(lowerCaseSearchTerm) ||
+                (student.gradeYearLevel?.toLowerCase() || '').includes(lowerCaseSearchTerm) ||
+                (student.section?.toLowerCase() || '').includes(lowerCaseSearchTerm)
+            );
+        }
 
-            return signInDate === selectedDate || signOutDate === selectedDate;
-        });
+        setFilteredStudents(filtered); // Update the state for the table
 
-        console.log("Filtered Students:", filtered);
-        setFilteredStudents(filtered);
-    }, [students, currentDate]);
+    }, [students, searchTerm]); // Dependencies are correct: re-run when the base student list or search term changes
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
@@ -376,8 +396,10 @@ const TeacherAttendance = () => {
                     </table>
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gray-100 p-6">
-                    <p className="text-gray-500">No students found for this date.</p>
+                <div className="flex flex-col items-center justify-center min-h-[200px] w-full bg-gray-100 p-6">
+                    <p className="text-gray-500">
+                        {searchTerm ? "No students match your search criteria." : "No students found for this assignment."}
+                    </p>
                 </div>
             )}
         </div>

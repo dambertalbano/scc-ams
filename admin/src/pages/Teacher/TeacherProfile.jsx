@@ -3,13 +3,13 @@ import ExcelJS from "exceljs";
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import {
   EducationalSelections,
-  ItemListSection,
   ProfileForm,
   ProfileHeader,
-  SuccessModal,
-  TeachingAssignmentsList,
+  TeachingAssignmentsList
 } from "../../components/TeacherComponents";
 import { TeacherContext } from "../../context/TeacherContext";
 import gradeOptions from "../../utils/gradeOptions";
@@ -18,7 +18,6 @@ const TeacherProfile = () => {
   const [teacherInfo, setTeacherInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showSuccessCard, setShowSuccessCard] = useState(false);
 
   const {
     dToken,
@@ -84,9 +83,11 @@ const TeacherProfile = () => {
         setTeachingAssignments(profileData.teachingAssignments || []);
       } else {
         setError(response.data.message);
+        toast.error(response.data.message || "Failed to fetch profile data.");
       }
     } catch (err) {
       setError(err.message);
+      toast.error(err.message || "An error occurred while fetching the profile.");
     } finally {
       setLoading(false);
     }
@@ -108,7 +109,7 @@ const TeacherProfile = () => {
 
   const handleAddTeachingAssignment = useCallback(async () => {
     if (!educationLevel || !gradeYearLevel || !section) {
-      return alert("Please select all fields: Education Level, Grade/Year Level, and Section");
+      return toast.warn("Please select all fields: Education Level, Grade/Year Level, and Section");
     }
 
     if (
@@ -119,7 +120,7 @@ const TeacherProfile = () => {
           assignment.section === section
       )
     ) {
-      return alert("This teaching assignment is already added.");
+      return toast.warn("This teaching assignment is already added.");
     }
 
     try {
@@ -132,13 +133,13 @@ const TeacherProfile = () => {
         setEducationLevel("");
         setGradeYearLevel("");
         setSection("");
-        alert("Teaching assignment added successfully!");
+        toast.success("Teaching assignment added successfully!");
       } else {
-        alert("Failed to update teaching assignments.");
+        toast.error("Failed to update teaching assignments.");
       }
     } catch (error) {
       console.error("Error adding teaching assignment:", error);
-      alert(error.response?.data?.message || error.message);
+      toast.error(error.response?.data?.message || error.message || "Error adding assignment.");
     }
   }, [educationLevel, gradeYearLevel, section, teachingAssignments, updateTeacherTeachingAssignments]);
 
@@ -156,12 +157,14 @@ const TeacherProfile = () => {
         setTeachingAssignments(updatedAssignments);
 
         const success = await updateTeacherTeachingAssignments(updatedAssignments);
-        if (!success) {
-          alert("Failed to update teaching assignments.");
+        if (success) {
+          toast.success("Teaching assignment removed.");
+        } else {
+          toast.error("Failed to update teaching assignments.");
         }
       } catch (error) {
         console.error("Error removing teaching assignment:", error);
-        alert(error.response?.data?.message || error.message);
+        toast.error(error.response?.data?.message || error.message || "Error removing assignment.");
       }
     },
     [teachingAssignments, updateTeacherTeachingAssignments]
@@ -169,7 +172,7 @@ const TeacherProfile = () => {
 
   const addTeacherClassSchedule = () => {
     if (newClassSchedule.trim() === "") {
-      alert("Class schedule cannot be empty.");
+      toast.warn("Class schedule cannot be empty.");
       return;
     }
     setClassSchedule([...classSchedule, newClassSchedule]);
@@ -190,7 +193,7 @@ const TeacherProfile = () => {
 
   const addTeacherSubjects = () => {
     if (newSubjects.trim() === "") {
-      alert("Subject cannot be empty.");
+      toast.warn("Subject cannot be empty.");
       return;
     }
     setSubjects([...subjects, newSubjects]);
@@ -214,117 +217,118 @@ const TeacherProfile = () => {
     try {
       const success = await updateTeacherByProfile(formData);
       if (success) {
-        alert("Profile updated successfully!");
+        toast.success("Profile updated successfully!");
         fetchTeacherProfile();
       } else {
-        alert("Failed to update profile.");
+        toast.error("Failed to update profile.");
       }
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert(error.response?.data?.message || error.message);
+      toast.error(error.response?.data?.message || error.message || "Error updating profile.");
     }
   };
 
-  // --- Updated addMonthlyTotals Function ---
-  const addMonthlyTotals = (worksheet, students, headerDates, reportStartDate, reportEndDate) => {
-    const startRow = 14; // Starting row for student names
-    const absentColumn = 30; // Column for Total Absences
-    const tardyColumn = 31; // Column for Total Tardy
-    const tardyHourThreshold = 8; // Example: Tardy if first sign-in is at 8 AM or later
+  const addMonthlyTotals = (worksheet, students, headerDates) => {
+    const startRow = 14;
+    const absentColumn = 30;
+    const tardyColumn = 31;
+    const tardyHourThreshold = 8;
 
     students.forEach((student, index) => {
-        const row = worksheet.getRow(startRow + index);
+      const row = worksheet.getRow(startRow + index);
 
-        let totalAbsent = 0;
-        let totalTardy = 0;
+      let totalAbsent = 0;
+      let totalTardy = 0;
 
-        // Group attendance records by date for easier processing
-        const attendanceByDate = {};
-        if (student.attendanceInRange && Array.isArray(student.attendanceInRange)) {
-            student.attendanceInRange.forEach(record => {
-                const recordDateStr = new Date(record.timestamp).toISOString().split('T')[0];
-                if (!attendanceByDate[recordDateStr]) {
-                    attendanceByDate[recordDateStr] = [];
-                }
-                attendanceByDate[recordDateStr].push(new Date(record.timestamp)); // Store as Date objects
-            });
-        }
+      const attendanceByLocalDate = {};
+      if (student.attendanceInRange && Array.isArray(student.attendanceInRange)) {
+        student.attendanceInRange.forEach(record => {
+          const recordTimestamp = new Date(record.timestamp);
+          const localYear = recordTimestamp.getFullYear();
+          const localMonth = String(recordTimestamp.getMonth() + 1).padStart(2, '0');
+          const localDay = String(recordTimestamp.getDate()).padStart(2, '0');
+          const recordLocalDateStr = `${localYear}-${localMonth}-${localDay}`;
 
-        // Iterate through the dates shown in the template's header
-        headerDates.forEach((headerDateStr, columnIndex) => {
-            if (headerDateStr) { // Only process columns with a valid date
-                const currentDate = new Date();
-                const isFutureDate = new Date(headerDateStr) > currentDate;
-
-                if (!isFutureDate) {
-                    // Check for Absence
-                    if (!attendanceByDate[headerDateStr]) {
-                        // No attendance records found for this student on this header date
-                        totalAbsent++;
-                    } else {
-                        // Check for Tardy (only if present)
-                        const recordsForDay = attendanceByDate[headerDateStr];
-                        recordsForDay.sort((a, b) => a - b); // Sort timestamps chronologically
-                        const firstSignInTime = recordsForDay[0]; // Get the earliest record for the day
-
-                        if (firstSignInTime) {
-                            // Check local hour against threshold
-                            if (firstSignInTime.getHours() >= tardyHourThreshold) {
-                                totalTardy++;
-                            }
-                        }
-                    }
-                }
-            }
+          if (!attendanceByLocalDate[recordLocalDateStr]) {
+            attendanceByLocalDate[recordLocalDateStr] = [];
+          }
+          attendanceByLocalDate[recordLocalDateStr].push(recordTimestamp);
         });
+      }
 
-        // Write totals to the worksheet
-        row.getCell(absentColumn).value = totalAbsent > 0 ? totalAbsent : null;
-        row.getCell(tardyColumn).value = totalTardy > 0 ? totalTardy : null;
+      const today = new Date();
+      const todayYear = today.getFullYear();
+      const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+      const todayDay = String(today.getDate()).padStart(2, '0');
+      const todayDateStr = `${todayYear}-${todayMonth}-${todayDay}`;
 
-        row.commit();
+      headerDates.forEach((headerDateStr, columnIndex) => {
+        if (headerDateStr) {
+          const isFutureDate = headerDateStr > todayDateStr;
+
+          if (!isFutureDate) {
+            if (!attendanceByLocalDate[headerDateStr]) {
+              totalAbsent++;
+            } else {
+              const recordsForDay = attendanceByLocalDate[headerDateStr];
+              recordsForDay.sort((a, b) => a - b);
+              const firstSignInTime = recordsForDay[0];
+
+              if (firstSignInTime) {
+                if (firstSignInTime.getHours() >= tardyHourThreshold) {
+                  totalTardy++;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      row.getCell(absentColumn).value = totalAbsent > 0 ? totalAbsent : null;
+      row.getCell(tardyColumn).value = totalTardy > 0 ? totalTardy : null;
     });
-
-    console.log("Monthly Totals Added: Absent and Tardy (Updated Logic)");
   };
-  // --- End Updated addMonthlyTotals Function ---
 
   const generateExcel = async () => {
     if (!templateFile) {
-      alert("Please upload the SF2 Excel template first.");
+      toast.warn("Please upload the SF2 Excel template first.");
       return;
     }
     if (!selectedAssignment) {
-      alert("Please select a teaching assignment before generating the report.");
+      toast.warn("Please select a teaching assignment before generating the report.");
       return;
     }
     if (!startDate || !endDate) {
-      alert("Please fill in both Start Date and End Date.");
+      toast.warn("Please fill in both Start Date and End Date.");
       return;
     }
 
     setLoading(true);
     setError(null);
+    toast.info("Generating Excel report...", { autoClose: 2000 });
+
     try {
-      // --- Format dates before sending ---
-      const formattedStartDate = startDate.toISOString().split('T')[0];
-      const formattedEndDate = endDate.toISOString().split('T')[0];
-      // --- End formatting ---
+      const formatLocalDate = (date) => {
+        if (!date) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const formattedStartDate = formatLocalDate(startDate);
+      const formattedEndDate = formatLocalDate(endDate);
 
       const response = await fetch(
-        // --- Use formatted dates in the URL ---
         `${backendUrl}/api/teacher/students/${selectedAssignment._id}?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
-        // --- End URL change ---
         {
           headers: { Authorization: `Bearer ${dToken}` },
         }
       );
       const data = await response.json();
-      if (!data.success) {
-        // --- Log the specific error from backend if available ---
-        console.error("Backend Error:", data.message);
-        throw new Error(data.message || "Failed to fetch attendance data.");
-        // --- End logging ---
+      if (!response.ok || !data.success) {
+        const errorMsg = data.message || `Failed to fetch attendance data. Status: ${response.status}`;
+        throw new Error(errorMsg);
       }
 
       const students = data.students.sort((a, b) =>
@@ -333,158 +337,197 @@ const TeacherProfile = () => {
 
       const reader = new FileReader();
       reader.onload = async (e) => {
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(e.target.result);
+        try {
+          const workbook = new ExcelJS.Workbook();
+          await workbook.xlsx.load(e.target.result);
 
-        const worksheet = workbook.getWorksheet(1);
+          const worksheet = workbook.getWorksheet(1);
 
-        const month = startDate.toLocaleString("default", { month: "long" });
-        const gradeLevel = selectedAssignment.gradeYearLevel;
-        const section = selectedAssignment.section;
+          const month = startDate.toLocaleString("default", { month: "long" });
+          const gradeLevel = selectedAssignment.gradeYearLevel;
+          const section = selectedAssignment.section;
 
-        const formatTeacherName = (teacher) => {
-          if (!teacher) return "N/A";
-          const lastName = teacher.lastName
-            ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase()
-            : "";
-          const firstName = teacher.firstName
-            ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase()
-            : "";
-          const middleInitial = teacher.middleName
-            ? `${teacher.middleName.charAt(0).toUpperCase()}.`
-            : "";
-          return `${lastName}, ${firstName} ${middleInitial}`;
-        };
+          const formatTeacherName = (teacher) => {
+            if (!teacher) return "N/A";
+            const lastName = teacher.lastName
+              ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase()
+              : "";
+            const firstName = teacher.firstName
+              ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase()
+              : "";
+            const middleInitial = teacher.middleName
+              ? `${teacher.middleName.charAt(0).toUpperCase()}.`
+              : "";
+            return `${lastName}, ${firstName} ${middleInitial}`;
+          };
 
-        const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
-        worksheet.getCell("AF86").value = teacherName;
-        worksheet.getCell("AB6").value = `${month}`;
-        worksheet.getCell("X8").value = `${gradeLevel}`;
-        worksheet.getCell("AE8").value = `${section}`;
+          const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
+          worksheet.getCell("AF86").value = teacherName;
+          worksheet.getCell("AB6").value = `${month}`;
+          worksheet.getCell("X8").value = `${gradeLevel}`;
+          worksheet.getCell("AE8").value = `${section}`;
 
-        const headerDates = [];
-        worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          if (colNumber >= 4 && colNumber <= 29) {
-            let raw = cell.value;
-            if (typeof raw === "object" && raw !== null) {
-              if (raw.richText) {
-                raw = raw.richText.map((rt) => rt.text).join("");
-              } else if (raw.result) {
-                raw = raw.result;
-              } else {
-                raw = null;
-              }
-            }
-            const parsed = raw !== null ? parseInt(String(raw).trim(), 10) : NaN;
-            if (!isNaN(parsed)) {
-              const date = new Date(startDate);
-              date.setDate(parsed);
-              const formattedDate = date.toISOString().split("T")[0];
+          const headerDates = [];
+          const reportStartYear = startDate.getFullYear();
+          const reportStartMonth = startDate.getMonth();
 
-              if (date >= startDate && date <= endDate) {
-                headerDates[colNumber] = formattedDate;
-              }
-            }
-          }
-        });
+          const compareStartDate = new Date(startDate);
+          compareStartDate.setHours(0, 0, 0, 0);
+          const compareEndDate = new Date(endDate);
+          compareEndDate.setHours(23, 59, 59, 999);
 
-        const startRow = 14;
-        const dailyTotals = Array(26).fill(0); // Assuming 26 possible attendance days (columns 4 to 29)
-
-        // --- Updated Loop to Process Attendance ---
-        students.forEach((student, index) => {
-          const row = worksheet.getRow(startRow + index);
-          row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`; // Student Name
-
-          // Create a map of attendance dates for quick lookup
-          const attendanceDates = new Set();
-          if (student.attendanceInRange && Array.isArray(student.attendanceInRange)) {
-              student.attendanceInRange.forEach(record => {
-                  const recordDate = new Date(record.timestamp).toISOString().split('T')[0];
-                  attendanceDates.add(recordDate);
-              });
-          }
-
-          headerDates.forEach((headerDate, columnIndex) => {
-            if (headerDate) { // Check if headerDate is valid for the current month/range
-              const cell = row.getCell(columnIndex);
-              const currentDate = new Date();
-              const isFutureDate = new Date(headerDate) > currentDate;
-
-              if (isFutureDate) {
-                cell.value = null; // Clear future dates
-              } else {
-                // Check if the student has any attendance record for this headerDate
-                if (attendanceDates.has(headerDate)) {
-                  cell.value = "P"; // Present
-                  dailyTotals[columnIndex - 4]++; // Increment daily total for this column (index adjusted)
+          worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            if (colNumber >= 4 && colNumber <= 29) {
+              let raw = cell.value;
+              if (typeof raw === "object" && raw !== null) {
+                if (raw.richText) {
+                  raw = raw.richText.map((rt) => rt.text).join("");
+                } else if (raw.result) {
+                  raw = raw.result;
                 } else {
-                  cell.value = "A"; // Absent
+                  raw = null;
+                }
+              }
+              const parsed = raw !== null ? parseInt(String(raw).trim(), 10) : NaN;
+
+              if (!isNaN(parsed)) {
+                const day = parsed;
+                const checkDate = new Date(reportStartYear, reportStartMonth, day, 12, 0, 0);
+
+                if (checkDate >= compareStartDate && checkDate <= compareEndDate) {
+                  const monthString = String(checkDate.getMonth() + 1).padStart(2, '0');
+                  const dayString = String(checkDate.getDate()).padStart(2, '0');
+                  headerDates[colNumber] = `${checkDate.getFullYear()}-${monthString}-${dayString}`;
                 }
               }
             }
           });
-          row.commit(); // Commit row after processing all dates for the student
-        });
-        // --- End Updated Loop ---
 
-        // --- Update Daily Totals Row (Row 62) ---
-        const totalRow = worksheet.getRow(62); // Assuming totals are on row 62
-        dailyTotals.forEach((total, index) => {
-            // Only update columns that had valid header dates
-            if (headerDates[index + 4]) {
-                totalRow.getCell(index + 4).value = total > 0 ? total : null; // Show total if > 0, else clear
-            } else {
-                totalRow.getCell(index + 4).value = null; // Clear columns with no valid date
+          const startRow = 14;
+          const dailyTotals = Array(26).fill(0);
+
+          students.forEach((student, index) => {
+            const row = worksheet.getRow(startRow + index);
+            row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
+
+            const localAttendanceDates = new Set();
+            if (student.attendanceInRange && Array.isArray(student.attendanceInRange)) {
+              student.attendanceInRange.forEach(record => {
+                const recordTimestamp = new Date(record.timestamp);
+                const localYear = recordTimestamp.getFullYear();
+                const localMonth = String(recordTimestamp.getMonth() + 1).padStart(2, '0');
+                const localDay = String(recordTimestamp.getDate()).padStart(2, '0');
+                const recordLocalDateStr = `${localYear}-${localMonth}-${localDay}`;
+                localAttendanceDates.add(recordLocalDateStr);
+              });
             }
-        });
-        totalRow.commit();
-        // --- End Update Daily Totals Row ---
 
-        // --- Call Updated addMonthlyTotals ---
-        addMonthlyTotals(worksheet, students, headerDates, startDate, endDate);
-        // --- End Call ---
+            headerDates.forEach((headerDateStr, columnIndex) => {
+              if (headerDateStr && columnIndex >= 4 && columnIndex <= 29) {
+                const cell = row.getCell(columnIndex);
 
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], {
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "Attendance_Report.xlsx";
-        link.click();
+                const today = new Date();
+                const todayYear = today.getFullYear();
+                const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+                const todayDay = String(today.getDate()).padStart(2, '0');
+                const todayDateStr = `${todayYear}-${todayMonth}-${todayDay}`;
+
+                const isFutureDate = headerDateStr > todayDateStr;
+
+                if (isFutureDate) {
+                  cell.value = null;
+                } else {
+                  if (localAttendanceDates.has(headerDateStr)) {
+                    cell.value = "P";
+                    dailyTotals[columnIndex - 4]++;
+                  } else {
+                    cell.value = "A";
+                  }
+                }
+              } else if (columnIndex >= 4 && columnIndex <= 29) {
+                const cell = row.getCell(columnIndex);
+                cell.value = null;
+              }
+            });
+          });
+
+          const totalRow = worksheet.getRow(62);
+          dailyTotals.forEach((total, index) => {
+            const colIndex = index + 4;
+            if (headerDates[colIndex]) {
+              totalRow.getCell(colIndex).value = total > 0 ? total : null;
+            } else {
+              totalRow.getCell(colIndex).value = null;
+            }
+          });
+
+          addMonthlyTotals(worksheet, students, headerDates);
+
+          const buffer = await workbook.xlsx.writeBuffer();
+          const blob = new Blob([buffer], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          });
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `SF2_${selectedAssignment.gradeYearLevel}-${selectedAssignment.section}_${month}_${startDate.getFullYear()}.xlsx`;
+          link.click();
+          URL.revokeObjectURL(link.href);
+
+          toast.success("Excel report generated successfully!");
+        } catch (loadErr) {
+          console.error("Error processing Excel template:", loadErr);
+          toast.error(loadErr.message || "Failed to process the Excel template.");
+          setError(loadErr.message || "Failed to process the Excel template.");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      reader.onerror = (err) => {
+        console.error("Error reading template file:", err);
+        toast.error("Failed to read the template file.");
+        setError("Failed to read the template file.");
+        setLoading(false);
       };
 
       reader.readAsArrayBuffer(templateFile);
     } catch (err) {
       console.error("Error generating Excel file:", err);
+      toast.error(err.message || "Failed to generate Excel file.");
       setError(err.message || "Failed to generate Excel file.");
-    } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center text-lg">Loading profile...</div>;
-  if (error) return <div className="h-screen flex items-center justify-center text-red-500 text-lg">{error}</div>;
+  if (loading && !teacherInfo) return <div className="h-screen flex items-center justify-center text-lg">Loading profile...</div>;
 
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
-      {/* Profile Header */}
-      <ProfileHeader teacherInfo={teacherInfo} />
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
 
-      {/* Profile Form */}
-      <ProfileForm
+      {teacherInfo && <ProfileHeader teacherInfo={teacherInfo} />}
+
+      {teacherInfo && <ProfileForm
         formData={formData}
         setFormData={setFormData}
         onSubmit={handleUpdateProfile}
-      />
+      />}
 
-      {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-        {/* Teaching Assignments Section */}
         <div className="bg-white shadow-lg rounded-lg p-6">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800">
-            Select Teaching Schedule
+            Manage Teaching Assignments
           </h3>
           <EducationalSelections
             educationLevel={educationLevel}
@@ -503,43 +546,15 @@ const TeacherProfile = () => {
             onRemove={handleRemoveTeachingAssignment}
           />
         </div>
-
-        {/* Class Schedule and Subjects Section */}
-        <div className="bg-white shadow-lg rounded-lg p-6">
-          <ItemListSection
-            title="Class Schedule"
-            items={classSchedule}
-            newItemValue={newClassSchedule}
-            setNewItemValue={setNewClassSchedule}
-            handleAddItem={addTeacherClassSchedule}
-            handleRemoveItem={removeTeacherClassSchedule}
-            handleEditItem={editTeacherClassSchedule}
-            editingItemId={editingClassScheduleId}
-            setEditingItemId={setEditingClassScheduleId}
-            editedItemValue={editedClassSchedule}
-            setEditedItemValue={setEditedClassSchedule}
-          />
-          <ItemListSection
-            title="Subjects"
-            items={subjects}
-            newItemValue={newSubjects}
-            setNewItemValue={setNewSubjects}
-            handleAddItem={addTeacherSubjects}
-            handleRemoveItem={removeTeacherSubjects}
-            handleEditItem={editTeacherSubjects}
-            editingItemId={editingSubjectsId}
-            setEditingItemId={setEditingSubjectsId}
-            editedItemValue={editedSubjects}
-            setEditedItemValue={setEditedSubjects}
-          />
-        </div>
       </div>
 
-      {/* Teaching Assignment Selection */}
       <div className="bg-white shadow-lg rounded-lg p-6 mt-8">
+        <h3 className="text-2xl font-semibold mb-6 text-gray-800">
+          Generate Attendance Report (SF2)
+        </h3>
         <div className="mb-6">
           <label className="block text-lg font-semibold text-gray-700 mb-2">
-            Select Teaching Schedule:
+            Select Teaching Assignment for Report:
           </label>
           <select
             className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -548,9 +563,9 @@ const TeacherProfile = () => {
               const assignment = teachingAssignments.find(
                 (ta) => ta._id === e.target.value
               );
-              console.log("Selected Assignment:", assignment);
               setSelectedAssignment(assignment);
             }}
+            disabled={teachingAssignments.length === 0}
           >
             <option value="">-- Select Assignment --</option>
             {teachingAssignments.map((assignment) => (
@@ -559,63 +574,67 @@ const TeacherProfile = () => {
               </option>
             ))}
           </select>
+          {teachingAssignments.length === 0 && <p className="text-sm text-red-500 mt-1">No teaching assignments available. Please add one above.</p>}
         </div>
 
-        {/* Date Pickers */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <label className="block text-lg font-semibold text-gray-700 mb-2">
-              Start Date:
+              Report Start Date:
             </label>
             <DatePicker
               selected={startDate}
               onChange={(date) => setStartDate(date)}
+              selectsStart
+              startDate={startDate}
+              endDate={endDate}
+              dateFormat="MM/dd/yyyy"
               className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholderText="Select start date"
             />
           </div>
           <div>
             <label className="block text-lg font-semibold text-gray-700 mb-2">
-              End Date:
+              Report End Date:
             </label>
             <DatePicker
               selected={endDate}
               onChange={(date) => setEndDate(date)}
+              selectsEnd
+              startDate={startDate}
+              endDate={endDate}
+              minDate={startDate}
+              dateFormat="MM/dd/yyyy"
               className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholderText="Select end date"
             />
           </div>
         </div>
-      </div>
 
-      {/* File Upload and Generate Button */}
-      <div className="bg-white shadow-lg rounded-lg p-6 mt-8">
         <div className="mb-6">
           <label className="block text-lg font-semibold text-gray-700 mb-2">
             Upload SF2 Excel Template:
           </label>
           <input
             type="file"
-            accept=".xlsx, .xls"
+            accept=".xlsx"
             onChange={(e) => setTemplateFile(e.target.files[0])}
-            className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-300 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {templateFile && <p className="text-sm text-gray-600 mt-1">Selected: {templateFile.name}</p>}
         </div>
+
         <button
-          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg w-full md:w-auto"
+          className={`bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg w-full md:w-auto transition duration-150 ease-in-out ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           onClick={(e) => {
             e.preventDefault();
             generateExcel();
           }}
           disabled={loading}
         >
-          {loading ? "Generating..." : "Generate Excel"}
+          {loading ? "Generating..." : "Generate Excel Report"}
         </button>
       </div>
-
-      {/* Success Modal */}
-      <SuccessModal
-        isOpen={showSuccessCard}
-        onClose={() => setShowSuccessCard(false)}
-      />
     </div>
   );
 };

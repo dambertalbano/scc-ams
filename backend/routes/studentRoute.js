@@ -1,5 +1,14 @@
 import express from 'express';
-import { getStudentAttendance, getStudentsByStudent, loginStudent, studentProfile, updateStudentProfile } from '../controllers/studentController.js';
+// Import the new controller function
+import {
+    getStudentAttendance,
+    getStudentAttendanceProfile // <-- Import added
+    ,
+
+    loginStudent,
+    studentProfile,
+    updateStudentProfile
+} from '../controllers/studentController.js';
 import authStudent from '../middleware/authStudent.js';
 
 const studentRouter = express.Router();
@@ -11,10 +20,11 @@ studentRouter.post("/login", loginStudent);
 studentRouter.get("/profile", authStudent, studentProfile);
 studentRouter.put("/update-profile", authStudent, updateStudentProfile);
 
-// Get students by student route
-studentRouter.get("/related-students/:studentId", authStudent, getStudentsByStudent);
+// Get students by student route (If needed, otherwise remove)
+// studentRouter.get("/related-students/:studentId", authStudent, getStudentsByStudent);
 
-// Attendance route
-studentRouter.get("/attendance", authStudent, getStudentAttendance);
+// Attendance routes
+studentRouter.get("/attendance", authStudent, getStudentAttendance); // Existing attendance route
+studentRouter.get("/attendance-profile", authStudent, getStudentAttendanceProfile); // <-- New route added
 
 export default studentRouter;

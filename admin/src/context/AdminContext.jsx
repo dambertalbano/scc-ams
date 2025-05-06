@@ -485,11 +485,13 @@ const AdminContextProvider = (props) => {
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const value = {
+    const contextValue = {
         aToken,
         setAToken: updateAToken,
+        backendUrl, // Ensure this is here
         students,
         teachers,
+        dashData,
         getAllStudents,
         getAllTeachers,
         updateTeacher,
@@ -505,19 +507,19 @@ const AdminContextProvider = (props) => {
         adminSignOut,
         fetchAttendanceRecords,
         getDashData,
-        dashData,
-        // Subject APIs
+        // Subject API Functions
         getAllSubjects,
         createSubject,
         updateSubject,
         deleteSubject,
-        // Schedule APIs
+        // Schedule API Functions
         getAllSchedules,
         createSchedule,
         updateSchedule,
         deleteSchedule,
     };
-    return <AdminContext.Provider value={value}>{props.children}</AdminContext.Provider>;
+
+    return <AdminContext.Provider value={contextValue}>{props.children}</AdminContext.Provider>;
 };
 
 export const useAdminContext = () => useContext(AdminContext);

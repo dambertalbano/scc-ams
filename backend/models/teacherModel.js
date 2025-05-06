@@ -11,7 +11,7 @@ const teacherSchema = new mongoose.Schema({
         trim: true,
         match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
     },
-    password: { type: String, required: true }, // Removed select: false
+    password: { type: String, required: true },
     image: {
         type: String,
         trim: true,
@@ -40,6 +40,10 @@ const teacherSchema = new mongoose.Schema({
         gradeYearLevel: { type: String, trim: true },
         section: { type: String, trim: true },
         _id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() } // Ensure each assignment has an _id
+    }],
+    schedules: [{ // <--- ADD THIS FIELD
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Schedule' // Assuming your schedule model is named 'Schedule'
     }],
 },
     { timestamps: true }

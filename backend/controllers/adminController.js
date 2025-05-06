@@ -2,8 +2,10 @@ import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
 import jwt from "jsonwebtoken";
 import validator from "validator";
-import Attendance from "../models/attendanceModel.js";
+import { default as Attendance, default as attendanceModel } from "../models/attendanceModel.js";
+import scheduleModel from "../models/scheduleModel.js";
 import studentModel from "../models/studentModel.js";
+import subjectModel from "../models/subjectModel.js";
 import teacherModel from "../models/teacherModel.js";
 
 const loginAdmin = async (req, res) => {
@@ -482,6 +484,303 @@ const getAttendanceRecords = async (req, res) => {
     }
 };
 
+// --- Subject Management ---
+
+export const createSubject = async (req, res) => {
+    try {
+        const { name, code, semesterId } = req.body;
+
+        if (!name || !code) {
+            return res.status(400).json({ success: false, message: 'Subject name and code are required' });
+        }
+
+        const subjectExists = await subjectModel.findOne({ code });
+        if (subjectExists) {
+            return res.status(400).json({ success: false, message: 'Subject with this code already exists' });
+        }
+
+        const subjectData = { name, code };
+        if (semesterId) {
+            subjectData.semesterId = semesterId;
+        }
+
+        const subject = await subjectModel.create(subjectData);
+        res.status(201).json({ success: true, message: 'Subject created successfully', subject });
+    } catch (error) {
+        console.error("Error creating subject:", error);
+        res.status(500).json({ success: false, message: error.message || 'Server Error when creating subject' });
+    }
+};
+
+export const getAllSubjects = async (req, res) => {
+    try {
+        const subjects = await subjectModel.find({}).populate('semesterId', 'name year');
+        res.status(200).json({ success: true, subjects });
+    } catch (error) {
+        console.error("Error fetching subjects:", error);
+        res.status(500).json({ success: false, message: error.message || 'Server Error when fetching subjects' });
+    }
+};
+
+export const getSubjectById = async (req, res) => {
+    try {
+        const subject = await subjectModel.findById(req.params.id).populate('semesterId', 'name year');
+        if (!subject) {
+            return res.status(404).json({ success: false, message: 'Subject not found' });
+        }
+        res.status(200).json({ success: true, subject });
+    } catch (error) {
+        console.error("Error fetching subject by ID:", error);
+        if (error.kind === 'ObjectId') {
+            return res.status(404).json({ success: false, message: 'Subject not found (invalid ID format)' });
+        }
+        res.status(500).json({ success: false, message: error.message || 'Server Error when fetching subject by ID' });
+    }
+};
+
+export const updateSubject = async (req, res) => {
+    try {
+        const { name, code, semesterId } = req.body;
+        const subjectId = req.params.id;
+
+        const subject = await subjectModel.findById(subjectId);
+        if (!subject) {
+            return res.status(404).json({ success: false, message: 'Subject not found' });
+        }
+
+        if (code && code !== subject.code) {
+            const subjectWithNewCodeExists = await subjectModel.findOne({ code });
+            if (subjectWithNewCodeExists && subjectWithNewCodeExists._id.toString() !== subjectId) {
+                return res.status(400).json({ success: false, message: 'Another subject with this code already exists' });
+            }
+        }
+
+        subject.name = name || subject.name;
+        subject.code = code || subject.code;
+        if (req.body.hasOwnProperty('semesterId')) {
+            subject.semesterId = semesterId;
+        }
+
+        const updatedSubject = await subject.save();
+        res.status(200).json({ success: true, message: 'Subject updated successfully', subject: updatedSubject });
+    } catch (error) {
+        console.error("Error updating subject:", error);
+        if (error.kind === 'ObjectId') {
+            return res.status(404).json({ success: false, message: 'Subject not found (invalid ID format)' });
+        }
+        res.status(500).json({ success: false, message: error.message || 'Server Error when updating subject' });
+    }
+};
+
+export const deleteSubjectAdmin = async (req, res) => {
+    try {
+        const subjectId = req.params.id;
+        const subject = await subjectModel.findById(subjectId);
+
+        if (!subject) {
+            return res.status(404).json({ success: false, message: 'Subject not found' });
+        }
+
+        const schedulesUsingSubject = await scheduleModel.findOne({ subjectId: subjectId });
+        if (schedulesUsingSubject) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot delete subject. It is currently assigned to one or more schedules. Please remove it from schedules first.'
+            });
+        }
+
+        await subject.deleteOne();
+        res.status(200).json({ success: true, message: 'Subject deleted successfully' });
+    } catch (error) {
+        console.error("Error deleting subject:", error);
+        if (error.kind === 'ObjectId') {
+            return res.status(404).json({ success: false, message: 'Subject not found (invalid ID format)' });
+        }
+        res.status(500).json({ success: false, message: error.message || 'Server Error when deleting subject' });
+    }
+};
+
+// --- Schedule Management ---
+
+export const createSchedule = async (req, res) => {
+    try {
+        const { subjectId, teacherId, section, gradeYearLevel, educationLevel, dayOfWeek, startTime, endTime, semester } = req.body;
+
+        if (!subjectId || !teacherId || !section || !gradeYearLevel || !educationLevel || !dayOfWeek || !startTime || !endTime || !semester) {
+            return res.status(400).json({ success: false, message: 'All schedule fields are required' });
+        }
+
+        // Check if teacher exists
+        const teacher = await teacherModel.findById(teacherId);
+        if (!teacher) {
+            return res.status(404).json({ success: false, message: 'Assigned teacher not found' });
+        }
+
+        const newSchedule = await scheduleModel.create({
+            subjectId,
+            teacherId,
+            section,
+            gradeYearLevel,
+            educationLevel,
+            dayOfWeek,
+            startTime,
+            endTime,
+            semester
+        });
+
+        // Add schedule reference to teacher
+        if (newSchedule && teacher) {
+            teacher.schedules.push(newSchedule._id);
+            await teacher.save();
+        }
+
+        res.status(201).json({ success: true, message: 'Schedule created successfully', schedule: newSchedule });
+    } catch (error) {
+        console.error("Error creating schedule:", error);
+        if (error.name === 'ValidationError') {
+             return res.status(400).json({ success: false, message: 'Validation error: ' + error.message, errors: error.errors });
+        }
+        res.status(500).json({ success: false, message: error.message || 'Server Error when creating schedule' });
+    }
+};
+
+export const getAllSchedules = async (req, res) => {
+    try {
+        const schedules = await scheduleModel.find({})
+            .populate('subjectId', 'name code')
+            .populate('teacherId', 'firstName lastName code');
+        res.status(200).json({ success: true, schedules });
+    } catch (error) {
+        console.error("Error fetching schedules:", error);
+        res.status(500).json({ success: false, message: error.message || 'Server Error when fetching schedules' });
+    }
+};
+
+export const getScheduleById = async (req, res) => {
+    try {
+        const schedule = await scheduleModel.findById(req.params.id)
+            .populate('subjectId', 'name code')
+            .populate('teacherId', 'firstName lastName code');
+        if (!schedule) {
+            return res.status(404).json({ success: false, message: 'Schedule not found' });
+        }
+        res.status(200).json({ success: true, schedule });
+    } catch (error) {
+        console.error("Error fetching schedule by ID:", error);
+        if (error.kind === 'ObjectId') {
+            return res.status(404).json({ success: false, message: 'Schedule not found (invalid ID format)' });
+        }
+        res.status(500).json({ success: false, message: error.message || 'Server Error when fetching schedule by ID' });
+    }
+};
+
+export const updateSchedule = async (req, res) => {
+    try {
+        const scheduleId = req.params.id;
+        const updates = req.body;
+
+        // Fetch the current schedule to check old teacherId
+        const currentSchedule = await scheduleModel.findById(scheduleId);
+        if (!currentSchedule) {
+            return res.status(404).json({ success: false, message: 'Schedule not found for update' });
+        }
+        const oldTeacherId = currentSchedule.teacherId;
+
+        const updatedSchedule = await scheduleModel.findByIdAndUpdate(scheduleId, updates, { new: true, runValidators: true })
+            .populate('subjectId', 'name code')
+            .populate('teacherId', 'firstName lastName code');
+
+        if (!updatedSchedule) {
+            // This case should ideally be caught by the findById above, but as a fallback
+            return res.status(404).json({ success: false, message: 'Schedule not found after update attempt' });
+        }
+
+        // If teacherId has changed, update teacher documents
+        const newTeacherId = updatedSchedule.teacherId?._id || updatedSchedule.teacherId; // Handle populated vs non-populated
+
+        if (oldTeacherId && newTeacherId && oldTeacherId.toString() !== newTeacherId.toString()) {
+            // Remove schedule from old teacher
+            const oldTeacher = await teacherModel.findById(oldTeacherId);
+            if (oldTeacher) {
+                oldTeacher.schedules.pull(scheduleId);
+                await oldTeacher.save();
+            }
+
+            // Add schedule to new teacher
+            const newTeacher = await teacherModel.findById(newTeacherId);
+            if (newTeacher) {
+                if (!newTeacher.schedules.includes(scheduleId)) { // Avoid duplicates
+                    newTeacher.schedules.push(scheduleId);
+                    await newTeacher.save();
+                }
+            } else {
+                 console.warn(`New teacher with ID ${newTeacherId} not found while updating schedule references.`);
+            }
+        } else if (!oldTeacherId && newTeacherId) { // Case: Schedule was not assigned to a teacher, but now is
+            const newTeacher = await teacherModel.findById(newTeacherId);
+            if (newTeacher) {
+                if (!newTeacher.schedules.includes(scheduleId)) {
+                    newTeacher.schedules.push(scheduleId);
+                    await newTeacher.save();
+                }
+            }
+        } else if (oldTeacherId && !newTeacherId) { // Case: Schedule was assigned, but now is not (teacherId removed)
+             const oldTeacher = await teacherModel.findById(oldTeacherId);
+            if (oldTeacher) {
+                oldTeacher.schedules.pull(scheduleId);
+                await oldTeacher.save();
+            }
+        }
+
+
+        res.status(200).json({ success: true, message: 'Schedule updated successfully', schedule: updatedSchedule });
+    } catch (error) {
+        console.error("Error updating schedule:", error);
+        if (error.kind === 'ObjectId') {
+            return res.status(404).json({ success: false, message: 'Schedule not found (invalid ID format)' });
+        }
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ success: false, message: 'Validation error: ' + error.message, errors: error.errors });
+       }
+        res.status(500).json({ success: false, message: error.message || 'Server Error when updating schedule' });
+    }
+};
+
+export const deleteScheduleAdmin = async (req, res) => {
+    try {
+        const scheduleId = req.params.id;
+
+        // Find the schedule to get the teacherId before deleting
+        const scheduleToDelete = await scheduleModel.findById(scheduleId);
+
+        if (!scheduleToDelete) {
+            return res.status(404).json({ success: false, message: 'Schedule not found' });
+        }
+
+        const teacherId = scheduleToDelete.teacherId;
+
+        // Delete the schedule
+        const schedule = await scheduleModel.findByIdAndDelete(scheduleId);
+
+        // If schedule was successfully deleted and had an associated teacher
+        if (schedule && teacherId) {
+            const teacher = await teacherModel.findById(teacherId);
+            if (teacher) {
+                teacher.schedules.pull(scheduleId); // Remove the scheduleId from teacher's schedules array
+                await teacher.save();
+            }
+        }
+
+        res.status(200).json({ success: true, message: 'Schedule deleted successfully' });
+    } catch (error) {
+        console.error("Error deleting schedule:", error);
+        if (error.kind === 'ObjectId') {
+            return res.status(404).json({ success: false, message: 'Schedule not found (invalid ID format)' });
+        }
+        res.status(500).json({ success: false, message: error.message || 'Server Error when deleting schedule' });
+    }
+};
+
 export {
     addStudent,
     addTeacher,
@@ -500,3 +799,4 @@ export {
     updateStudent,
     updateTeacher
 };
+

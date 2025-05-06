@@ -28,17 +28,26 @@ const scheduleSchema = new mongoose.Schema(
         "Thursday",
         "Friday",
         "Saturday",
-        "Sunday",
+        // "Sunday", // You had Sunday in a previous version, decide if it's needed
       ],
       required: true,
     },
-    startTime: { type: String, required: true }, // "HH:mm"
-    endTime: { type: String, required: true },
+    startTime: {
+      type: String,
+      required: true,
+      match: [/^([01]\d|2[0-3]):([0-5]\d)$/, 'Start time must be in HH:MM format (e.g., 09:00 or 14:30)']
+    },
+    endTime: {
+      type: String,
+      required: true,
+      match: [/^([01]\d|2[0-3]):([0-5]\d)$/, 'End time must be in HH:MM format (e.g., 10:00 or 15:30)']
+    },
     semester: {
       type: String,
       enum: ["1st Sem", "2nd Sem"],
       required: true,
     },
+    // ... any other fields ...
   },
   { timestamps: true }
 );

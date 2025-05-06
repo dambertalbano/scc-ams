@@ -339,3 +339,36 @@ export const ItemListSection = ({
     </div>
   </div>
 );
+
+export const SchedulesList = ({ schedules }) => {
+  if (!schedules || schedules.length === 0) {
+    return <p className="text-gray-600">No schedules assigned.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {schedules.map(schedule => (
+        <div key={schedule._id} className="p-4 bg-gray-100 rounded-lg shadow">
+          <h4 className="font-semibold text-gray-800">
+            {schedule.subjectId?.name || 'N/A'} ({schedule.subjectId?.code || 'N/A'})
+          </h4>
+          <p className="text-sm text-gray-700">
+            Section: {schedule.section}
+          </p>
+          <p className="text-sm text-gray-700">
+            Grade/Year Level: {schedule.gradeYearLevel} ({schedule.educationLevel})
+          </p>
+          <p className="text-sm text-gray-700">
+            Day: {schedule.dayOfWeek}
+          </p>
+          <p className="text-sm text-gray-700">
+            Time: {schedule.startTime} - {schedule.endTime}
+          </p>
+          <p className="text-sm text-gray-700">
+            Semester: {schedule.semester}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+};

@@ -52,7 +52,7 @@ const AddTeacher = () => {
         formData.append('lastName', lastName);
         formData.append('email', email);
         formData.append('password', password);
-        formData.append('number', Number(number));
+        formData.append('number', number);
         formData.append('address', address);
         formData.append('code', code);
 

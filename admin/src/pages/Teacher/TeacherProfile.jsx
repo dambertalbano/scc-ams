@@ -1,21 +1,18 @@
 import axios from "axios";
-import { format, isValid } from 'date-fns'; // Import date-fns for robust date handling
-import ExcelJS from "exceljs"; // Ensure ExcelJS is imported
-import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { format, isValid } from 'date-fns';
+import ExcelJS from "exceljs";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FaCalendarAlt, FaCheckCircle, FaExclamationTriangle, FaPercentage, FaUsers } from "react-icons/fa"; // Added icons
+import { FaCalendarAlt, FaCheckCircle, FaExclamationTriangle, FaPercentage, FaUsers } from "react-icons/fa";
 import { ToastContainer, toast } from 'react-toastify';
 import {
-  EducationalSelections,
   ProfileForm,
   ProfileHeader,
-  TeachingAssignmentsList
-} from "../../components/TeacherComponents"; // Assuming these are responsive
+  SchedulesList
+} from "../../components/TeacherComponents";
 import { TeacherContext } from "../../context/TeacherContext";
-import gradeOptions from "../../utils/gradeOptions";
 
-// Helper component for individual stat cards (can be moved to a separate file)
 const StatCard = ({ icon, label, value, colorClass = "text-gray-700" }) => (
   <div className="bg-white p-4 rounded-lg shadow-md flex items-center space-x-3">
     <div className={`text-3xl ${colorClass}`}>{icon}</div>
@@ -26,12 +23,11 @@ const StatCard = ({ icon, label, value, colorClass = "text-gray-700" }) => (
   </div>
 );
 
-// Helper function for formatting dates (can be moved to a utils file)
 const formatQueryDate = (date) => {
-  if (date && isValid(new Date(date))) { // Check if date is valid
+  if (date && isValid(new Date(date))) {
     return format(new Date(date), 'yyyy-MM-dd');
   }
-  return undefined; // Return undefined if date is not valid, to prevent sending "undefined" string
+  return undefined;
 };
 
 const formatLocalDate = (date) => {
@@ -42,27 +38,35 @@ const formatLocalDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const addMonthlyTotals = (worksheet, students, headerDates) => {
-  const startRow = 14; // Assuming student data starts at row 14
-  const absentColumn = 30; // Column for Absences (e.g., AD)
-  const tardyColumn = 31;  // Column for Tardies (e.g., AE)
-  const tardyHourThreshold = 8; // Example: Sign-in at 8 AM or later is tardy
+const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime) => { // Added scheduleStartTime
+  const startRow = 14;
+  const absentColumn = 30;
+  const tardyColumn = 31;
+  // const tardyHourThreshold = 8; // Removed fixed threshold
+
+  let tardyThresholdHours = null;
+  let tardyThresholdMinutes = null;
+
+  if (scheduleStartTime) {
+    const [startHours, startMinutes] = scheduleStartTime.split(':').map(Number);
+    const tempDate = new Date();
+    tempDate.setHours(startHours, startMinutes + 15, 0, 0); // Add 15 minutes
+    tardyThresholdHours = tempDate.getHours();
+    tardyThresholdMinutes = tempDate.getMinutes();
+  } else {
+    console.warn("Schedule start time not provided for tardy calculation in addMonthlyTotals. Tardy count might be inaccurate.");
+  }
 
   students.forEach((student, index) => {
     const row = worksheet.getRow(startRow + index);
-
     let totalAbsent = 0;
     let totalTardy = 0;
-
     const attendanceByLocalDate = {};
+
     if (student.attendanceInRange && Array.isArray(student.attendanceInRange)) {
       student.attendanceInRange.forEach(record => {
         const recordTimestamp = new Date(record.timestamp);
-        const localYear = recordTimestamp.getFullYear();
-        const localMonth = String(recordTimestamp.getMonth() + 1).padStart(2, '0');
-        const localDay = String(recordTimestamp.getDate()).padStart(2, '0');
-        const recordLocalDateStr = `${localYear}-${localMonth}-${localDay}`;
-
+        const recordLocalDateStr = formatLocalDate(recordTimestamp);
         if (!attendanceByLocalDate[recordLocalDateStr]) {
           attendanceByLocalDate[recordLocalDateStr] = [];
         }
@@ -70,26 +74,25 @@ const addMonthlyTotals = (worksheet, students, headerDates) => {
       });
     }
 
-    const today = new Date();
-    const todayYear = today.getFullYear();
-    const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
-    const todayDay = String(today.getDate()).padStart(2, '0');
-    const todayDateStr = `${todayYear}-${todayMonth}-${todayDay}`;
+    const todayDateStr = formatLocalDate(new Date());
 
     headerDates.forEach((headerDateStr, columnIndex) => {
-      if (headerDateStr && columnIndex >= 4 && columnIndex <= 29) {
+      if (headerDateStr && columnIndex >= 4 && columnIndex <= 29) { // Assuming these are the date columns
         const isFutureDate = headerDateStr > todayDateStr;
-
         if (!isFutureDate) {
           if (!attendanceByLocalDate[headerDateStr]) {
             totalAbsent++;
           } else {
             const recordsForDay = attendanceByLocalDate[headerDateStr];
-            recordsForDay.sort((a, b) => a.getTime() - b.getTime());
-            const firstSignInTime = recordsForDay[0];
+            recordsForDay.sort((a, b) => a.getTime() - b.getTime()); // Ensure records are sorted
+            const firstSignInTime = recordsForDay[0]; // This is a Date object
 
-            if (firstSignInTime) {
-              if (firstSignInTime.getHours() >= tardyHourThreshold) {
+            if (firstSignInTime && tardyThresholdHours !== null && tardyThresholdMinutes !== null) {
+              // Compare only the time part for tardiness
+              const signInHour = firstSignInTime.getHours();
+              const signInMinute = firstSignInTime.getMinutes();
+
+              if (signInHour > tardyThresholdHours || (signInHour === tardyThresholdHours && signInMinute > tardyThresholdMinutes)) {
                 totalTardy++;
               }
             }
@@ -97,7 +100,6 @@ const addMonthlyTotals = (worksheet, students, headerDates) => {
         }
       }
     });
-
     row.getCell(absentColumn).value = totalAbsent > 0 ? totalAbsent : null;
     row.getCell(tardyColumn).value = totalTardy > 0 ? totalTardy : null;
   });
@@ -105,14 +107,14 @@ const addMonthlyTotals = (worksheet, students, headerDates) => {
 
 const TeacherProfile = () => {
   const [teacherInfo, setTeacherInfo] = useState(null);
-  const [loading, setLoading] = useState(true); // General page loading
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const {
     dToken,
     backendUrl,
     updateTeacherByProfile,
-    updateTeacherTeachingAssignments,
+    fetchStudentsBySchedule,
   } = useContext(TeacherContext);
 
   const [formData, setFormData] = useState({
@@ -125,21 +127,14 @@ const TeacherProfile = () => {
     code: "",
   });
 
-  const [teachingAssignments, setTeachingAssignments] = useState([]);
-  const [educationLevel, setEducationLevel] = useState("");
-  const [gradeYearLevel, setGradeYearLevel] = useState("");
-  const [section, setSection] = useState("");
-  const [availableSections, setAvailableSections] = useState([]);
-  const educationLevels = useMemo(() => Object.keys(gradeOptions), []);
+  const [schedules, setSchedules] = useState([]);
 
-  // For Excel Report Generation
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
-  const [startDate, setStartDate] = useState(null); // Initial state is null
-  const [endDate, setEndDate] = useState(null); // Initial state is null
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [templateFile, setTemplateFile] = useState(null);
-  const [generatingReport, setGeneratingReport] = useState(false); // Specific loading for report
+  const [generatingReport, setGeneratingReport] = useState(false);
 
-  // For Assignment Attendance Statistics
   const [assignmentStudentsForStats, setAssignmentStudentsForStats] = useState([]);
   const [assignmentAttendanceStats, setAssignmentAttendanceStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -164,7 +159,7 @@ const TeacherProfile = () => {
           address: profileData.address || "",
           code: profileData.code || "",
         });
-        setTeachingAssignments(profileData.teachingAssignments || []);
+        setSchedules(profileData.schedules || []);
       } else {
         setError(response.data.message);
         toast.error(response.data.message || "Failed to fetch profile data.");
@@ -181,27 +176,6 @@ const TeacherProfile = () => {
     fetchTeacherProfile();
   }, [fetchTeacherProfile]);
 
-  useEffect(() => {
-    if (educationLevels.length > 0 && !educationLevel) {
-      setEducationLevel(educationLevels[0]);
-    }
-  }, [educationLevels, educationLevel]);
-
-  useEffect(() => {
-    if (educationLevel && gradeOptions[educationLevel]) {
-        const grades = Object.keys(gradeOptions[educationLevel]);
-        if (grades.length > 0 && !gradeYearLevel) {
-            // setGradeYearLevel(grades[0]); // Optionally set default grade
-        }
-    }
-    const newAvailableSections = gradeOptions[educationLevel]?.[gradeYearLevel] || [];
-    setAvailableSections(newAvailableSections);
-
-    if (!newAvailableSections.includes(section)) {
-        setSection(""); // Reset section if not in new available sections
-    }
-  }, [educationLevel, gradeYearLevel, section]);
-
   const calculateClassAttendanceStats = useCallback((students, periodStartDate, periodEndDate) => {
     if (!students || students.length === 0 || !periodStartDate || !periodEndDate) {
       return {
@@ -210,7 +184,7 @@ const TeacherProfile = () => {
         totalPresentInstances: 0,
         totalAbsentInstances: 0,
         studentsWithPerfectAttendance: 0,
-        studentsWithHighAbsences: 0, // e.g., 3+ absences
+        studentsWithHighAbsences: 0,
       };
     }
 
@@ -228,7 +202,7 @@ const TeacherProfile = () => {
       const presentDatesForStudent = new Set();
       if (student.attendanceInRange && Array.isArray(student.attendanceInRange)) {
         student.attendanceInRange.forEach(record => {
-          if (record.eventType === 'sign-in') { // Consider only sign-ins for presence
+          if (record.eventType === 'sign-in') {
             const recordDate = new Date(record.timestamp);
             presentDatesForStudent.add(recordDate.toISOString().split('T')[0]);
           }
@@ -237,20 +211,20 @@ const TeacherProfile = () => {
 
       let studentPossibleDays = 0;
       let studentPresentDays = 0;
-      let currentDate = new Date(pStartDate);
+      let currentDateIter = new Date(pStartDate);
       const today = new Date();
       today.setHours(23,59,59,999);
 
-      while (currentDate <= pEndDate && currentDate <= today) {
-        const dayOfWeek = currentDate.getDay();
-        if (dayOfWeek !== 0) { // Exclude Sundays
+      while (currentDateIter <= pEndDate && currentDateIter <= today) {
+        const dayOfWeek = currentDateIter.getDay();
+        if (dayOfWeek !== 0) {
           studentPossibleDays++;
-          const dateStr = currentDate.toISOString().split('T')[0];
+          const dateStr = currentDateIter.toISOString().split('T')[0];
           if (presentDatesForStudent.has(dateStr)) {
             studentPresentDays++;
           }
         }
-        currentDate.setDate(currentDate.getDate() + 1);
+        currentDateIter.setDate(currentDateIter.getDate() + 1);
       }
 
       grandTotalPossibleDays += studentPossibleDays;
@@ -267,19 +241,19 @@ const TeacherProfile = () => {
     return {
       totalStudents: students.length,
       overallAttendancePercentage: grandTotalPossibleDays > 0 ? Math.round((grandTotalPresentDays / grandTotalPossibleDays) * 100) : 0,
-      totalPresentInstances: grandTotalPresentDays, // This is total student-present-days
-      totalAbsentInstances: grandTotalPossibleDays - grandTotalPresentDays, // Total student-absent-days
+      totalPresentInstances: grandTotalPresentDays,
+      totalAbsentInstances: grandTotalPossibleDays - grandTotalPresentDays,
       studentsWithPerfectAttendance: studentsPerfect,
       studentsWithHighAbsences: studentsHighAbs,
     };
   }, []);
 
   useEffect(() => {
-    const fetchStudentsForStats = async () => {
+    const fetchStudentsAndCalculateStats = async () => {
       const formattedStartDate = formatQueryDate(startDate);
       const formattedEndDate = formatQueryDate(endDate);
 
-      if (!selectedAssignment || !formattedStartDate || !formattedEndDate) { // Check for formatted dates
+      if (!selectedSchedule || !formattedStartDate || !formattedEndDate) {
         setAssignmentAttendanceStats(null);
         setAssignmentStudentsForStats([]);
         return;
@@ -287,17 +261,14 @@ const TeacherProfile = () => {
 
       setLoadingStats(true);
       try {
-        const response = await axios.get(
-          `${backendUrl}/api/teacher/students/${selectedAssignment._id}?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
-          { headers: { Authorization: `Bearer ${dToken}` } }
-        );
+        const data = await fetchStudentsBySchedule(selectedSchedule._id, null, formattedStartDate, formattedEndDate);
 
-        if (response.data.success) {
-          setAssignmentStudentsForStats(response.data.students || []);
-          const stats = calculateClassAttendanceStats(response.data.students || [], startDate, endDate);
+        if (data && data.success) {
+          setAssignmentStudentsForStats(data.students || []);
+          const stats = calculateClassAttendanceStats(data.students || [], startDate, endDate);
           setAssignmentAttendanceStats(stats);
         } else {
-          toast.error(response.data.message || "Failed to fetch student data for statistics.");
+          toast.error(data?.message || "Failed to fetch student data for statistics.");
           setAssignmentStudentsForStats([]);
           setAssignmentAttendanceStats(null);
         }
@@ -310,55 +281,8 @@ const TeacherProfile = () => {
       }
     };
 
-    fetchStudentsForStats();
-  }, [selectedAssignment, startDate, endDate, dToken, backendUrl, calculateClassAttendanceStats]);
-
-  const handleAddTeachingAssignment = useCallback(async () => {
-    if (!educationLevel || !gradeYearLevel || !section) {
-      return toast.warn("Please select all fields: Education Level, Grade/Year Level, and Section");
-    }
-    if (teachingAssignments.some(a => a.educationLevel === educationLevel && a.gradeYearLevel === gradeYearLevel && a.section === section)) {
-      return toast.warn("This teaching assignment is already added.");
-    }
-    try {
-      const newAssignment = { educationLevel, gradeYearLevel, section };
-      const success = await updateTeacherTeachingAssignments([...teachingAssignments, newAssignment]);
-      if (success) {
-        toast.success("Teaching assignment added successfully!");
-        fetchTeacherProfile();
-        setEducationLevel("");
-        setGradeYearLevel("");
-        setSection("");
-      } else {
-        toast.error("Failed to update teaching assignments on the server.");
-      }
-    } catch (error) {
-      console.error("Error adding teaching assignment:", error);
-      toast.error(error.response?.data?.message || error.message || "Error adding assignment.");
-    }
-  }, [educationLevel, gradeYearLevel, section, teachingAssignments, updateTeacherTeachingAssignments, fetchTeacherProfile]);
-
-  const handleRemoveTeachingAssignment = useCallback(
-    async (assignmentToRemove) => {
-      try {
-        const updatedAssignments = teachingAssignments.filter(
-          (assignment) => assignment._id !== assignmentToRemove._id
-        );
-
-        const success = await updateTeacherTeachingAssignments(updatedAssignments);
-        if (success) {
-          toast.success("Teaching assignment removed.");
-          fetchTeacherProfile();
-        } else {
-          toast.error("Failed to update teaching assignments on the server.");
-        }
-      } catch (error) {
-        console.error("Error removing teaching assignment:", error);
-        toast.error(error.response?.data?.message || error.message || "Error removing assignment.");
-      }
-    },
-    [teachingAssignments, updateTeacherTeachingAssignments, fetchTeacherProfile]
-  );
+    fetchStudentsAndCalculateStats();
+  }, [selectedSchedule, startDate, endDate, fetchStudentsBySchedule, calculateClassAttendanceStats]);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -367,8 +291,6 @@ const TeacherProfile = () => {
       if (success) {
         toast.success("Profile updated successfully!");
         fetchTeacherProfile();
-      } else {
-        toast.error("Failed to update profile.");
       }
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -381,37 +303,32 @@ const TeacherProfile = () => {
       toast.warn("Please upload the SF2 Excel template first.");
       return;
     }
-    if (!selectedAssignment) {
-      toast.warn("Please select a teaching assignment before generating the report.");
+    if (!selectedSchedule) { 
+      toast.warn("Please select a schedule before generating the report.");
       return;
     }
-    const formattedStartDate = formatQueryDate ? formatQueryDate(startDate) : formatLocalDate(startDate);
-    const formattedEndDate = formatQueryDate ? formatQueryDate(endDate) : formatLocalDate(endDate);
+    const formattedStartDate = formatQueryDate(startDate);
+    const formattedEndDate = formatQueryDate(endDate);
 
     if (!formattedStartDate || !formattedEndDate) {
       toast.warn("Please fill in both Start Date and End Date with valid dates.");
       return;
     }
 
-    setLoading(true);
+    setGeneratingReport(true); 
     setError(null);
     toast.info("Generating Excel report...", { autoClose: 2000 });
 
     try {
-      const response = await fetch(
-        `${backendUrl}/api/teacher/students/${selectedAssignment._id}?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
-        {
-          headers: { Authorization: `Bearer ${dToken}` },
-        }
-      );
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        const errorMsg = data.message || `Failed to fetch attendance data. Status: ${response.status}`;
+      const data = await fetchStudentsBySchedule(selectedSchedule._id, null, formattedStartDate, formattedEndDate);
+
+      if (!data || !data.success) {
+        const errorMsg = data?.message || `Failed to fetch attendance data.`;
         throw new Error(errorMsg);
       }
 
-      const students = data.students.sort((a, b) =>
-        a.lastName.localeCompare(b.lastName)
+      const students = (data.students || []).sort((a, b) =>
+        (a.lastName || "").localeCompare(b.lastName || "")
       );
 
       const reader = new FileReader();
@@ -419,66 +336,51 @@ const TeacherProfile = () => {
         try {
           const workbook = new ExcelJS.Workbook();
           await workbook.xlsx.load(e.target.result);
-
           const worksheet = workbook.getWorksheet(1);
-          if (!worksheet) {
-            throw new Error("Could not find the worksheet in the template.");
-          }
+          if (!worksheet) throw new Error("Could not find the worksheet in the template.");
 
           const month = new Date(startDate).toLocaleString("default", { month: "long" });
-          const gradeLevel = selectedAssignment.gradeYearLevel;
-          const section = selectedAssignment.section;
+          const gradeLevel = selectedSchedule.gradeYearLevel;
+          const section = selectedSchedule.section;
+          const subjectName = selectedSchedule.subjectId?.name || 'N/A';
+          const scheduleStartTimeForExcel = selectedSchedule.startTime; // Get schedule start time
+
 
           const formatTeacherName = (teacher) => {
             if (!teacher) return "N/A";
-            const lastName = teacher.lastName
-              ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase()
-              : "";
-            const firstName = teacher.firstName
-              ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase()
-              : "";
-            const middleInitial = teacher.middleName
-              ? `${teacher.middleName.charAt(0).toUpperCase()}.`
-              : "";
+            const lastName = teacher.lastName ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase() : "";
+            const firstName = teacher.firstName ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase() : "";
+            const middleInitial = teacher.middleName ? `${teacher.middleName.charAt(0).toUpperCase()}.` : "";
             return `${lastName}, ${firstName} ${middleInitial}`.trim();
           };
 
           const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
-          worksheet.getCell("AF86").value = teacherName;
-          worksheet.getCell("AB6").value = `${month}`;
-          worksheet.getCell("X8").value = `${gradeLevel}`;
-          worksheet.getCell("AE8").value = `${section}`;
+          worksheet.getCell("AF86").value = teacherName; 
+          worksheet.getCell("AB6").value = `${month}`;    
+          worksheet.getCell("X8").value = `${gradeLevel}`; 
+          worksheet.getCell("AE8").value = `${section}`;   
+          // worksheet.getCell("SOME_CELL_FOR_SUBJECT").value = subjectName;
+
 
           const headerDates = [];
           const reportStartYear = new Date(startDate).getFullYear();
           const reportStartMonth = new Date(startDate).getMonth();
-
-          const compareStartDate = new Date(startDate);
-          compareStartDate.setHours(0, 0, 0, 0);
-          const compareEndDate = new Date(endDate);
-          compareEndDate.setHours(23, 59, 59, 999);
+          const compareStartDate = new Date(startDate); compareStartDate.setHours(0, 0, 0, 0);
+          const compareEndDate = new Date(endDate); compareEndDate.setHours(23, 59, 59, 999);
 
           worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
             if (colNumber >= 4 && colNumber <= 29) {
               let rawCellValue = cell.value;
               if (typeof rawCellValue === "object" && rawCellValue !== null) {
-                if (rawCellValue.richText) {
-                  rawCellValue = rawCellValue.richText.map((rt) => rt.text).join("");
-                } else if (rawCellValue.hasOwnProperty('result')) {
-                  rawCellValue = rawCellValue.result;
-                } else {
-                  rawCellValue = null;
-                }
+                if (rawCellValue.richText) rawCellValue = rawCellValue.richText.map(rt => rt.text).join("");
+                else if (rawCellValue.hasOwnProperty('result')) rawCellValue = rawCellValue.result;
+                else rawCellValue = null;
               }
               const dayOfMonth = rawCellValue !== null ? parseInt(String(rawCellValue).trim(), 10) : NaN;
-
               if (!isNaN(dayOfMonth) && dayOfMonth >= 1 && dayOfMonth <= 31) {
                 const checkDate = new Date(reportStartYear, reportStartMonth, dayOfMonth, 12, 0, 0);
-
                 if (checkDate >= compareStartDate && checkDate <= compareEndDate) {
-                  const monthString = String(checkDate.getMonth() + 1).padStart(2, '0');
-                  const dayString = String(checkDate.getDate()).padStart(2, '0');
-                  headerDates[colNumber] = `${checkDate.getFullYear()}-${monthString}-${dayString}`;
+                  headerDates[colNumber] = formatLocalDate(checkDate);
                 } else {
                   headerDates[colNumber] = undefined;
                 }
@@ -489,99 +391,72 @@ const TeacherProfile = () => {
           });
 
           const startDataRow = 14;
-          const dailyTotals = Array(26).fill(0);
+          const dailyTotals = Array(26).fill(0); // Assuming 26 possible date columns (4 to 29 inclusive)
 
           students.forEach((student, index) => {
             const row = worksheet.getRow(startDataRow + index);
             row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`.trim();
-
             const localAttendanceDates = new Set();
             if (student.attendanceInRange && Array.isArray(student.attendanceInRange)) {
               student.attendanceInRange.forEach(record => {
-                const recordTimestamp = new Date(record.timestamp);
-                const localYear = recordTimestamp.getFullYear();
-                const localMonth = String(recordTimestamp.getMonth() + 1).padStart(2, '0');
-                const localDay = String(recordTimestamp.getDate()).padStart(2, '0');
-                const recordLocalDateStr = `${localYear}-${localMonth}-${localDay}`;
-                localAttendanceDates.add(recordLocalDateStr);
+                localAttendanceDates.add(formatLocalDate(new Date(record.timestamp)));
               });
             }
-
             headerDates.forEach((headerDateStr, columnIndex) => {
               if (headerDateStr && columnIndex >= 4 && columnIndex <= 29) {
                 const cell = row.getCell(columnIndex);
-
-                const today = new Date();
-                const todayYear = today.getFullYear();
-                const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
-                const todayDay = String(today.getDate()).padStart(2, '0');
-                const todayDateStr = `${todayYear}-${todayMonth}-${todayDay}`;
+                const todayDateStr = formatLocalDate(new Date());
                 const isFutureDate = headerDateStr > todayDateStr;
-
-                if (isFutureDate) {
-                  cell.value = null;
-                } else {
-                  if (localAttendanceDates.has(headerDateStr)) {
-                    cell.value = "P";
-                    dailyTotals[columnIndex - 4]++;
-                  } else {
-                    cell.value = "A";
-                  }
-                }
-              } else if (columnIndex >= 4 && columnIndex <= 29) {
-                const cell = row.getCell(columnIndex);
-                cell.value = null;
+                if (isFutureDate) cell.value = null;
+                else if (localAttendanceDates.has(headerDateStr)) {
+                  cell.value = "P";
+                  dailyTotals[columnIndex - 4]++;
+                } else cell.value = "x"; // Mark 'x' for absent on past/present days
+              } else if (columnIndex >= 4 && columnIndex <= 29) { // Clear cells for dates not in range
+                row.getCell(columnIndex).value = null;
               }
             });
           });
 
-          const totalRow = worksheet.getRow(62);
+          const totalRow = worksheet.getRow(62); // Assuming row 62 is for daily totals
           dailyTotals.forEach((total, index) => {
-            const colIndex = index + 4;
-            if (headerDates[colIndex]) {
-              totalRow.getCell(colIndex).value = total > 0 ? total : null;
-            } else {
-              totalRow.getCell(colIndex).value = null;
-            }
+            const colIndex = index + 4; // Map back to column index
+            if (headerDates[colIndex]) totalRow.getCell(colIndex).value = total > 0 ? total : null;
+            else totalRow.getCell(colIndex).value = null; // Clear total if date column was cleared
           });
 
-          addMonthlyTotals(worksheet, students, headerDates);
+          addMonthlyTotals(worksheet, students, headerDates, scheduleStartTimeForExcel); // Pass scheduleStartTime
 
           const buffer = await workbook.xlsx.writeBuffer();
-          const blob = new Blob([buffer], {
-            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          });
+          const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
           const link = document.createElement("a");
           link.href = URL.createObjectURL(blob);
-          link.download = `SF2_${selectedAssignment.gradeYearLevel}-${selectedAssignment.section}_${month}_${new Date(startDate).getFullYear()}.xlsx`;
+          link.download = `SF2_${gradeLevel}-${section}_${subjectName.replace(/\s+/g, '_')}_${month}_${new Date(startDate).getFullYear()}.xlsx`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(link.href);
-
           toast.success("Excel report generated successfully!");
         } catch (loadErr) {
           console.error("Error processing Excel template:", loadErr);
           toast.error(loadErr.message || "Failed to process the Excel template.");
           setError(loadErr.message || "Failed to process the Excel template.");
         } finally {
-          setLoading(false);
+          setGeneratingReport(false);
         }
       };
-
       reader.onerror = (err) => {
         console.error("Error reading template file:", err);
         toast.error("Failed to read the template file.");
         setError("Failed to read the template file.");
-        setLoading(false);
+        setGeneratingReport(false);
       };
-
       reader.readAsArrayBuffer(templateFile);
     } catch (err) {
       console.error("Error generating Excel file:", err);
       toast.error(err.message || "Failed to generate Excel file.");
       setError(err.message || "Failed to generate Excel file.");
-      setLoading(false);
+      setGeneratingReport(false);
     }
   };
 
@@ -602,24 +477,13 @@ const TeacherProfile = () => {
 
       <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6 mt-6 sm:mt-8">
         <h3 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-gray-800">
-          Manage Teaching Assignments
+          My Assigned Schedules
         </h3>
-        <EducationalSelections
-          educationLevel={educationLevel}
-          setEducationLevel={setEducationLevel}
-          gradeYearLevel={gradeYearLevel}
-          setGradeYearLevel={setGradeYearLevel}
-          section={section}
-          setSection={setSection}
-          availableSections={availableSections}
-          educationLevels={educationLevels}
-          onSubmit={handleAddTeachingAssignment}
-          teachingAssignments={teachingAssignments}
-        />
-        <TeachingAssignmentsList
-          assignments={teachingAssignments}
-          onRemove={handleRemoveTeachingAssignment}
-        />
+        {schedules.length > 0 ? (
+          <SchedulesList schedules={schedules} />
+        ) : (
+          <p className="text-gray-600">You currently have no schedules assigned.</p>
+        )}
       </div>
 
       <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6 mt-6 sm:mt-8">
@@ -628,25 +492,25 @@ const TeacherProfile = () => {
         </h3>
         <div className="mb-4 sm:mb-6">
           <label className="block text-base sm:text-lg font-semibold text-gray-700 mb-2">
-            Select Teaching Assignment:
+            Select Schedule:
           </label>
           <select
             className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={selectedAssignment?._id || ""}
+            value={selectedSchedule?._id || ""}
             onChange={(e) => {
-              const assignment = teachingAssignments.find((ta) => ta._id === e.target.value);
-              setSelectedAssignment(assignment);
+              const schedule = schedules.find((s) => s._id === e.target.value);
+              setSelectedSchedule(schedule);
             }}
-            disabled={teachingAssignments.length === 0}
+            disabled={schedules.length === 0}
           >
-            <option value="">-- Select Assignment --</option>
-            {teachingAssignments.map((assignment) => (
-              <option key={assignment._id} value={assignment._id}>
-                {`${assignment.educationLevel} - Grade ${assignment.gradeYearLevel} - Section ${assignment.section}`}
+            <option value="">-- Select Schedule --</option>
+            {schedules.map((schedule) => (
+              <option key={schedule._id} value={schedule._id}>
+                {`${schedule.subjectId?.name || 'N/A'} (${schedule.subjectId?.code || 'N/A'}) - ${schedule.section} - ${schedule.dayOfWeek} ${schedule.startTime}-${schedule.endTime}`}
               </option>
             ))}
           </select>
-          {teachingAssignments.length === 0 && <p className="text-xs sm:text-sm text-red-500 mt-1">No teaching assignments available. Please add one above.</p>}
+          {schedules.length === 0 && <p className="text-xs sm:text-sm text-red-500 mt-1">No schedules available. Schedules are assigned by an administrator.</p>}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
@@ -683,7 +547,7 @@ const TeacherProfile = () => {
           </div>
         </div>
 
-        {selectedAssignment && startDate && endDate && (
+        {selectedSchedule && startDate && endDate && (
           <div className="my-6 sm:my-8">
             <h4 className="text-lg sm:text-xl font-semibold text-gray-700 mb-3 sm:mb-4">Class Attendance Statistics</h4>
             {loadingStats && <p className="text-gray-600">Loading statistics...</p>}
@@ -720,7 +584,7 @@ const TeacherProfile = () => {
             e.preventDefault();
             generateExcel();
           }}
-          disabled={generatingReport}
+          disabled={generatingReport || !selectedSchedule}
         >
           {generatingReport ? "Generating..." : "Generate Excel Report (SF2)"}
         </button>

@@ -7,29 +7,25 @@ import {
     adminSignOut,
     allStudents,
     allTeachers,
+    createSchedule,
+    createSubject,
+    deleteScheduleAdmin,
     deleteStudent,
+    deleteSubjectAdmin,
     deleteTeacher,
+    getAllSchedules,
+    getAllSubjects,
     getAttendanceByDate,
+    getScheduleById,
     getStudentByCode,
+    getSubjectById,
     getUserByCode,
     loginAdmin,
+    updateSchedule,
     updateStudent,
+    updateSubject,
     updateTeacher
 } from '../controllers/adminController.js';
-import {
-    createSchedule,
-    deleteSchedule,
-    getAllSchedules,
-    getScheduleById,
-    updateSchedule
-} from '../controllers/scheduleController.js';
-import {
-    createSubject,
-    deleteSubject,
-    getAllSubjects,
-    getSubjectById,
-    updateSubject
-} from '../controllers/subjectController.js';
 import authAdmin from '../middleware/authAdmin.js';
 import upload from '../middleware/multer.js';
 
@@ -60,16 +56,22 @@ adminRouter.post("/sign-out/:code", authAdmin, adminSignOut);
 adminRouter.put("/sign-in/:code", authAdmin, adminSignIn);
 adminRouter.put("/sign-out/:code", authAdmin, adminSignOut);
 
-adminRouter.get("/subjects", authAdmin, getAllSubjects);
-adminRouter.get("/subjects/:id", authAdmin, getSubjectById);
-adminRouter.post("/subjects", authAdmin, createSubject);
-adminRouter.put("/subjects/:id", authAdmin, updateSubject);
-adminRouter.delete("/subjects/:id", authAdmin, deleteSubject);
+// Subject Routes
+adminRouter.route('/subjects')
+    .post(authAdmin, createSubject)
+    .get(authAdmin, getAllSubjects);
+adminRouter.route('/subjects/:id')
+    .get(authAdmin, getSubjectById)
+    .put(authAdmin, updateSubject)
+    .delete(authAdmin, deleteSubjectAdmin);
 
-adminRouter.get("/schedules", authAdmin, getAllSchedules);
-adminRouter.get("/schedules/:id", authAdmin, getScheduleById);
-adminRouter.post("/schedules", authAdmin, createSchedule);
-adminRouter.put("/schedules/:id", authAdmin, updateSchedule);
-adminRouter.delete("/schedules/:id", authAdmin, deleteSchedule);
+// Schedule Routes
+adminRouter.route('/schedules')
+    .post(authAdmin, createSchedule)
+    .get(authAdmin, getAllSchedules);
+adminRouter.route('/schedules/:id')
+    .get(authAdmin, getScheduleById)
+    .put(authAdmin, updateSchedule)
+    .delete(authAdmin, deleteScheduleAdmin);
 
 export default adminRouter;

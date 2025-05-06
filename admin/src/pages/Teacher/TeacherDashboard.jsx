@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { format } from 'date-fns'; // Import date-fns for formatting
 import { Loader } from "lucide-react";
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { FiInfo } from 'react-icons/fi';
@@ -11,32 +12,35 @@ const TeacherDashboard = () => {
     const [error, setError] = useState(null);
     const { dToken, backendUrl } = useContext(TeacherContext);
 
-    const fetchTeacherInfo = useCallback(async () => {
+    const fetchTeacherInfoAndTodaysAttendance = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.get(`${backendUrl}/api/teacher/profile`, {
+            const today = format(new Date(), 'yyyy-MM-dd'); // Get today's date in YYYY-MM-DD format
+            const response = await axios.get(`${backendUrl}/api/teacher/profile?date=${today}`, { // Append date to API call
                 headers: {
                     Authorization: `Bearer ${dToken}`,
                 },
             });
             if (response.data.success) {
+                // Assuming profileData now includes signInTime and signOutTime for today if available
                 setTeacherInfo(response.data.profileData);
             } else {
-                toast.error(response.data.message);
-                setError(response.data.message);
+                toast.error(response.data.message || "Failed to fetch teacher information.");
+                setError(response.data.message || "Failed to fetch teacher information.");
             }
         } catch (err) {
-            setError(err.message);
-            toast.error(err.message);
+            const errorMessage = err.response?.data?.message || err.message || "An error occurred.";
+            setError(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }
     }, [dToken, backendUrl]);
 
     useEffect(() => {
-        fetchTeacherInfo();
-    }, [fetchTeacherInfo]);
+        fetchTeacherInfoAndTodaysAttendance();
+    }, [fetchTeacherInfoAndTodaysAttendance]);
 
     const formatName = (user) => {
         if (!user) return '';
@@ -57,7 +61,7 @@ const TeacherDashboard = () => {
                 {loading ? (
                     <div className="flex justify-center items-center">
                         <Loader className="w-5 h-5 text-customRed animate-spin mr-2" />
-                        <span className="text-customRed">Scanning ...</span>
+                        <span className="text-customRed">Loading Information...</span>
                     </div>
                 ) : error ? (
                     <p className="text-red-500 text-center">{error}</p>
@@ -76,13 +80,13 @@ const UserInfoDisplay = ({ userInfo, formatName }) => {
         if (!dateTimeString) return 'No Data';
         try {
             const date = new Date(dateTimeString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
+            if (isNaN(date.getTime())) {
+                return 'Invalid Date';
+            }
+            return date.toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
-                second: '2-digit',
+                hour12: true
             });
         } catch (error) {
             console.error("Error formatting date:", error);
@@ -107,26 +111,23 @@ const UserInfoDisplay = ({ userInfo, formatName }) => {
 
             {/* Info Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 py-4 text-gray-700 border-t">
-                <p><strong>Email:</strong> {userInfo?.email}</p>
-                <p><strong>Address:</strong> {userInfo?.address}</p>
-                <p><strong>Contact Number:</strong> {userInfo?.number}</p>
+                <p><strong>Address:</strong> {userInfo?.address || 'N/A'}</p>
+                <p><strong>Contact Number:</strong> {userInfo?.number || 'N/A'}</p>
                 {userInfo?.position && <p><strong>Position:</strong> {userInfo?.position}</p>}
-                {userInfo?.educationLevel && <p><strong>Education Level:</strong> {userInfo?.educationLevel}</p>}
-                {userInfo?.subjects && <p><strong>Subjects:</strong> {userInfo?.subjects}</p>}
             </div>
 
-            {/* Sign-in/out Footer */}
+            {/* Sign-in/out Footer - Updated to use todaysAttendance */}
             <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-4 border-t bg-gray-50">
                 <p className="text-green-600 font-medium">
-                    <strong>Sign In Time:</strong> {formatDateTime(userInfo?.signInTime)}
+                    <strong>Sign In Time (Today):</strong> {formatDateTime(userInfo?.todaysAttendance?.signInTime)}
                 </p>
-                {userInfo?.signOutTime ? (
+                {userInfo?.todaysAttendance?.signOutTime ? (
                     <p className="text-red-500 font-medium mt-2 sm:mt-0">
-                        <strong>Sign Out Time:</strong> {formatDateTime(userInfo?.signOutTime)}
+                        <strong>Sign Out Time (Today):</strong> {formatDateTime(userInfo?.todaysAttendance?.signOutTime)}
                     </p>
                 ) : (
-                    <p className="text-red-600 font-medium mt-2 sm:mt-0">
-                        <strong>Sign Out Time:</strong> Not yet signed out
+                    <p className="text-gray-600 font-medium mt-2 sm:mt-0">
+                        <strong>Sign Out Time (Today):</strong> Not yet signed out
                     </p>
                 )}
             </div>

@@ -226,66 +226,85 @@ const getStudentsBySemester = async (req, res) => {
 // @access  Private (Student)
 const getStudentAttendanceProfile = async (req, res) => {
     try {
-        // req.student should be populated by authStudent middleware
         const studentId = req.student.id;
+        console.log('[AttendanceProfile] Student ID from token:', studentId);
 
         if (!mongoose.Types.ObjectId.isValid(studentId)) {
+            console.log('[AttendanceProfile] Invalid Student ID format');
             return res.status(400).json({ success: false, message: 'Invalid student ID' });
         }
 
-        // 1. Fetch student details (excluding password)
         const student = await studentModel.findById(studentId).select('-password').lean();
 
         if (!student) {
+            console.log('[AttendanceProfile] Student not found in DB for ID:', studentId);
             return res.status(404).json({ success: false, message: 'Student not found' });
         }
+        console.log('[AttendanceProfile] Student data found:', JSON.stringify(student, null, 2));
 
-        // 2. Get semester dates from the student document
         const semesterDates = student.semesterDates;
+        console.log('[AttendanceProfile] Raw Semester Dates from student doc:', JSON.stringify(semesterDates, null, 2));
+
 
         if (!semesterDates || !semesterDates.start || !semesterDates.end) {
-             return res.status(400).json({
+            console.log('[AttendanceProfile] Semester dates missing or incomplete on student doc.');
+            return res.status(400).json({
                 success: false,
                 message: 'Semester dates not found for the student. Please contact an administrator.'
-             });
+            });
         }
 
-        // Ensure dates are valid Date objects before querying
         const startDate = new Date(semesterDates.start);
         const endDate = new Date(semesterDates.end);
+
+        console.log(`[AttendanceProfile] Querying for attendance with:`);
+        console.log(`  User ID: ${studentId}`);
+        console.log(`  Start Date (UTC): ${startDate.toISOString()}`);
+        console.log(`  End Date (UTC): ${endDate.toISOString()}`);
+
+
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            console.log('[AttendanceProfile] Invalid date conversion for semester start/end dates.');
             return res.status(400).json({ success: false, message: 'Invalid semester dates stored for the student.' });
         }
 
-        // 3. Fetch attendance records within the semester dates
-        const attendance = await attendanceModel.find({
-            user: studentId,
-            userType: 'Student', // Ensure it's student attendance
-            timestamp: { // Assuming 'timestamp' field stores the attendance time
+        const attendanceQuery = {
+            user: studentId, // or mongoose.Types.ObjectId(studentId) if studentId is a string
+            userType: 'Student',
+            timestamp: {
                 $gte: startDate,
                 $lte: endDate,
             },
-        }).sort({ timestamp: 1 }).lean(); // Sort by date ascending
+        };
+        console.log('[AttendanceProfile] Attendance Query:', JSON.stringify(attendanceQuery, null, 2));
 
-        // 4. Send combined response
+        const attendance = await attendanceModel.find(attendanceQuery)
+            .sort({ timestamp: 1 })
+            .lean();
+
+        console.log(`[AttendanceProfile] Found ${attendance.length} attendance records.`);
+        if (attendance.length > 0) {
+            console.log('[AttendanceProfile] First few attendance records:', JSON.stringify(attendance.slice(0, 3), null, 2)); // Log first 3 records
+        }
+
+
         res.status(200).json({
             success: true,
-            student: student, // Send student profile data
-            attendance: attendance, // Send attendance records for the semester
-            semesterDates: semesterDates, // Send the semester dates used
+            student: student,
+            attendance: attendance,
+            semesterDates: semesterDates,
         });
 
     } catch (error) {
-        handleControllerError(res, error, 'Error fetching student attendance profile');
+        // Pass the specific message to the handler
+        handleControllerError(res, error, 'Error in getStudentAttendanceProfile');
     }
 };
 
 
 // --- Exports ---
 export {
-    getStudentAttendance, getStudentAttendanceProfile // <-- Export the new function
-    ,
-
+    getStudentAttendance, getStudentAttendanceProfile, // <-- Export the new function
     getStudentsBySemester,
     getStudentsByStudent,
     loginStudent,

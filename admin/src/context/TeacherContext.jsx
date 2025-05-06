@@ -104,7 +104,6 @@ const TeacherContextProvider = (props) => {
                 },
             });
             if (data.success) {
-                toast.success(data.message || 'Teacher profile updated successfully!');
                 return true;
             } else {
                 toast.error(data.message || 'Failed to update teacher profile.');

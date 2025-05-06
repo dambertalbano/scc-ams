@@ -71,12 +71,26 @@ const TeachersList = () => {
                 email: currentTeacher.email,
                 number: currentTeacher.number,
                 address: currentTeacher.address,
+                // Ensure you include all fields that can be edited in the modal
             };
 
-            await updateTeacher(currentTeacher._id, updates, null);
-            setIsEditing(false);
+            // Log what's being sent
+            console.log("Attempting to update teacher:", currentTeacher._id, "with data:", updates);
+
+            const success = await updateTeacher(currentTeacher._id, updates, null); // Assuming updateTeacher returns a boolean or throws an error
+
+            if (success) { // Or if updateTeacher doesn't return boolean, remove this check if it always proceeds
+                setIsEditing(false);
+                getAllTeachers(); // <--- ADD THIS LINE TO RE-FETCH THE TEACHER LIST
+                // Optionally, add a success toast here if your context doesn't already show one
+                // toast.success("Teacher updated successfully!");
+            } else {
+                // Handle case where updateTeacher indicates failure (if it returns boolean)
+                // toast.error("Failed to update teacher. Please try again.");
+            }
         } catch (error) {
             console.error("Error updating teacher:", error);
+            // toast.error(error.message || "An error occurred while updating teacher.");
         }
     };
 

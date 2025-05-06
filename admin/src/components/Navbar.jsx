@@ -99,12 +99,12 @@ const Navbar = forwardRef((props, ref) => {
                     ],
                 },
                 {
-                    title: 'Schedule',
-                    path: '/schedules',
-                },
-                {
                     title: 'Subjects',
                     path: '/Subjects',
+                },
+                {
+                    title: 'Schedules',
+                    path: '/schedules',
                 },
             ];
         } else if (dToken) {

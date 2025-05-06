@@ -1,5 +1,5 @@
 import axios from "axios";
-import { format, isValid } from 'date-fns';
+import { endOfMonth, format, isValid, startOfMonth } from 'date-fns';
 import ExcelJS from "exceljs";
 import React, { useCallback, useContext, useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
@@ -38,11 +38,10 @@ const formatLocalDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime) => { // Added scheduleStartTime
+const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime) => {
   const startRow = 14;
   const absentColumn = 30;
   const tardyColumn = 31;
-  // const tardyHourThreshold = 8; // Removed fixed threshold
 
   let tardyThresholdHours = null;
   let tardyThresholdMinutes = null;
@@ -50,7 +49,7 @@ const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime) =
   if (scheduleStartTime) {
     const [startHours, startMinutes] = scheduleStartTime.split(':').map(Number);
     const tempDate = new Date();
-    tempDate.setHours(startHours, startMinutes + 15, 0, 0); // Add 15 minutes
+    tempDate.setHours(startHours, startMinutes + 15, 0, 0);
     tardyThresholdHours = tempDate.getHours();
     tardyThresholdMinutes = tempDate.getMinutes();
   } else {
@@ -77,18 +76,17 @@ const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime) =
     const todayDateStr = formatLocalDate(new Date());
 
     headerDates.forEach((headerDateStr, columnIndex) => {
-      if (headerDateStr && columnIndex >= 4 && columnIndex <= 29) { // Assuming these are the date columns
+      if (headerDateStr && columnIndex >= 4 && columnIndex <= 29) {
         const isFutureDate = headerDateStr > todayDateStr;
         if (!isFutureDate) {
           if (!attendanceByLocalDate[headerDateStr]) {
             totalAbsent++;
           } else {
             const recordsForDay = attendanceByLocalDate[headerDateStr];
-            recordsForDay.sort((a, b) => a.getTime() - b.getTime()); // Ensure records are sorted
-            const firstSignInTime = recordsForDay[0]; // This is a Date object
+            recordsForDay.sort((a, b) => a.getTime() - b.getTime());
+            const firstSignInTime = recordsForDay[0];
 
             if (firstSignInTime && tardyThresholdHours !== null && tardyThresholdMinutes !== null) {
-              // Compare only the time part for tardiness
               const signInHour = firstSignInTime.getHours();
               const signInMinute = firstSignInTime.getMinutes();
 
@@ -132,6 +130,8 @@ const TeacherProfile = () => {
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [selectedMonthForPicker, setSelectedMonthForPicker] = useState(new Date());
+
   const [templateFile, setTemplateFile] = useState(null);
   const [generatingReport, setGeneratingReport] = useState(false);
 
@@ -298,24 +298,35 @@ const TeacherProfile = () => {
     }
   };
 
+  const handleMonthChange = (date) => {
+    if (date && isValid(date)) {
+      setSelectedMonthForPicker(date);
+      setStartDate(startOfMonth(date));
+      setEndDate(endOfMonth(date));
+    } else {
+      setSelectedMonthForPicker(null);
+      setStartDate(null);
+      setEndDate(null);
+    }
+  };
+
   const generateExcel = async () => {
     if (!templateFile) {
       toast.warn("Please upload the SF2 Excel template first.");
       return;
     }
-    if (!selectedSchedule) { 
+    if (!selectedSchedule) {
       toast.warn("Please select a schedule before generating the report.");
+      return;
+    }
+    if (!startDate || !endDate) {
+      toast.warn("Please select a month for the report.");
       return;
     }
     const formattedStartDate = formatQueryDate(startDate);
     const formattedEndDate = formatQueryDate(endDate);
 
-    if (!formattedStartDate || !formattedEndDate) {
-      toast.warn("Please fill in both Start Date and End Date with valid dates.");
-      return;
-    }
-
-    setGeneratingReport(true); 
+    setGeneratingReport(true);
     setError(null);
     toast.info("Generating Excel report...", { autoClose: 2000 });
 
@@ -339,12 +350,11 @@ const TeacherProfile = () => {
           const worksheet = workbook.getWorksheet(1);
           if (!worksheet) throw new Error("Could not find the worksheet in the template.");
 
-          const month = new Date(startDate).toLocaleString("default", { month: "long" });
+          const monthForReport = new Date(startDate).toLocaleString("default", { month: "long" });
           const gradeLevel = selectedSchedule.gradeYearLevel;
           const section = selectedSchedule.section;
           const subjectName = selectedSchedule.subjectId?.name || 'N/A';
-          const scheduleStartTimeForExcel = selectedSchedule.startTime; // Get schedule start time
-
+          const scheduleStartTimeForExcel = selectedSchedule.startTime;
 
           const formatTeacherName = (teacher) => {
             if (!teacher) return "N/A";
@@ -355,12 +365,10 @@ const TeacherProfile = () => {
           };
 
           const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
-          worksheet.getCell("AF86").value = teacherName; 
-          worksheet.getCell("AB6").value = `${month}`;    
-          worksheet.getCell("X8").value = `${gradeLevel}`; 
-          worksheet.getCell("AE8").value = `${section}`;   
-          // worksheet.getCell("SOME_CELL_FOR_SUBJECT").value = subjectName;
-
+          worksheet.getCell("AF86").value = teacherName;
+          worksheet.getCell("AB6").value = `${monthForReport}`;
+          worksheet.getCell("X8").value = `${gradeLevel}`;
+          worksheet.getCell("AE8").value = `${section}`;
 
           const headerDates = [];
           const reportStartYear = new Date(startDate).getFullYear();
@@ -391,7 +399,7 @@ const TeacherProfile = () => {
           });
 
           const startDataRow = 14;
-          const dailyTotals = Array(26).fill(0); // Assuming 26 possible date columns (4 to 29 inclusive)
+          const dailyTotals = Array(26).fill(0);
 
           students.forEach((student, index) => {
             const row = worksheet.getRow(startDataRow + index);
@@ -411,27 +419,27 @@ const TeacherProfile = () => {
                 else if (localAttendanceDates.has(headerDateStr)) {
                   cell.value = "P";
                   dailyTotals[columnIndex - 4]++;
-                } else cell.value = "x"; // Mark 'x' for absent on past/present days
-              } else if (columnIndex >= 4 && columnIndex <= 29) { // Clear cells for dates not in range
+                } else cell.value = "x";
+              } else if (columnIndex >= 4 && columnIndex <= 29) {
                 row.getCell(columnIndex).value = null;
               }
             });
           });
 
-          const totalRow = worksheet.getRow(62); // Assuming row 62 is for daily totals
+          const totalRow = worksheet.getRow(62);
           dailyTotals.forEach((total, index) => {
-            const colIndex = index + 4; // Map back to column index
+            const colIndex = index + 4;
             if (headerDates[colIndex]) totalRow.getCell(colIndex).value = total > 0 ? total : null;
-            else totalRow.getCell(colIndex).value = null; // Clear total if date column was cleared
+            else totalRow.getCell(colIndex).value = null;
           });
 
-          addMonthlyTotals(worksheet, students, headerDates, scheduleStartTimeForExcel); // Pass scheduleStartTime
+          addMonthlyTotals(worksheet, students, headerDates, scheduleStartTimeForExcel);
 
           const buffer = await workbook.xlsx.writeBuffer();
           const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
           const link = document.createElement("a");
           link.href = URL.createObjectURL(blob);
-          link.download = `SF2_${gradeLevel}-${section}_${subjectName.replace(/\s+/g, '_')}_${month}_${new Date(startDate).getFullYear()}.xlsx`;
+          link.download = `SF2_${gradeLevel}-${section}_${subjectName.replace(/\s+/g, '_')}_${monthForReport}_${new Date(startDate).getFullYear()}.xlsx`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -513,38 +521,18 @@ const TeacherProfile = () => {
           {schedules.length === 0 && <p className="text-xs sm:text-sm text-red-500 mt-1">No schedules available. Schedules are assigned by an administrator.</p>}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
-          <div>
-            <label className="block text-base sm:text-lg font-semibold text-gray-700 mb-2">
-              Start Date:
-            </label>
-            <DatePicker
-              selected={startDate}
-              onChange={(date) => setStartDate(date)}
-              selectsStart
-              startDate={startDate}
-              endDate={endDate}
-              dateFormat="MM/dd/yyyy"
-              className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholderText="Select start date"
-            />
-          </div>
-          <div>
-            <label className="block text-base sm:text-lg font-semibold text-gray-700 mb-2">
-              End Date:
-            </label>
-            <DatePicker
-              selected={endDate}
-              onChange={(date) => setEndDate(date)}
-              selectsEnd
-              startDate={startDate}
-              endDate={endDate}
-              minDate={startDate}
-              dateFormat="MM/dd/yyyy"
-              className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholderText="Select end date"
-            />
-          </div>
+        <div className="mb-4 sm:mb-6">
+          <label className="block text-base sm:text-lg font-semibold text-gray-700 mb-2">
+            Select Month for Report:
+          </label>
+          <DatePicker
+            selected={selectedMonthForPicker}
+            onChange={handleMonthChange}
+            dateFormat="MMMM yyyy"
+            showMonthYearPicker
+            className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholderText="Select month and year"
+          />
         </div>
 
         {selectedSchedule && startDate && endDate && (
@@ -584,7 +572,7 @@ const TeacherProfile = () => {
             e.preventDefault();
             generateExcel();
           }}
-          disabled={generatingReport || !selectedSchedule}
+          disabled={generatingReport || !selectedSchedule || !startDate}
         >
           {generatingReport ? "Generating..." : "Generate Excel Report (SF2)"}
         </button>

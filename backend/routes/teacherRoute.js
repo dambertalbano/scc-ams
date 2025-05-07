@@ -24,7 +24,7 @@ router.put("/profile", authTeacher, [
     body('firstName').optional({ checkFalsy: true }).trim().escape(),
     body('middleName').optional({ checkFalsy: true }).trim().escape(),
     body('lastName').optional({ checkFalsy: true }).trim().escape(),
-    body('email').optional().isEmail().normalizeEmail(),
+    body('email').optional().isEmail(), // Removed normalizeEmail()
     body('number').optional().isMobilePhone('any', { strictMode: false }),
     body('address').optional({ checkFalsy: true }).trim().escape(),
 ], updateTeacherProfile);

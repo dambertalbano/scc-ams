@@ -105,8 +105,6 @@ const AdminContextProvider = (props) => {
 
     const updateTeacher = useCallback(async (teacherId, updates, imageFile) => {
         const url = `${backendUrl}/api/admin/teachers/${teacherId}`;
-        console.log("Updating teacher at URL:", url);
-
         try {
             const formData = new FormData();
             for (const key in updates) {
@@ -116,19 +114,22 @@ const AdminContextProvider = (props) => {
                 formData.append('image', imageFile);
             }
 
+            // Log FormData contents
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+
             const response = await axios.put(url, formData, {
-                headers: {
+                headers: { 
                     Authorization: `Bearer ${aToken}`,
                     'Content-Type': 'multipart/form-data',
                 },
             });
 
             if (response.data.success) {
-                toast.success("Teacher updated successfully");
                 getAllTeachers();
                 return true;
             } else {
-                toast.error(response.data.message || "Failed to update teacher");
                 return false;
             }
         } catch (error) {

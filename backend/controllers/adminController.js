@@ -2,12 +2,15 @@ import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
 import { eachDayOfInterval, endOfMonth, formatISO, isValid, parseISO, startOfMonth, subMonths } from 'date-fns';
 import jwt from "jsonwebtoken";
+import multer from 'multer';
 import validator from "validator";
 import { default as Attendance, default as attendanceModel } from "../models/attendanceModel.js";
 import scheduleModel from "../models/scheduleModel.js";
 import studentModel from "../models/studentModel.js";
 import subjectModel from "../models/subjectModel.js";
 import teacherModel from "../models/teacherModel.js";
+
+const upload = multer({ dest: 'uploads/' });
 
 const loginAdmin = async (req, res) => {
     try {
@@ -341,35 +344,36 @@ const deleteTeacher = async (req, res) => {
 };
 
 const updateTeacher = async (req, res) => {
-    const { id } = req.params;
-    const updates = req.body;
-
     try {
-        if (!req.file) {
-            if (updates.image && typeof updates.image === 'object' && Object.keys(updates.image).length === 0) {
-                delete updates.image;
-            }
-        } else {
-            try {
-                const imageUpload = await cloudinary.uploader.upload(req.file.path, { resource_type: "image" });
-                updates.image = imageUpload.secure_url;
-            } catch (cloudinaryError) {
-                return res.status(500).json({ success: false, message: "Failed to upload image to Cloudinary" });
-            }
+        const userId = req.params.id;
+        const updatedData = req.body;
+
+        console.log("Raw request body:", req.body);
+
+        // Validate required fields
+        if (!updatedData.firstName || !updatedData.lastName || !updatedData.email) {
+            return res.status(400).json({ success: false, message: "Missing required fields" });
         }
 
-        const updatedTeacher = await teacherModel.findByIdAndUpdate(id, updates, {
+        if (req.file) {
+            const imageUpload = await cloudinary.uploader.upload(req.file.path, { resource_type: "image" });
+            updatedData.image = imageUpload.secure_url;
+        }
+
+        const updatedTeacher = await teacherModel.findByIdAndUpdate(userId, updatedData, {
             new: true,
-            runValidators: true
+            runValidators: true,
         });
 
         if (!updatedTeacher) {
-            return res.status(404).json({ success: false, message: 'Teacher not found' });
+            return res.status(404).json({ success: false, message: "Teacher not found" });
         }
 
-        res.json({ success: true, message: 'Teacher updated successfully', teacher: updatedTeacher });
+        console.log("Updated teacher:", updatedTeacher);
 
+        res.status(200).json({ success: true, teacher: updatedTeacher });
     } catch (error) {
+        console.error("Error in updateTeacher:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

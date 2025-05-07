@@ -12,11 +12,7 @@ const teacherSchema = new mongoose.Schema({
         match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
     },
     password: { type: String, required: true },
-    image: {
-        type: String,
-        trim: true,
-        match: /^(ftp|http|https):\/\/[^ "]+$/,
-    },
+    image: { type: String, trim: true },
     number: { type: String, required: true, trim: true, maxlength: 11 },
     address: { type: String, required: true, trim: true },
     code: { type: String, required: true, unique: true, trim: true },
@@ -39,11 +35,11 @@ const teacherSchema = new mongoose.Schema({
         },
         gradeYearLevel: { type: String, trim: true },
         section: { type: String, trim: true },
-        _id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() } // Ensure each assignment has an _id
+        _id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() }
     }],
-    schedules: [{ // <--- ADD THIS FIELD
+    schedules: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Schedule' // Assuming your schedule model is named 'Schedule'
+        ref: 'Schedule'
     }],
 },
     { timestamps: true }

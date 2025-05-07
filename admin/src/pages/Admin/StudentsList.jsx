@@ -167,9 +167,8 @@ const StudentsList = () => {
                                 onChange={(e) => handleFilterChange('educationLevel', e.target.value)}
                             >
                                 <option value="">Education Level</option>
-                                <option value="Elementary">Elementary</option>
-                                <option value="High School">High School</option>
-                                <option value="College">College</option>
+                                <option value="Primary">Primary</option>
+                                <option value="Secondary">Secondary</option>
                             </select>
                             <select
                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full border-b"
@@ -187,12 +186,18 @@ const StudentsList = () => {
                                 <option value="Grade 8">Grade 8</option>
                                 <option value="Grade 9">Grade 9</option>
                                 <option value="Grade 10">Grade 10</option>
-                                <option value="Grade 11">Grade 11</option>
-                                <option value="Grade 12">Grade 12</option>
-                                <option value="1st Year College">1st Year College</option>
-                                <option value="2nd Year College">2nd Year College</option>
-                                <option value="3rd Year College">3rd Year College</option>
-                                <option value="4th Year College">4th Year College</option>
+                                <option value="Grade 11 HUMMS">Grade 11 HUMMS</option>
+                                <option value="Grade 11 A&D">Grade 11 A&D</option>
+                                <option value="Grade 11 F&B">Grade 11 F&B</option>
+                                <option value="Grade 11 B&P">Grade 11 B&P</option>
+                                <option value="Grade 11 TS">Grade 11 TS</option>
+                                <option value="Grade 11 ICT">Grade 11 ICT</option>
+                                <option value="Grade 12 HUMMS">Grade 12 HUMMS</option>
+                                <option value="Grade 12 A&D">Grade 12 A&D</option>
+                                <option value="Grade 12 F&B">Grade 12 F&B</option>
+                                <option value="Grade 12 B&P">Grade 12 B&P</option>
+                                <option value="Grade 12 TS">Grade 12 TS</option>
+                                <option value="Grade 12 ICT">Grade 12 ICT</option>
                             </select>
                             <select
                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
@@ -200,10 +205,12 @@ const StudentsList = () => {
                                 onChange={(e) => handleFilterChange('section', e.target.value)}
                             >
                                 <option value="">Section</option>
-                                <option value="A">A</option>
-                                <option value="B">B</option>
-                                <option value="C">C</option>
-                                <option value="D">D</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+
                             </select>
                         </div>
                     )}

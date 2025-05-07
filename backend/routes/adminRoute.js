@@ -47,7 +47,7 @@ adminRouter.get("/student/code/:code", authAdmin, getStudentByCode);
 
 adminRouter.get("/attendance", authAdmin, getAttendanceByDate);
 
-adminRouter.put("/teachers/:id", authAdmin, updateTeacher);
+adminRouter.put('/teachers/:id', upload.single('image'), updateTeacher);
 adminRouter.put("/students/:id", authAdmin, updateStudent);
 
 adminRouter.delete("/teachers/:id", authAdmin, deleteTeacher);

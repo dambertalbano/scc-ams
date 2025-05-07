@@ -15,8 +15,8 @@ const TeachersList = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [isEditing, setIsEditing] = useState(false);
     const [currentTeacher, setCurrentTeacher] = useState(null);
+    const [imageFile, setImageFile] = useState(null); // State for the image file
     const teachersPerPage = 10;
-    const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
     useEffect(() => {
         document.title = 'Teacher List';
@@ -43,10 +43,43 @@ const TeachersList = () => {
     const handleCloseEdit = () => {
         setIsEditing(false);
         setCurrentTeacher(null);
+        setImageFile(null); // Reset the image file
     };
 
-    const handleDelete = (teacherId) => {
-        deleteTeacher(teacherId);
+    const handleDelete = async (teacherId) => {
+        try {
+            await deleteTeacher(teacherId);
+            getAllTeachers(); // Refresh the teacher list
+        } catch (error) {
+            console.error('Failed to delete teacher:', error);
+        }
+    };
+
+    const handleSave = async () => {
+        try {
+            const updates = {
+                firstName: currentTeacher.firstName,
+                middleName: currentTeacher.middleName,
+                lastName: currentTeacher.lastName,
+                email: currentTeacher.email,
+                number: currentTeacher.number,
+                address: currentTeacher.address,
+            };
+
+            console.log("Attempting to update teacher:", currentTeacher._id, "with data:", updates);
+            console.log("Updates being sent to backend:", updates);
+
+            const success = await updateTeacher(currentTeacher._id, updates, imageFile);
+
+            if (success) {
+                setIsEditing(false);
+                setCurrentTeacher(null);
+                setImageFile(null); // Reset the image file
+                getAllTeachers(); // Refresh the teacher list
+            }
+        } catch (error) {
+            console.error("Error updating teacher:", error);
+        }
     };
 
     const filteredTeachers = teachers?.filter((teacher) => {
@@ -61,38 +94,6 @@ const TeachersList = () => {
 
         return matchesSearch;
     });
-
-    const handleSave = async () => {
-        try {
-            const updates = {
-                firstName: currentTeacher.firstName,
-                middleName: currentTeacher.middleName,
-                lastName: currentTeacher.lastName,
-                email: currentTeacher.email,
-                number: currentTeacher.number,
-                address: currentTeacher.address,
-                // Ensure you include all fields that can be edited in the modal
-            };
-
-            // Log what's being sent
-            console.log("Attempting to update teacher:", currentTeacher._id, "with data:", updates);
-
-            const success = await updateTeacher(currentTeacher._id, updates, null); // Assuming updateTeacher returns a boolean or throws an error
-
-            if (success) { // Or if updateTeacher doesn't return boolean, remove this check if it always proceeds
-                setIsEditing(false);
-                getAllTeachers(); // <--- ADD THIS LINE TO RE-FETCH THE TEACHER LIST
-                // Optionally, add a success toast here if your context doesn't already show one
-                // toast.success("Teacher updated successfully!");
-            } else {
-                // Handle case where updateTeacher indicates failure (if it returns boolean)
-                // toast.error("Failed to update teacher. Please try again.");
-            }
-        } catch (error) {
-            console.error("Error updating teacher:", error);
-            // toast.error(error.message || "An error occurred while updating teacher.");
-        }
-    };
 
     const pageCount = Math.ceil((filteredTeachers?.length || 0) / teachersPerPage);
     const offset = currentPage * teachersPerPage;
@@ -112,54 +113,6 @@ const TeachersList = () => {
                         onChange={handleSearch}
                     />
                     <Search className="absolute top-3 left-3 text-gray-400" size={20} />
-                </div>
-                <div className="relative">
-                    <button
-                        className="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-200"
-                        onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                    >
-                        Filters
-                    </button>
-                    {isFilterDropdownOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                            <label className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <input
-                                    type="checkbox"
-                                    checked={filters.withEmail}
-                                    onChange={() => handleFilterChange('withEmail')}
-                                    className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                With Email
-                            </label>
-                            <label className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <input
-                                    type="checkbox"
-                                    checked={filters.noEmail}
-                                    onChange={() => handleFilterChange('noEmail')}
-                                    className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                No Email
-                            </label>
-                            <label className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <input
-                                    type="checkbox"
-                                    checked={filters.withContact}
-                                    onChange={() => handleFilterChange('withContact')}
-                                    className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                With Contact
-                            </label>
-                            <label className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <input
-                                    type="checkbox"
-                                    checked={filters.noContact}
-                                    onChange={() => handleFilterChange('noContact')}
-                                    className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                No Contact
-                            </label>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -194,17 +147,11 @@ const TeachersList = () => {
                                         <button className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600" onClick={() => handleEdit(item)}>
                                             <Pencil size={18} />
                                         </button>
-                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-500 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                                            Edit
-                                        </div>
                                     </div>
                                     <div className="relative group">
                                         <button className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600" onClick={() => handleDelete(item._id)}>
                                             <Trash2 size={18} />
                                         </button>
-                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-500 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                                            Delete
-                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -281,6 +228,14 @@ const TeachersList = () => {
                                 name="address"
                                 value={currentTeacher.address || ''}
                                 onChange={(e) => setCurrentTeacher({ ...currentTeacher, address: e.target.value })}
+                            />
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700">Image</label>
+                            <input
+                                type="file"
+                                className="border w-full p-2 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                onChange={(e) => setImageFile(e.target.files[0])}
                             />
                         </div>
                         <div className="mt-4 flex justify-end">

@@ -1,4 +1,5 @@
 import React, { useContext, useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { toast } from 'react-toastify';
 import { RFIDReaderInput } from 'rfid-reader-input';
 import { assets } from '../../assets/assets';
@@ -16,6 +17,7 @@ const AddTeacher = () => {
     const [code, setCode] = useState('');
     const [openCardReaderWindow, setOpenCardReaderWindow] = useState(false);
     const { aToken, addTeacher } = useContext(AdminContext);
+    const navigate = useNavigate(); // Initialize useNavigate
 
     const handleOpenRFID = () => {
         setOpenCardReaderWindow(true);
@@ -72,6 +74,7 @@ const AddTeacher = () => {
                 setCode('');
 
                 toast.success('Teacher added successfully!');
+                navigate('/admin/add-users'); // Redirect to Add Users page
             }
         } catch (error) {
             console.error("Error Response:", error.response);

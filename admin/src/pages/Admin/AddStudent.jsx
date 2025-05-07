@@ -1,5 +1,6 @@
 import axios from 'axios';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { toast } from 'react-toastify';
 import { RFIDReaderInput } from 'rfid-reader-input';
 import { assets } from '../../assets/assets';
@@ -25,6 +26,7 @@ const useAddStudentForm = () => {
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const { aToken } = useContext(AdminContext);
+    const navigate = useNavigate(); // Initialize useNavigate
 
     const educationLevels = Object.keys(gradeOptions);
 
@@ -48,7 +50,7 @@ const useAddStudentForm = () => {
         setSection('');
         setNumber('');
         setCode('');
-    }, [setDocImg, setStudentNumber, setFirstName, setMiddleName, setLastName, setEmail, setPassword, setAddress, setEducationLevel, setGradeYearLevel, setSection, number, setNumber, setCode, educationLevels]);
+    }, [educationLevels]);
 
     const handleOpenRFID = useCallback(() => {
         setOpenCardReaderWindow(true);
@@ -115,6 +117,7 @@ const useAddStudentForm = () => {
             if (data.success) {
                 toast.success(data.message);
                 resetForm();
+                navigate('/admin/add-users'); // Redirect to the dashboard
             } else {
                 toast.error(data.message);
             }
@@ -122,7 +125,7 @@ const useAddStudentForm = () => {
             toast.error(error.message);
             console.error(error);
         }
-    }, [aToken, address, backendUrl, code, docImg, educationLevel, email, firstName, gradeYearLevel, lastName, middleName, number, password, section, resetForm, studentNumber]);
+    }, [aToken, address, backendUrl, code, docImg, educationLevel, email, firstName, gradeYearLevel, lastName, middleName, navigate, number, password, section, resetForm, studentNumber]);
 
     useEffect(() => {
         setAvailableSections(gradeOptions[educationLevel]?.[gradeYearLevel] || []);

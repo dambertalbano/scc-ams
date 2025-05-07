@@ -63,32 +63,70 @@ const useAddStudentForm = () => {
     const onSubmitHandler = useCallback(async (event) => {
         event.preventDefault();
 
+        // Validation checks with toast.error for feedback
         if (!docImg) {
-            return toast.error('Image Not Selected');
+            toast.error('Please upload a profile picture.');
+            return;
         }
 
-        if (!studentNumber || !firstName || !lastName || !email || !password || !number || !address || !educationLevel || !gradeYearLevel || !section) {
-            return toast.error('Missing Details');
+        if (!studentNumber) {
+            toast.error('Student Number is required.');
+            return;
+        }
+
+        if (!firstName) {
+            toast.error('First Name is required.');
+            return;
+        }
+
+        if (!lastName) {
+            toast.error('Last Name is required.');
+            return;
+        }
+
+        if (!email) {
+            toast.error('Email is required.');
+            return;
         }
 
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return toast.error('Please enter a valid email');
+            toast.error('Please enter a valid email address.');
+            return;
+        }
+
+        if (!password) {
+            toast.error('Password is required.');
+            return;
         }
 
         if (password.length < 8) {
-            return toast.error('Please enter a strong password');
+            toast.error('Password must be at least 8 characters long.');
+            return;
+        }
+
+        if (!number) {
+            toast.error('Contact Number is required.');
+            return;
+        }
+
+        if (!address) {
+            toast.error('Address is required.');
+            return;
         }
 
         if (!educationLevel) {
-            return toast.error("Please select an Education Level");
+            toast.error('Please select an Education Level.');
+            return;
         }
 
         if (!gradeYearLevel) {
-            return toast.error("Please select a Grade/Year Level");
+            toast.error('Please select a Grade/Year Level.');
+            return;
         }
 
         if (!section) {
-            return toast.error("Please select a Section");
+            toast.error('Please select a Section.');
+            return;
         }
 
         const formData = new FormData();
@@ -122,7 +160,7 @@ const useAddStudentForm = () => {
                 toast.error(data.message);
             }
         } catch (error) {
-            toast.error(error.message);
+            toast.error('Failed to add student. Please try again.');
             console.error(error);
         }
     }, [aToken, address, backendUrl, code, docImg, educationLevel, email, firstName, gradeYearLevel, lastName, middleName, navigate, number, password, section, resetForm, studentNumber]);

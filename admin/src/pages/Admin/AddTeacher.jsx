@@ -30,20 +30,55 @@ const AddTeacher = () => {
     const onSubmitHandler = async (event) => {
         event.preventDefault();
 
+        // Validation checks with toast.error for feedback
         if (!docImg) {
-            return toast.error('Image Not Selected');
+            toast.error('Please upload a profile picture.');
+            return;
         }
 
-        if (!firstName || !lastName || !email || !password || !number || !address || !code) {
-            return toast.error('Missing Details');
+        if (!firstName) {
+            toast.error('First Name is required.');
+            return;
+        }
+
+        if (!lastName) {
+            toast.error('Last Name is required.');
+            return;
+        }
+
+        if (!email) {
+            toast.error('Email is required.');
+            return;
         }
 
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return toast.error('Please enter a valid email');
+            toast.error('Please enter a valid email address.');
+            return;
+        }
+
+        if (!password) {
+            toast.error('Password is required.');
+            return;
         }
 
         if (password.length < 8) {
-            return toast.error('Please enter a strong password');
+            toast.error('Password must be at least 8 characters long.');
+            return;
+        }
+
+        if (!number) {
+            toast.error('Contact Number is required.');
+            return;
+        }
+
+        if (!address) {
+            toast.error('Address is required.');
+            return;
+        }
+
+        if (!code) {
+            toast.error('RFID Code is required.');
+            return;
         }
 
         const formData = new FormData();
@@ -57,8 +92,6 @@ const AddTeacher = () => {
         formData.append('number', number);
         formData.append('address', address);
         formData.append('code', code);
-
-        console.log("Form Data:", Object.fromEntries(formData));
 
         try {
             const success = await addTeacher(formData);

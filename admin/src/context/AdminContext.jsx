@@ -219,11 +219,9 @@ const AdminContextProvider = (props) => {
             });
 
             if (response.data.success) {
-                toast.success("Student added successfully");
                 getAllStudents();
                 return true;
             } else {
-                toast.error(response.data.message || "Failed to add student");
                 return false;
             }
         } catch (error) {
@@ -242,11 +240,9 @@ const AdminContextProvider = (props) => {
             });
 
             if (response.data.success) {
-                toast.success("Teacher added successfully");
                 getAllTeachers();
                 return true;
             } else {
-                toast.error(response.data.message || "Failed to add teacher");
                 return false;
             }
         } catch (error) {

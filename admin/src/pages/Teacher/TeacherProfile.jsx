@@ -419,7 +419,7 @@ const TeacherProfile = () => {
                 else if (localAttendanceDates.has(headerDateStr)) {
                   cell.value = "P";
                   dailyTotals[columnIndex - 4]++;
-                } else cell.value = "x";
+                } else cell.value = "/";
               } else if (columnIndex >= 4 && columnIndex <= 29) {
                 row.getCell(columnIndex).value = null;
               }

@@ -158,105 +158,140 @@ const TeacherAttendance = () => {
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.load(e.target.result);
 
-            const worksheet = workbook.getWorksheet(1);
+            const worksheet = workbook.getWorksheet(1); // Assuming SF2 is the first sheet
 
-            const month = currentDate.toLocaleString('default', { month: 'long' });
+            // --- Date Handling Setup ---
+            const selectedCalendarDateObj = currentDate;
+            const selectedYear = selectedCalendarDateObj.getFullYear();
+            const selectedMonth_0_idx = selectedCalendarDateObj.getMonth();
+            const selectedMonth_1_idx_str = String(selectedMonth_0_idx + 1).padStart(2, '0');
+            const selectedDayStr = String(selectedCalendarDateObj.getDate()).padStart(2, '0');
+            const selectedDateString_Local = `${selectedYear}-${selectedMonth_1_idx_str}-${selectedDayStr}`;
+
+            // --- Update Static Info in Excel ---
+            const monthName = selectedCalendarDateObj.toLocaleString('default', { month: 'long' });
             const gradeLevel = currentScheduleDetails.gradeYearLevel;
             const section = currentScheduleDetails.section;
             const subjectName = currentScheduleDetails.subjectId?.name || 'N/A';
 
             const formatTeacherName = (teacher) => {
                 if (!teacher) return "N/A";
-                const lastName = teacher.lastName
-                    ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase()
-                    : "";
-                const firstName = teacher.firstName
-                    ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase()
-                    : "";
-                const middleInitial = teacher.middleName
-                    ? `${teacher.middleName.charAt(0).toUpperCase()}.`
-                    : "";
+                const lastName = teacher.lastName ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase() : "";
+                const firstName = teacher.firstName ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase() : "";
+                const middleInitial = teacher.middleName ? `${teacher.middleName.charAt(0).toUpperCase()}.` : "";
                 return `${lastName}, ${firstName} ${middleInitial}`;
             };
+            const teacherNameStr = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
 
-            const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
-
-            worksheet.getCell("AE86").value = teacherName;
-            worksheet.getCell("AA6").value = `${month}`;
+            worksheet.getCell("AE86").value = teacherNameStr;
+            worksheet.getCell("AA6").value = `${monthName}`;
             worksheet.getCell("W8").value = `${gradeLevel}`;
             worksheet.getCell("AD8").value = `${section}`;
 
+            // --- Map Excel Header Dates to Column Numbers ---
             const dateToColumnMap = {};
-            worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                if (colNumber >= 4 && colNumber <= 29) {
-                    let raw = cell.value;
-                    if (typeof raw === "object" && raw !== null) {
-                        if (raw.richText) {
-                            raw = raw.richText.map((rt) => rt.text).join("");
-                        } else if (raw.result) {
-                            raw = raw.result;
+            const headerYearForDays = selectedYear;
+            const headerMonthForDays_0_idx = selectedMonth_0_idx;
+
+            const dateHeaderRow = 11;
+            const firstDayColumn = 4;
+            const lastPossibleDayColumn = 34;
+
+            worksheet.getRow(dateHeaderRow).eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                if (colNumber >= firstDayColumn && colNumber <= lastPossibleDayColumn) {
+                    let rawCellValue = cell.value;
+                    if (typeof rawCellValue === "object" && rawCellValue !== null) {
+                        if (rawCellValue.richText) {
+                            rawCellValue = rawCellValue.richText.map(rt => rt.text).join('');
+                        } else if (rawCellValue.result !== undefined) {
+                            rawCellValue = rawCellValue.result;
                         } else {
-                            raw = null;
+                            rawCellValue = String(rawCellValue);
                         }
                     }
-                    const parsed = raw !== null ? parseInt(String(raw).trim(), 10) : NaN;
-                    if (!isNaN(parsed)) {
-                        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), parsed);
-                        const isoDate = date.toISOString().split("T")[0];
-                        dateToColumnMap[isoDate] = colNumber;
+                    
+                    const parsedDayNumber = rawCellValue !== null && rawCellValue !== '' ? parseInt(String(rawCellValue).trim(), 10) : NaN;
+
+                    if (!isNaN(parsedDayNumber) && parsedDayNumber >= 1 && parsedDayNumber <= 31) {
+                        const dayStr = String(parsedDayNumber).padStart(2, '0');
+                        const monthStr = String(headerMonthForDays_0_idx + 1).padStart(2, '0');
+                        const columnDateString_Local = `${headerYearForDays}-${monthStr}-${dayStr}`;
+                        dateToColumnMap[columnDateString_Local] = colNumber;
                     }
                 }
             });
+            
+            const targetColumnForSelectedDate = dateToColumnMap[selectedDateString_Local];
 
-            const selectedDate = currentDate.toISOString().split("T")[0];
-            const selectedColumn = dateToColumnMap[selectedDate];
-
-            if (!selectedColumn) {
-                alert("Selected date is not found in the SF2 template's header. Please check the template or selected date.");
+            if (!targetColumnForSelectedDate) {
+                console.error("Date to Column Map:", dateToColumnMap);
+                console.error("Selected Date String (Local):", selectedDateString_Local);
+                alert(`The selected date (${selectedDateString_Local}) could not be found in the SF2 template's header (Row ${dateHeaderRow}, Columns ${firstDayColumn}-${lastPossibleDayColumn}). Please check the template, ensure the month matches, and that day numbers are present and parseable.`);
                 return;
             }
 
+            // --- Populate Student Attendance ---
             const sortedStudents = [...students].sort((a, b) => {
                 const lastNameA = (a.lastName || "").toLowerCase();
                 const lastNameB = (b.lastName || "").toLowerCase();
                 return lastNameA.localeCompare(lastNameB);
             });
 
-            const startRow = 14;
-            let totalPresent = 0;
+            const attendanceStartRow = 14;
+            let totalPresentForDay = 0;
 
             sortedStudents.forEach((student, index) => {
-                const row = worksheet.getRow(startRow + index);
-                row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
+                const studentRow = worksheet.getRow(attendanceStartRow + index);
+                studentRow.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
 
-                const signInDate = student.signInTime
-                    ? new Date(student.signInTime).toISOString().split("T")[0]
-                    : null;
-                const signOutDate = student.signOutTime
-                    ? new Date(student.signOutTime).toISOString().split("T")[0]
-                    : null;
+                let isPresentOnThisDay = false;
 
-                if (selectedDate === signInDate || selectedDate === signOutDate) {
-                    row.getCell(selectedColumn).value = "P";
-                    totalPresent++;
-                } else {
-                    row.getCell(selectedColumn).value = "A";
+                if (student.signInTime) {
+                    const signIn_UTC_DateObj = new Date(student.signInTime);
+                    const event_Local_Year = signIn_UTC_DateObj.getFullYear();
+                    const event_Local_Month = String(signIn_UTC_DateObj.getMonth() + 1).padStart(2, '0');
+                    const event_Local_Day = String(signIn_UTC_DateObj.getDate()).padStart(2, '0');
+                    const event_LocalDateString = `${event_Local_Year}-${event_Local_Month}-${event_Local_Day}`;
+
+                    if (selectedDateString_Local === event_LocalDateString) {
+                        isPresentOnThisDay = true;
+                    }
                 }
 
-                row.commit();
+                if (!isPresentOnThisDay && student.signOutTime) {
+                    const signOut_UTC_DateObj = new Date(student.signOutTime);
+                    const event_Local_Year = signOut_UTC_DateObj.getFullYear();
+                    const event_Local_Month = String(signOut_UTC_DateObj.getMonth() + 1).padStart(2, '0');
+                    const event_Local_Day = String(signOut_UTC_DateObj.getDate()).padStart(2, '0');
+                    const event_LocalDateString = `${event_Local_Year}-${event_Local_Month}-${event_Local_Day}`;
+
+                    if (selectedDateString_Local === event_LocalDateString) {
+                        isPresentOnThisDay = true;
+                    }
+                }
+                
+                studentRow.getCell(targetColumnForSelectedDate).value = isPresentOnThisDay ? "P" : "/";
+                if (isPresentOnThisDay) {
+                    totalPresentForDay++;
+                }
+                studentRow.commit();
             });
 
-            const totalRow = 62;
-            worksheet.getCell(totalRow, selectedColumn).value = totalPresent;
+            const totalAttendanceRow = 62;
+            worksheet.getCell(totalAttendanceRow, targetColumnForSelectedDate).value = totalPresentForDay;
 
             const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            });
+            const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `SF2_${gradeLevel}_${section}_${subjectName.replace(/\s+/g, '_')}_${month}_${currentDate.getFullYear()}.xlsx`;
+            link.download = `SF2_${gradeLevel}_${section}_${subjectName.replace(/\s+/g, '_')}_${monthName}_${selectedYear}.xlsx`;
             link.click();
+            URL.revokeObjectURL(link.href);
+        };
+
+        reader.onerror = (error) => {
+            console.error("Error reading the template file:", error);
+            alert("Error reading the template file. Please ensure it's a valid Excel file.");
         };
 
         reader.readAsArrayBuffer(templateFile);

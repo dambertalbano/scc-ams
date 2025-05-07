@@ -287,16 +287,14 @@ const TeacherProfile = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     try {
-      const success = await updateTeacherByProfile(formData);
-      if (success) {
-        toast.success("Profile updated successfully!");
-        fetchTeacherProfile();
-      }
+        const success = await updateTeacherByProfile(formData);
+        if (success) {
+            fetchTeacherProfile(); // Refresh the profile data
+        }
     } catch (error) {
-      console.error("Error updating profile:", error);
-      toast.error(error.response?.data?.message || error.message || "Error updating profile.");
+        console.error("Error updating profile:", error);
     }
-  };
+};
 
   const handleMonthChange = (date) => {
     if (date && isValid(date)) {

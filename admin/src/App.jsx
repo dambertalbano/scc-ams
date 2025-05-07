@@ -13,6 +13,7 @@ import AddTeacher from './pages/Admin/AddTeacher';
 import AddUsers from './pages/Admin/AddUsers';
 import AllUserAttendanceCard from './pages/Admin/AllUserAttendanceCard';
 import AllUsers from './pages/Admin/AllUsers';
+import Analytics from './pages/Admin/Analytics';
 import Attendance from './pages/Admin/Attendance';
 import AttendanceStudentCard from './pages/Admin/AttendanceStudentCard';
 import AttendanceTeacherCard from './pages/Admin/AttendanceTeacherCard';
@@ -117,6 +118,7 @@ const App = () => {
                     <Route path='/edit-users' element={aToken ? <EditUser /> : <LandingPage />} />
                     <Route path='/subjects' element={aToken ? <Subjects /> : <LandingPage />} />
                     <Route path='/schedules' element={aToken ? <Schedules /> : <LandingPage />} />
+                    <Route path='/analytics' element={aToken ? <Analytics /> : <LandingPage />} />
                 </Routes>
             </div>
         </>

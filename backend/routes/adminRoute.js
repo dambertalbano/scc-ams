@@ -15,11 +15,14 @@ import {
     deleteTeacher,
     getAllSchedules,
     getAllSubjects,
+    getAnalyticsSummary,
     getAttendanceByDate,
+    getDailySignInStats,
     getScheduleById,
     getStudentByCode,
     getSubjectById,
     getUserByCode,
+    getUserGrowthStats,
     loginAdmin,
     updateSchedule,
     updateStudent,
@@ -56,7 +59,6 @@ adminRouter.post("/sign-out/:code", authAdmin, adminSignOut);
 adminRouter.put("/sign-in/:code", authAdmin, adminSignIn);
 adminRouter.put("/sign-out/:code", authAdmin, adminSignOut);
 
-// Subject Routes
 adminRouter.route('/subjects')
     .post(authAdmin, createSubject)
     .get(authAdmin, getAllSubjects);
@@ -65,7 +67,6 @@ adminRouter.route('/subjects/:id')
     .put(authAdmin, updateSubject)
     .delete(authAdmin, deleteSubjectAdmin);
 
-// Schedule Routes
 adminRouter.route('/schedules')
     .post(authAdmin, createSchedule)
     .get(authAdmin, getAllSchedules);
@@ -73,5 +74,9 @@ adminRouter.route('/schedules/:id')
     .get(authAdmin, getScheduleById)
     .put(authAdmin, updateSchedule)
     .delete(authAdmin, deleteScheduleAdmin);
+
+adminRouter.get('/analytics/summary', authAdmin, getAnalyticsSummary);
+adminRouter.get('/analytics/user-growth', authAdmin, getUserGrowthStats);
+adminRouter.get('/analytics/daily-sign-ins', authAdmin, getDailySignInStats);
 
 export default adminRouter;

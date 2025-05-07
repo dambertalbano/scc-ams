@@ -2,7 +2,7 @@ import axios from "axios";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
-export const AdminContext = createContext();
+export const AdminContext = createContext(undefined); // Or provide a default shape if preferred
 
 const AdminContextProvider = (props) => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -31,7 +31,8 @@ const AdminContextProvider = (props) => {
 
     const handleApiError = useCallback((error, message = "An error occurred") => {
         console.error(message + ":", error);
-        toast.error(message + ": " + error.message);
+        const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred";
+        toast.error(`${message}: ${errorMessage}`);
     }, []);
 
     const getUserByCode = useCallback(async (code) => {
@@ -43,10 +44,10 @@ const AdminContextProvider = (props) => {
             });
 
             if (response.data && response.data.success && response.data.user) {
-                return { ...response.data, type: 'student' };
+                return { ...response.data, type: response.data.userType || 'unknown' }; // Ensure userType is handled
             }
 
-            toast.error('User not found');
+            toast.error(response.data.message || 'User not found');
             return null;
 
         } catch (error) {
@@ -108,26 +109,17 @@ const AdminContextProvider = (props) => {
 
         try {
             const formData = new FormData();
-
-            // Append updates to formData
             for (const key in updates) {
                 formData.append(key, updates[key]);
             }
-
-            // Append imageFile to formData if it exists
             if (imageFile) {
                 formData.append('image', imageFile);
-            }
-
-            // Inspect the FormData object
-            for (var pair of formData.entries()) {
-                console.log(pair[0]+ ', ' + pair[1]);
             }
 
             const response = await axios.put(url, formData, {
                 headers: {
                     Authorization: `Bearer ${aToken}`,
-                    'Content-Type': 'multipart/form-data', // Important!
+                    'Content-Type': 'multipart/form-data',
                 },
             });
 
@@ -137,9 +129,11 @@ const AdminContextProvider = (props) => {
                 return true;
             } else {
                 toast.error(response.data.message || "Failed to update teacher");
+                return false;
             }
         } catch (error) {
             handleApiError(error, 'Error updating teacher');
+            return false;
         }
     }, [aToken, backendUrl, getAllTeachers, handleApiError]);
 
@@ -155,16 +149,30 @@ const AdminContextProvider = (props) => {
                 return true;
             } else {
                 toast.error(response.data.message || "Failed to delete teacher");
+                return false;
             }
         } catch (error) {
             handleApiError(error, 'Error deleting teacher');
+            return false;
         }
     }, [aToken, backendUrl, getAllTeachers, handleApiError]);
     
-    const updateStudent = useCallback(async (student) => {
+    const updateStudent = useCallback(async (studentId, updates, imageFile) => { // Added imageFile
+        const url = `${backendUrl}/api/admin/students/${studentId}`;
         try {
-            const response = await axios.put(`${backendUrl}/api/admin/students/${student._id}`, student, {
-                headers: { Authorization: `Bearer ${aToken}` },
+            const formData = new FormData();
+            for (const key in updates) {
+                formData.append(key, updates[key]);
+            }
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+
+            const response = await axios.put(url, formData, {
+                headers: { 
+                    Authorization: `Bearer ${aToken}`,
+                    'Content-Type': 'multipart/form-data',
+                },
             });
 
             if (response.data.success) {
@@ -173,9 +181,11 @@ const AdminContextProvider = (props) => {
                 return true;
             } else {
                 toast.error(response.data.message || "Failed to update student");
+                return false;
             }
         } catch (error) {
             handleApiError(error, 'Error updating student');
+            return false;
         }
     }, [aToken, backendUrl, getAllStudents, handleApiError]);
 
@@ -191,9 +201,11 @@ const AdminContextProvider = (props) => {
                 return true;
             } else {
                 toast.error(response.data.message || "Failed to delete student");
+                return false;
             }
         } catch (error) {
             handleApiError(error, 'Error deleting student');
+            return false;
         }
     }, [aToken, backendUrl, getAllStudents, handleApiError]);
 
@@ -314,7 +326,6 @@ const AdminContextProvider = (props) => {
             });
 
             if (response.data.success) {
-                // Sort the records by timestamp in ascending order on the frontend
                 return response.data.attendanceRecords.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             } else {
                 toast.error(response.data.message || "Failed to fetch attendance records");
@@ -322,7 +333,10 @@ const AdminContextProvider = (props) => {
             }
         } catch (error) {
             console.error("Error fetching attendance records:", error);
-            throw error;
+            // It's better to throw the error or return a consistent error object
+            // so the calling component can handle it (e.g., show a specific message or state)
+            handleApiError(error, "Error fetching attendance records");
+            return []; // Or throw error;
         }
     }, [aToken, backendUrl, handleApiError]);
 
@@ -485,10 +499,69 @@ const AdminContextProvider = (props) => {
         }
     }, [aToken, backendUrl, handleApiError]);
 
+    // --- Analytics API Functions ---
+    const fetchAnalyticsSummary = useCallback(async (params = {}) => {
+        try {
+            const queryParams = new URLSearchParams(params).toString();
+            const { data } = await axios.get(`${backendUrl}/api/admin/analytics/summary?${queryParams}`, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (data.success) {
+                return data.summary;
+            } else {
+                toast.error(data.message || "Failed to fetch analytics summary");
+                return null; // Or a default summary object
+            }
+        } catch (error) {
+            handleApiError(error, "Error fetching analytics summary");
+            return null; // Or a default summary object
+        }
+    }, [aToken, backendUrl, handleApiError]);
+
+    const fetchUserGrowthStats = useCallback(async (params = {}) => {
+        try {
+            const queryParams = new URLSearchParams(params).toString();
+            const { data } = await axios.get(`${backendUrl}/api/admin/analytics/user-growth?${queryParams}`, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (data.success) {
+                return data; 
+            } else {
+                toast.error(data.message || "Failed to fetch user growth statistics");
+                return { userGrowth: [], granularity: 'daily', period: {} }; 
+            }
+        } catch (error) {
+            handleApiError(error, "Error fetching user growth statistics");
+            return { userGrowth: [], granularity: 'daily', period: {} };
+        }
+    }, [aToken, backendUrl, handleApiError]);
+
+    // Remove fetchAttendanceStatsByEducationLevel if no longer needed
+    // const fetchAttendanceStatsByEducationLevel = useCallback(async (params = {}) => { ... });
+
+    const fetchDailySignInStats = useCallback(async (params = {}) => {
+        try {
+            const queryParams = new URLSearchParams(params).toString();
+            const { data } = await axios.get(`${backendUrl}/api/admin/analytics/daily-sign-ins?${queryParams}`, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (data.success) {
+                return data; // Return the whole data object { dailySignIns: [], period: {}, granularity: 'daily' }
+            } else {
+                toast.error(data.message || "Failed to fetch daily sign-in statistics");
+                return { dailySignIns: [], granularity: 'daily', period: {} }; // Default structure
+            }
+        } catch (error) {
+            handleApiError(error, "Error fetching daily sign-in statistics");
+            return { dailySignIns: [], granularity: 'daily', period: {} }; // Default structure
+        }
+    }, [aToken, backendUrl, handleApiError]);
+
+
     const contextValue = {
         aToken,
         setAToken: updateAToken,
-        backendUrl, // Ensure this is here
+        backendUrl,
         students,
         teachers,
         dashData,
@@ -511,16 +584,28 @@ const AdminContextProvider = (props) => {
         getAllSubjects,
         createSubject,
         updateSubject,
-        deleteSubject,
+        deleteSubject, // Renamed from deleteSubjectAdmin for consistency
         // Schedule API Functions
         getAllSchedules,
         createSchedule,
         updateSchedule,
-        deleteSchedule,
+        deleteSchedule, // Renamed from deleteScheduleAdmin for consistency
+        // Analytics API Functions
+        fetchAnalyticsSummary,
+        fetchUserGrowthStats,
+        // fetchAttendanceStatsByEducationLevel, // Removed
+        fetchDailySignInStats, // Added
     };
 
     return <AdminContext.Provider value={contextValue}>{props.children}</AdminContext.Provider>;
 };
 
-export const useAdminContext = () => useContext(AdminContext);
+export const useAdminContext = () => {
+    const context = useContext(AdminContext);
+    if (context === undefined) {
+        throw new Error('useAdminContext must be used within an AdminContextProvider. Make sure your component is a descendant of AdminContextProvider and that you are importing AdminContext correctly.');
+    }
+    return context;
+};
+
 export default AdminContextProvider;

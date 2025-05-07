@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
+import { eachDayOfInterval, endOfMonth, formatISO, isValid, parseISO, startOfMonth, subMonths } from 'date-fns';
 import jwt from "jsonwebtoken";
 import validator from "validator";
 import { default as Attendance, default as attendanceModel } from "../models/attendanceModel.js";
@@ -486,7 +487,7 @@ const getAttendanceRecords = async (req, res) => {
 
 // --- Subject Management ---
 
-export const createSubject = async (req, res) => {
+const createSubject = async (req, res) => {
     try {
         const { name, code, semesterId } = req.body;
 
@@ -512,7 +513,7 @@ export const createSubject = async (req, res) => {
     }
 };
 
-export const getAllSubjects = async (req, res) => {
+const getAllSubjects = async (req, res) => {
     try {
         const subjects = await subjectModel.find({}).populate('semesterId', 'name year');
         res.status(200).json({ success: true, subjects });
@@ -522,7 +523,7 @@ export const getAllSubjects = async (req, res) => {
     }
 };
 
-export const getSubjectById = async (req, res) => {
+const getSubjectById = async (req, res) => {
     try {
         const subject = await subjectModel.findById(req.params.id).populate('semesterId', 'name year');
         if (!subject) {
@@ -538,7 +539,7 @@ export const getSubjectById = async (req, res) => {
     }
 };
 
-export const updateSubject = async (req, res) => {
+const updateSubject = async (req, res) => {
     try {
         const { name, code, semesterId } = req.body;
         const subjectId = req.params.id;
@@ -572,7 +573,7 @@ export const updateSubject = async (req, res) => {
     }
 };
 
-export const deleteSubjectAdmin = async (req, res) => {
+const deleteSubjectAdmin = async (req, res) => {
     try {
         const subjectId = req.params.id;
         const subject = await subjectModel.findById(subjectId);
@@ -602,7 +603,7 @@ export const deleteSubjectAdmin = async (req, res) => {
 
 // --- Schedule Management ---
 
-export const createSchedule = async (req, res) => {
+const createSchedule = async (req, res) => {
     try {
         const { subjectId, teacherId, section, gradeYearLevel, educationLevel, dayOfWeek, startTime, endTime, semester } = req.body;
 
@@ -644,7 +645,7 @@ export const createSchedule = async (req, res) => {
     }
 };
 
-export const getAllSchedules = async (req, res) => {
+const getAllSchedules = async (req, res) => {
     try {
         const schedules = await scheduleModel.find({})
             .populate('subjectId', 'name code')
@@ -656,7 +657,7 @@ export const getAllSchedules = async (req, res) => {
     }
 };
 
-export const getScheduleById = async (req, res) => {
+const getScheduleById = async (req, res) => {
     try {
         const schedule = await scheduleModel.findById(req.params.id)
             .populate('subjectId', 'name code')
@@ -674,7 +675,7 @@ export const getScheduleById = async (req, res) => {
     }
 };
 
-export const updateSchedule = async (req, res) => {
+const updateSchedule = async (req, res) => {
     try {
         const scheduleId = req.params.id;
         const updates = req.body;
@@ -746,7 +747,7 @@ export const updateSchedule = async (req, res) => {
     }
 };
 
-export const deleteScheduleAdmin = async (req, res) => {
+const deleteScheduleAdmin = async (req, res) => {
     try {
         const scheduleId = req.params.id;
 
@@ -781,6 +782,420 @@ export const deleteScheduleAdmin = async (req, res) => {
     }
 };
 
+// --- Analytics Helper ---
+const getAnalyticsDateRange = (periodQuery, customStartDate, customEndDate) => {
+    const now = new Date();
+    let startDate, endDateRes; // Renamed endDate to avoid conflict with global if any
+
+    if (customStartDate && customEndDate && isValid(parseISO(customStartDate)) && isValid(parseISO(customEndDate))) {
+        startDate = parseISO(customStartDate);
+        endDateRes = parseISO(customEndDate);
+    } else {
+        endDateRes = endOfMonth(now); // Default end date
+        switch (periodQuery) {
+            case 'last7days':
+                startDate = new Date(new Date().setDate(now.getDate() - 7));
+                endDateRes = new Date(); // today
+                break;
+            case 'last30days':
+                startDate = new Date(new Date().setDate(now.getDate() - 30));
+                endDateRes = new Date(); // today
+                break;
+            case 'last6months':
+                startDate = startOfMonth(subMonths(now, 5));
+                // endDateRes remains endOfMonth(now) or is set if custom
+                break;
+            case 'last12months':
+                startDate = startOfMonth(subMonths(now, 11));
+                // endDateRes remains endOfMonth(now) or is set if custom
+                break;
+            case 'thisMonth':
+                startDate = startOfMonth(now);
+                // endDateRes remains endOfMonth(now) or is set if custom
+                break;
+            default: // Default to last 30 days if period is invalid
+                startDate = new Date(new Date().setDate(now.getDate() - 30));
+                endDateRes = new Date();
+                break;
+        }
+    }
+    return {
+        startDate: new Date(startDate.setHours(0, 0, 0, 0)),
+        endDate: new Date(endDateRes.setHours(23, 59, 59, 999))
+    };
+};
+
+
+// --- Analytics Controllers ---
+const getAnalyticsSummary = async (req, res) => {
+    try {
+        const { period = 'last30days', startDate: customStartDateQuery, endDate: customEndDateQuery } = req.query;
+        const { startDate, endDate } = getAnalyticsDateRange(period, customStartDateQuery, customEndDateQuery);
+
+        const totalStudents = await studentModel.countDocuments();
+        const totalTeachers = await teacherModel.countDocuments();
+        const totalUsers = totalStudents + totalTeachers;
+
+        const signInRecords = await attendanceModel.find({
+            eventType: 'sign-in',
+            timestamp: { $gte: startDate, $lte: endDate }
+        }).distinct('user');
+
+        const uniqueActiveUsers = signInRecords.length;
+        const overallActivityRate = totalUsers > 0 ? (uniqueActiveUsers / totalUsers) * 100 : 0;
+
+        const daysInPeriod = eachDayOfInterval({ start: startDate, end: endDate > new Date() ? new Date() : endDate }); // Iterate up to today if endDate is in future
+        let dailyAttendanceRatesSum = 0;
+        let daysWithAttendanceData = 0;
+
+        for (const day of daysInPeriod) {
+            const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
+            const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59, 999);
+
+            const dailySignIns = await attendanceModel.find({
+                eventType: 'sign-in',
+                timestamp: { $gte: dayStart, $lte: dayEnd }
+            }).distinct('user');
+
+            if (totalUsers > 0) {
+                const dailyRate = (dailySignIns.length / totalUsers) * 100;
+                dailyAttendanceRatesSum += dailyRate;
+            }
+            daysWithAttendanceData++; // Count day even if no signins, for averaging
+        }
+        
+        const averageDailyAttendanceRate = daysWithAttendanceData > 0 ? dailyAttendanceRatesSum / daysWithAttendanceData : 0;
+
+        res.status(200).json({
+            success: true,
+            summary: {
+                totalUsers,
+                activeTeachers: totalTeachers,
+                activeStudents: totalStudents,
+                overallActivityRate: parseFloat(overallActivityRate.toFixed(2)),
+                averageDailyAttendanceRate: parseFloat(averageDailyAttendanceRate.toFixed(2)),
+                period: {
+                    startDate: formatISO(startDate, { representation: 'date' }),
+                    endDate: formatISO(endDate, { representation: 'date' })
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in getAnalyticsSummary:", error);
+        res.status(500).json({ success: false, message: error.message || "Server error fetching analytics summary" });
+    }
+};
+
+const getUserGrowthStats = async (req, res) => {
+    try {
+        const { period = 'last6months', startDate: customStartDateQuery, endDate: customEndDateQuery } = req.query;
+        console.log('[Analytics] getUserGrowthStats query:', { period, customStartDateQuery, customEndDateQuery });
+
+        const { startDate, endDate } = getAnalyticsDateRange(period, customStartDateQuery, customEndDateQuery);
+        console.log('[Analytics] getUserGrowthStats date range:', { startDate, endDate });
+
+        // --- MODIFICATIONS START: Force daily granularity ---
+        const dataKeyName = "date"; // Always use 'date' as the key name
+        const isDaily = true; // Always treat as daily for output structure
+
+        const groupByFormat = { 
+            year: { $year: "$createdAt" }, 
+            month: { $month: "$createdAt" }, 
+            day: { $dayOfMonth: "$createdAt" } 
+        };
+        const projectFormat = {
+            $concat: [
+                { $toString: "$_id.year" }, "-",
+                { $toString: "$_id.month" }, "-",
+                { $toString: "$_id.day" }
+            ]
+        }; // Ensures "YYYY-M-D" format from aggregation
+        
+        console.log('[Analytics] getUserGrowthStats (Forced Daily) dataKeyName:', dataKeyName);
+        // --- MODIFICATIONS END ---
+
+        const studentGrowth = await studentModel.aggregate([
+            { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
+            { $group: { _id: groupByFormat, newStudents: { $sum: 1 } } },
+            { $project: { _id: 0, [dataKeyName]: projectFormat, newStudents: 1 } },
+            { $sort: { [dataKeyName]: 1 } }
+        ]);
+        console.log('[Analytics] studentGrowth result:', JSON.stringify(studentGrowth));
+
+        const teacherGrowth = await teacherModel.aggregate([
+            { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
+            { $group: { _id: groupByFormat, newTeachers: { $sum: 1 } } },
+            { $project: { _id: 0, [dataKeyName]: projectFormat, newTeachers: 1 } },
+            { $sort: { [dataKeyName]: 1 } }
+        ]);
+        console.log('[Analytics] teacherGrowth result:', JSON.stringify(teacherGrowth));
+
+        const growthDataMap = new Map();
+        
+        studentGrowth.forEach(item => {
+            const key = item[dataKeyName]; 
+            if (!key) {
+                console.error('[Analytics] ERROR: studentGrowth item missing key for dataKeyName:', dataKeyName, 'Item:', item);
+                return;
+            }
+            let formattedKey;
+            try {
+                // Always format to "YYYY-MM-DD" since output is always daily
+                const [year, monthNum, dayNum] = String(key).split('-').map(Number);
+                formattedKey = `${year}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            } catch (e) {
+                console.error('[Analytics] ERROR: Formatting key failed for studentGrowth. Key:', key, 'Error:', e);
+                return;
+            }
+
+            if (!growthDataMap.has(formattedKey)) growthDataMap.set(formattedKey, { [dataKeyName]: formattedKey, newStudents: 0, newTeachers: 0 });
+            growthDataMap.get(formattedKey).newStudents = item.newStudents;
+        });
+
+        teacherGrowth.forEach(item => {
+            const key = item[dataKeyName];
+            if (!key) {
+                console.error('[Analytics] ERROR: teacherGrowth item missing key for dataKeyName:', dataKeyName, 'Item:', item);
+                return;
+            }
+            let formattedKey;
+            try {
+                // Always format to "YYYY-MM-DD"
+                const [year, monthNum, dayNum] = String(key).split('-').map(Number);
+                formattedKey = `${year}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            } catch (e) {
+                console.error('[Analytics] ERROR: Formatting key failed for teacherGrowth. Key:', key, 'Error:', e);
+                return;
+            }
+
+            if (!growthDataMap.has(formattedKey)) growthDataMap.set(formattedKey, { [dataKeyName]: formattedKey, newStudents: 0, newTeachers: 0 });
+            growthDataMap.get(formattedKey).newTeachers = item.newTeachers;
+        });
+        console.log('[Analytics] growthDataMap after processing student/teacher growth:', JSON.stringify(Array.from(growthDataMap.entries())));
+
+        // Always use eachDayOfInterval
+        const intervalPoints = eachDayOfInterval({ start: startDate, end: endDate });
+
+        console.log(`[Analytics] Interval generation: Number of interval points: ${intervalPoints.length}`);
+        intervalPoints.forEach((pointInTime) => {
+            // Always format keyToFill as "YYYY-MM-DD"
+            const keyToFill = formatISO(pointInTime, { representation: 'date' }); 
+            
+            if (!growthDataMap.has(keyToFill)) {
+                growthDataMap.set(keyToFill, { [dataKeyName]: keyToFill, newStudents: 0, newTeachers: 0 });
+            }
+        });
+
+        console.log('[Analytics] growthDataMap after filling interval days:', JSON.stringify(Array.from(growthDataMap.entries())));
+
+        const combinedGrowth = Array.from(growthDataMap.values()).map(item => ({
+            ...item,
+            totalNewUsers: (item.newStudents || 0) + (item.newTeachers || 0)
+        })).sort((a,b) => {
+            const valA = a[dataKeyName] || ""; 
+            const valB = b[dataKeyName] || ""; 
+            return valA.localeCompare(valB);
+        });
+
+        console.log('[Analytics] getUserGrowthStats combinedGrowth:', JSON.stringify(combinedGrowth, null, 2));
+        // Granularity is now always 'daily'
+        console.log('[Analytics] getUserGrowthStats response granularity: daily'); 
+        
+        res.status(200).json({
+            success: true,
+            userGrowth: combinedGrowth,
+            period: {
+                startDate: formatISO(startDate, { representation: 'date' }),
+                endDate: formatISO(endDate, { representation: 'date' })
+            },
+            granularity: 'daily' // Always respond with daily granularity
+        });
+    } catch (error) {
+        console.error("Error in getUserGrowthStats:", error);
+        res.status(500).json({ success: false, message: error.message || "Server error fetching user growth statistics" });
+    }
+};
+
+const getAttendanceStatsByEducationLevel = async (req, res) => {
+    try {
+        const { period = 'last30days', startDate: customStartDate, endDate: customEndDate } = req.query;
+        const { startDate, endDate } = getAnalyticsDateRange(period, customStartDate, customEndDate);
+
+        const educationLevels = await studentModel.distinct('educationLevel', { educationLevel: { $ne: null, $ne: "" } });
+        const attendanceByLevel = [];
+
+        for (const level of educationLevels) {
+            const totalStudentsInLevel = await studentModel.countDocuments({ educationLevel: level });
+
+            if (totalStudentsInLevel === 0) {
+                attendanceByLevel.push({ educationLevel: level, activityRate: 0, averageDailyAttendanceRate: 0, totalStudents: 0 });
+                continue;
+            }
+            
+            const activeStudentRecords = await attendanceModel.aggregate([
+                { $match: { eventType: 'sign-in', userType: 'Student', timestamp: { $gte: startDate, $lte: endDate } }},
+                { $lookup: { from: 'students', localField: 'user', foreignField: '_id', as: 'studentInfo' }},
+                { $unwind: '$studentInfo' },
+                { $match: { 'studentInfo.educationLevel': level } },
+                { $group: { _id: '$user' } },
+                { $count: 'uniqueActiveStudents' }
+            ]);
+            
+            const uniqueActiveStudentsInLevel = activeStudentRecords.length > 0 ? activeStudentRecords[0].uniqueActiveStudents : 0;
+            const activityRate = (uniqueActiveStudentsInLevel / totalStudentsInLevel) * 100;
+
+            const daysInPeriod = eachDayOfInterval({ start: startDate, end: endDate > new Date() ? new Date() : endDate });
+            let dailyRatesSumForLevel = 0;
+            let daysWithDataForLevel = 0;
+
+            for (const day of daysInPeriod) {
+                const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0,0,0,0);
+                const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23,59,59,999);
+
+                const dailySignInsForLevel = await attendanceModel.aggregate([
+                    { $match: { eventType: 'sign-in', userType: 'Student', timestamp: { $gte: dayStart, $lte: dayEnd } }},
+                    { $lookup: { from: 'students', localField: 'user', foreignField: '_id', as: 'studentInfo' }},
+                    { $unwind: '$studentInfo' },
+                    { $match: { 'studentInfo.educationLevel': level } },
+                    { $group: { _id: '$user' } }, { $count: 'count' }
+                ]);
+                
+                const uniqueSignInsTodayForLevel = dailySignInsForLevel.length > 0 ? dailySignInsForLevel[0].count : 0;
+                if (totalStudentsInLevel > 0) {
+                     dailyRatesSumForLevel += (uniqueSignInsTodayForLevel / totalStudentsInLevel) * 100;
+                }
+                daysWithDataForLevel++;
+            }
+
+            const averageDailyAttendanceRateForLevel = daysWithDataForLevel > 0 ? dailyRatesSumForLevel / daysWithDataForLevel : 0;
+
+            attendanceByLevel.push({
+                educationLevel: level,
+                activityRate: parseFloat(activityRate.toFixed(2)),
+                averageDailyAttendanceRate: parseFloat(averageDailyAttendanceRateForLevel.toFixed(2)),
+                totalStudents: totalStudentsInLevel,
+                uniqueActiveStudents: uniqueActiveStudentsInLevel
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            attendanceByEducationLevel: attendanceByLevel,
+            period: {
+                startDate: formatISO(startDate, { representation: 'date' }),
+                endDate: formatISO(endDate, { representation: 'date' })
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in getAttendanceStatsByEducationLevel:", error);
+        res.status(500).json({ success: false, message: error.message || "Server error fetching attendance stats by education level" });
+    }
+};
+
+const getDailySignInStats = async (req, res) => {
+    try {
+        const { period = 'last30days', startDate: customStartDateQuery, endDate: customEndDateQuery } = req.query;
+        console.log('[Analytics] getDailySignInStats query:', { period, customStartDateQuery, customEndDateQuery });
+
+        const { startDate, endDate } = getAnalyticsDateRange(period, customStartDateQuery, customEndDateQuery);
+        console.log('[Analytics] getDailySignInStats date range:', { startDate, endDate });
+
+        const dailySignInsAgg = await attendanceModel.aggregate([
+            {
+                $match: {
+                    eventType: 'sign-in',
+                    timestamp: { $gte: startDate, $lte: endDate }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$timestamp" },
+                        month: { $month: "$timestamp" },
+                        day: { $dayOfMonth: "$timestamp" },
+                        user: "$user" // Group by user first to count unique users per day
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: "$_id.year",
+                        month: "$_id.month",
+                        day: "$_id.day"
+                    },
+                    signInCount: { $sum: 1 } // Count the unique users for that day
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    date: {
+                        $concat: [
+                            { $toString: "$_id.year" }, "-",
+                            { $toString: "$_id.month" }, "-",
+                            { $toString: "$_id.day" }
+                        ]
+                    },
+                    signInCount: 1
+                }
+            },
+            { $sort: { date: 1 } }
+        ]);
+        console.log('[Analytics] dailySignInsAgg result:', JSON.stringify(dailySignInsAgg));
+
+        const signInDataMap = new Map();
+        dailySignInsAgg.forEach(item => {
+            const key = item.date;
+            if (!key) {
+                console.error('[Analytics] ERROR: dailySignInsAgg item missing key for date. Item:', item);
+                return;
+            }
+            let formattedKey;
+            try {
+                const [year, monthNum, dayNum] = String(key).split('-').map(Number);
+                formattedKey = `${year}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            } catch (e) {
+                console.error('[Analytics] ERROR: Formatting key failed for dailySignInsAgg. Key:', key, 'Error:', e);
+                return;
+            }
+            signInDataMap.set(formattedKey, { date: formattedKey, signInCount: item.signInCount });
+        });
+
+        const intervalPoints = eachDayOfInterval({ start: startDate, end: endDate });
+        console.log(`[Analytics] Daily Sign-Ins: Number of interval points: ${intervalPoints.length}`);
+
+        intervalPoints.forEach((pointInTime) => {
+            const keyToFill = formatISO(pointInTime, { representation: 'date' });
+            if (!signInDataMap.has(keyToFill)) {
+                signInDataMap.set(keyToFill, { date: keyToFill, signInCount: 0 });
+            }
+        });
+
+        const dailySignInsData = Array.from(signInDataMap.values()).sort((a, b) => {
+            return (a.date || "").localeCompare(b.date || "");
+        });
+
+        console.log('[Analytics] getDailySignInStats dailySignInsData:', JSON.stringify(dailySignInsData, null, 2));
+        
+        res.status(200).json({
+            success: true,
+            dailySignIns: dailySignInsData,
+            period: {
+                startDate: formatISO(startDate, { representation: 'date' }),
+                endDate: formatISO(endDate, { representation: 'date' })
+            },
+            granularity: 'daily'
+        });
+
+    } catch (error) {
+        console.error("Error in getDailySignInStats:", error);
+        res.status(500).json({ success: false, message: error.message || "Server error fetching daily sign-in statistics" });
+    }
+};
+
 export {
     addStudent,
     addTeacher,
@@ -788,15 +1203,8 @@ export {
     adminSignIn,
     adminSignOut,
     allStudents,
-    allTeachers,
-    deleteStudent,
-    deleteTeacher,
-    getAttendanceByDate,
-    getAttendanceRecords,
-    getStudentByCode,
-    getUserByCode,
-    loginAdmin,
-    updateStudent,
-    updateTeacher
+    allTeachers, createSchedule, createSubject, deleteScheduleAdmin, deleteStudent, deleteSubjectAdmin, deleteTeacher, getAllSchedules, getAllSubjects, getAnalyticsDateRange, getAnalyticsSummary, getAttendanceByDate,
+    getAttendanceRecords, getAttendanceStatsByEducationLevel, getDailySignInStats, // Added getDailySignInStats
+    getScheduleById, getStudentByCode, getSubjectById, getUserByCode, getUserGrowthStats, loginAdmin, updateSchedule, updateStudent, updateSubject, updateTeacher
 };
 

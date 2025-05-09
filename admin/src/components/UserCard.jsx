@@ -46,6 +46,10 @@ export const AddTeachersCard = () => <UserCard title="Add Teacher" navigateTo="/
 export const StudentCard = () => <UserCard title="List of Students" navigateTo="/student-list" />;
 export const TeacherCard = () => <UserCard title="List of Teachers" navigateTo="/teacher-list" />;
 
+// Manage Cards
+export const SubjectCard = () => <UserCard title="Manage Subjects" navigateTo="/subjects" />;
+export const ScheduleCard = () => <UserCard title="Manage Schedules" navigateTo="/schedules" />;
+
 // Card Container Component with Responsive Grid and Centering
 const CardContainer = () => {
     return (
@@ -61,6 +65,24 @@ const CardContainer = () => {
                 </motion.div>
                 <motion.div variants={cardAnimation}>
                     <AttendanceTeacherCard />
+                </motion.div>
+                <motion.div variants={cardAnimation}>
+                    <AddStudentCard />
+                </motion.div>
+                <motion.div variants={cardAnimation}>
+                    <AddTeachersCard />
+                </motion.div>
+                <motion.div variants={cardAnimation}>
+                    <StudentCard />
+                </motion.div>
+                <motion.div variants={cardAnimation}>
+                    <TeacherCard />
+                </motion.div>
+                <motion.div variants={cardAnimation}>
+                    <SubjectCard />
+                </motion.div>
+                <motion.div variants={cardAnimation}>
+                    <ScheduleCard />
                 </motion.div>
             </motion.div>
         </div>

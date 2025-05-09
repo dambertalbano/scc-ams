@@ -1,236 +1,65 @@
 import { motion } from "framer-motion";
-import { Loader } from "lucide-react";
-import { useContext, useEffect, useState } from "react";
-import { FiInfo } from "react-icons/fi";
-import blankImage from "../../assets/blank-image.webp";
-import { AdminContext } from "../../context/AdminContext";
+import { Loader } from "lucide-react"; // Keep only necessary icons for this page shell
+import { useEffect } from "react";
+// Corrected imports for default exports
+import BlankUserInfo from '../../components/rfid/BlankUserInfo';
+import ErrorDisplay from '../../components/rfid/ErrorDisplay';
+import UserInfoDisplay from '../../components/rfid/UserInfoDisplay';
+// Assuming useRfidScanLogic is a default export based on previous errors, if not, adjust.
+import useRfidScanLogic from '../Admin/useRfidScanLogic'; // This path might also need checking
 
 const RFID_Scan = () => {
-    const { getUserByCode, adminSignIn, adminSignOut } = useContext(AdminContext);
-    const [scannedCode, setScannedCode] = useState('');
-    const [userInfo, setUserInfo] = useState(null);
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [lastScannedTimes, setLastScannedTimes] = useState({});
+    const { userInfo, error, loading, lastAction, formatName } = useRfidScanLogic();
 
     useEffect(() => {
-        document.title = 'Scan';
+        document.title = 'RFID Scanner - Admin';
     }, []);
-
-    useEffect(() => {
-        const handleKeyDown = (event) => {
-            if (event.key === 'Enter') {
-                if (scannedCode.trim() !== '') {
-                    handleScan(scannedCode.trim());
-                }
-                setScannedCode('');
-            } else {
-                setScannedCode((prevCode) => prevCode + event.key);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [getUserByCode, scannedCode]);
-
-    const handleScan = async (code) => {
-        if (!code.trim()) {
-            setError('Please scan a valid code');
-            return;
-        }
-
-        setLoading(true);
-        setError('');
-
-        try {
-            const response = await getUserByCode(code);
-
-            if (response && response.success && response.user) {
-                setUserInfo(response.user);
-
-                const user = response.user;
-
-                const now = new Date();
-                if (lastScannedTimes[code] && now.getTime() - lastScannedTimes[code].getTime() < 60000) {
-                    setError('Please wait at least one minute before scanning again.');
-                    setLoading(false);
-                    return;
-                }
-
-                const today = new Date();
-                const signInDate = user.signInTime ? new Date(user.signInTime) : null;
-                const signOutDate = user.signOutTime ? new Date(user.signOutTime) : null;
-
-                const sameDaySignIn = signInDate && (
-                    signInDate.getFullYear() === today.getFullYear() &&
-                    signInDate.getMonth() === today.getMonth() &&
-                    signInDate.getDate() === today.getDate()
-                );
-
-                const sameDaySignOut = signOutDate && (
-                    signOutDate.getFullYear() === today.getFullYear() &&
-                    signOutDate.getMonth() === today.getMonth() &&
-                    signOutDate.getDate() === today.getDate()
-                );
-
-                if (sameDaySignIn && sameDaySignOut && signOutDate > signInDate) {
-                    setError('Attendance was already recorded for today.');
-                    setLoading(false);
-                    return;
-                }
-
-                if (!user.signInTime || (user.signOutTime && user.signOutTime > user.signInTime)) {
-                    await handleSignIn(code);
-                } else if (user.signInTime && (!user.signOutTime || user.signOutTime < user.signInTime)) {
-                    await handleSignOut(code);
-                } else {
-                    setError('Invalid state. Please contact support.');
-                    setLoading(false);
-                    return;
-                }
-
-                setLastScannedTimes(prevTimes => ({ ...prevTimes, [code]: now }));
-            } else {
-                setError('No user found with this code');
-                setUserInfo(null);
-            }
-        } catch (err) {
-            setError('An error occurred while fetching user data.');
-            setUserInfo(null);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const formatName = (user) => {
-        if (!user) return 'No Data';
-        const lastName = user.lastName || '';
-        const firstName = user.firstName || '';
-        const middleName = user.middleName ? `${user.middleName.charAt(0)}.` : '';
-        return `${lastName}, ${firstName} ${middleName}`.trim();
-    };
-
-    const handleSignIn = async (code) => {
-        try {
-            await adminSignIn(code);
-            const response = await getUserByCode(code);
-            if (response && response.success && response.user) {
-                setUserInfo(response.user);
-            } else {
-                setError('Failed to refresh user data after sign-in.');
-            }
-        } catch (error) {
-            setError('Failed to sign in.');
-        }
-    };
-
-    const handleSignOut = async (code) => {
-        try {
-            await adminSignOut(code);
-            const response = await getUserByCode(code);
-            if (response && response.success && response.user) {
-                setUserInfo(response.user);
-            } else {
-                setError('Failed to refresh user data after sign-out.');
-            }
-        } catch (error) {
-            setError('Failed to sign out.');
-        }
-    };
-
+    
+    // The main RFID_Scan component becomes much simpler, primarily handling layout
+    // and passing props to the shared display components.
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1, transition: { duration: 0.5, ease: "easeOut" } }}
-            className="flex justify-center items-center min-h-screen w-full bg-gray-100 p-4 sm:p-6 md:p-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }}
+            className="flex flex-col justify-center items-center min-h-screen w-full bg-gradient-to-br from-slate-900 to-slate-700 p-4 sm:p-6 md:p-10"
         >
-            <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-2xl w-full">
-                {!loading && (
-                    <div className="flex items-center justify-center mb-4 text-customRed">
-                        <FiInfo className="w-8 h-8" />
-                        <h2 className="text-3xl font-bold ml-2">User Information</h2>
+            <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl text-center max-w-lg w-full transform transition-all duration-300 ease-in-out">
+                {(!userInfo || loading) && !error && (
+                    <div className="mb-6">
+                        <h1 className="text-3xl sm:text-4xl font-bold text-slate-700">RFID Attendance</h1>
+                        <p className="text-sm text-slate-500 mt-1">Scan RFID card to record attendance.</p>
                     </div>
                 )}
-                {loading ? (
-                    <div className="flex justify-center items-center">
-                        <Loader className="w-5 h-5 text-customRed animate-spin mr-2" />
-                        <span className="text-customRed">Scanning ...</span>
+                 {error && !userInfo && (
+                     <div className="mb-6">
+                        <h1 className="text-3xl sm:text-4xl font-bold text-slate-700">RFID Attendance</h1>
+                        <p className="text-sm text-slate-500 mt-1">Scan RFID card to record attendance.</p>
                     </div>
-                ) : error ? (
-                    <>
-                        <p className="text-red-500 text-center">{error}</p>
-                        {userInfo ? (
-                            userInfo.position !== 'Teacher' ? (
-                                <UserInfoDisplay userInfo={userInfo} formatName={formatName} />
-                            ) : null
-                        ) : (
-                            <BlankUserInfo />
-                        )}
-                    </>
-                ) : userInfo ? (
-                    userInfo.position !== 'Teacher' ? (
-                        <UserInfoDisplay userInfo={userInfo} formatName={formatName} />
-                    ) : null
-                ) : (
-                    <BlankUserInfo />
-                )}
-            </div>
-        </motion.div>
-    );
-};
+                 )}
 
-const UserInfoDisplay = ({ userInfo, formatName }) => {
-    const formatDateTime = (dateTimeString) => {
-        if (!dateTimeString) return 'No Data';
-        try {
-            const date = new Date(dateTimeString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: 'numeric',
-                second: 'numeric',
-            });
-        } catch (error) {
-            return 'Invalid Date';
-        }
-    };
+                {/* The global keydown listener is in useRfidScanLogic, so no explicit input field needed here unless for manual override */}
 
-    return (
-        <div className="mt-6 p-6 bg-gray-50 rounded-lg shadow-md text-left w-full">
-            <div className="flex flex-wrap items-center gap-4">
-                <img src={userInfo.image || blankImage} alt="User" className="w-28 h-28 rounded-full border" />
-                <div className="flex-1 min-w-0">
-                    <p className="text-xl font-semibold truncate">{formatName(userInfo)}</p>
-                    <p className="text-sm text-gray-500">{userInfo.studentNumber}</p>
+                <div className={`min-h-[380px] flex flex-col justify-center items-center ${(!userInfo && !loading && !error) ? 'pt-0' : 'pt-6'}`}>
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center text-blue-600">
+                            <Loader className="w-16 h-16 animate-spin mb-4" />
+                            <p className="text-xl font-semibold">Processing Scan...</p>
+                            {userInfo && <p className="text-md text-slate-600 mt-1">For: {formatName(userInfo)}</p>}
+                            {!userInfo && <p className="text-sm text-slate-500">Please wait a moment.</p>}
+                        </div>
+                    ) : error ? (
+                        <ErrorDisplay error={error} userInfo={userInfo} formatName={formatName} lastAction={lastAction} />
+                    ) : userInfo ? (
+                        <UserInfoDisplay userInfo={userInfo} formatName={formatName} lastAction={lastAction} />
+                    ) : (
+                        <BlankUserInfo />
+                    )}
                 </div>
             </div>
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-base text-gray-700 break-words">
-                <p><strong>Email:</strong> {userInfo.email}</p>
-                <p><strong>Address:</strong> {userInfo.address}</p>
-                {userInfo.position && <p><strong>Position:</strong> {userInfo.position}</p>}
-                {userInfo.educationLevel && <p><strong>Education Level:</strong> {userInfo.educationLevel}</p>}
-                {userInfo.gradeYearLevel && <p><strong>Grade/Year Level:</strong> {userInfo.gradeYearLevel}</p>}
-                {userInfo.section && <p><strong>Section:</strong> {userInfo.section}</p>}
-            </div>
-            <div className="col-span-1 sm:col-span-2 flex justify-between border-t pt-2">
-                <p className="text-green-500"><strong>Sign In Time:</strong> {formatDateTime(userInfo.signInTime)}</p>
-                <p className="text-red-500"><strong>Sign Out Time:</strong> {formatDateTime(userInfo.signOutTime)}</p>
-            </div>
-        </div>
-    );
-};
-
-const BlankUserInfo = () => {
-    return (
-        <div className="flex flex-col items-center justify-center mt-6">
-            <img src={blankImage} alt="User" className="w-28 h-28 rounded-full bg-gray-200" />
-            <p className="text-gray-500 mt-3 text-lg">No user scanned</p>
-        </div>
+            <footer className="mt-8 text-center">
+                <p className="text-slate-400 text-sm">&copy; {new Date().getFullYear()} Thesis Project. All rights reserved.</p>
+            </footer>
+        </motion.div>
     );
 };
 

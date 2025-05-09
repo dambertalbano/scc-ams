@@ -57,10 +57,6 @@ const Navbar = forwardRef((props, ref) => {
         setIsUserDropdownOpen(false);
     };
 
-    const handleScan = () => {
-        navigate('/rfid-scan');
-    };
-
     const handleDashboard = () => {
         if (aToken) {
             navigate('/admin-dashboard');
@@ -99,12 +95,12 @@ const Navbar = forwardRef((props, ref) => {
                     ],
                 },
                 {
-                    title: 'Subjects',
-                    path: '/Subjects',
-                },
-                {
-                    title: 'Schedules',
-                    path: '/schedules',
+                    title: 'Manage',
+                    path: '/manage',
+                    subMenu: [
+                        { name: 'Subjects', path: '/subjects' },
+                        { name: 'Schedules', path: '/schedules' },
+                    ],
                 },
                 {
                     title: 'Analytics',
@@ -223,14 +219,6 @@ const Navbar = forwardRef((props, ref) => {
                                         {userRoleLabel} Dashboard
                                     </button>
                                     
-                                    {aToken && (
-                                        <button
-                                            onClick={handleScan}
-                                            className='text-white py-2 text-left hover:text-customRed transition-colors duration-200 rounded-md px-3'
-                                        >
-                                            Scan
-                                        </button>
-                                    )}
 
                                     {navItems.map((menu, index) => {
                                         if (!menu.subMenu) {
@@ -318,12 +306,6 @@ const Navbar = forwardRef((props, ref) => {
                                 onClick={handleDashboard}
                             />
                             
-                            {aToken && (
-                                <FlyoutLink
-                                    title="Scan"
-                                    onClick={handleScan}
-                                />
-                            )}
                             
                             {navItems.map((menu, index) => {
                                 if (!menu.subMenu) {

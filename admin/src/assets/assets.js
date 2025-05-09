@@ -2,6 +2,7 @@ import add_icon from './add_icon.svg'
 import admin_logo from './admin_logo.svg'
 import appointment_icon from './appointment_icon.svg'
 import appointments_icon from './appointments_icon.svg'
+import blank_image from './blank-image.webp'
 import cancel_icon from './cancel_icon.svg'
 import earning_icon from './earning_icon.svg'
 import home_icon from './home_icon.svg'
@@ -23,5 +24,6 @@ export const assets = {
     list_icon,
     tick_icon,
     appointments_icon,
-    earning_icon
+    earning_icon,
+    blank_image
 }

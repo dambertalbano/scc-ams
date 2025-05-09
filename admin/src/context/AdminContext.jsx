@@ -29,34 +29,39 @@ const AdminContextProvider = (props) => {
         }
     }, [setAToken]);
 
-    const handleApiError = useCallback((error, message = "An error occurred") => {
+    const handleApiError = useCallback((error, message = "An error occurred", options = { showToast: true }) => {
         console.error(message + ":", error);
         const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred";
-        toast.error(`${message}: ${errorMessage}`);
+        if (options.showToast) {
+            toast.error(`${message}: ${errorMessage}`);
+        }
     }, []);
 
-    const getUserByCode = useCallback(async (code) => {
+    const getUserByCode = useCallback(async (code, tokenOverride = null, options = { showToast: true }) => {
+        const currentToken = tokenOverride !== null ? tokenOverride : aToken;
         try {
             console.log(`Attempting to fetch user with code: ${code}`);
-
-            const response = await axios.get(`${backendUrl}/api/admin/user/code/${code}`, {
-                headers: { Authorization: `Bearer ${aToken}` }
-            });
-
-            if (response.data && response.data.success && response.data.user) {
-                return { ...response.data, type: response.data.userType || 'unknown' }; // Ensure userType is handled
+            const headers = {};
+            if (currentToken) {
+                headers.Authorization = `Bearer ${currentToken}`;
             }
 
-            toast.error(response.data.message || 'User not found');
-            return null;
+            const response = await axios.get(`${backendUrl}/api/admin/user/code/${code}`, { headers });
 
+            if (response.data && response.data.success && response.data.user) {
+                return { ...response.data, type: response.data.userType || 'unknown' };
+            }
+            if (options.showToast) {
+                toast.error(response.data.message || 'User not found');
+            }
+            return null;
         } catch (error) {
-            handleApiError(error, 'Error fetching user by code');
+            handleApiError(error, 'Error fetching user by code', options);
             return null;
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const getStudentByCode = useCallback(async (code) => {
+    const getStudentByCode = useCallback(async (code, options = { showToast: true }) => {
         try {
             const { data } = await axios.get(`${backendUrl}/api/admin/student/code/${code}`, {
                 headers: { Authorization: `Bearer ${aToken}` }
@@ -64,16 +69,18 @@ const AdminContextProvider = (props) => {
             if (data.success && data.student) {
                 return data.student;
             } else {
-                toast.error(data.message || 'Student not found');
+                if (options.showToast) {
+                    toast.error(data.message || 'Student not found');
+                }
                 return null;
             }
         } catch (error) {
-            handleApiError(error, 'Error fetching student by code');
+            handleApiError(error, 'Error fetching student by code', options);
             return null;
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const getAllStudents = useCallback(async () => {
+    const getAllStudents = useCallback(async (options = { showToast: true }) => {
         try {
             const { data } = await axios.get(`${backendUrl}/api/admin/all-students`, {
                 headers: { Authorization: `Bearer ${aToken}` }
@@ -81,14 +88,16 @@ const AdminContextProvider = (props) => {
             if (data.success) {
                 setStudents(data.students);
             } else {
-                toast.error(data.message);
+                if (options.showToast) {
+                    toast.error(data.message);
+                }
             }
         } catch (error) {
-            handleApiError(error, 'Error fetching all students');
+            handleApiError(error, 'Error fetching all students', options);
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const getAllTeachers = useCallback(async () => {
+    const getAllTeachers = useCallback(async (options = { showToast: true }) => {
         try {
             const { data } = await axios.get(`${backendUrl}/api/admin/all-teachers`, {
                 headers: { Authorization: `Bearer ${aToken}` }
@@ -96,14 +105,16 @@ const AdminContextProvider = (props) => {
             if (data.success) {
                 setTeachers(data.teachers);
             } else {
-                toast.error(data.message);
+                if (options.showToast) {
+                    toast.error(data.message);
+                }
             }
         } catch (error) {
-            handleApiError(error, 'Error fetching all teachers');
+            handleApiError(error, 'Error fetching all teachers', options);
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const updateTeacher = useCallback(async (teacherId, updates, imageFile) => {
+    const updateTeacher = useCallback(async (teacherId, updates, imageFile, options = { showToast: true }) => {
         const url = `${backendUrl}/api/admin/teachers/${teacherId}`;
         try {
             const formData = new FormData();
@@ -127,38 +138,48 @@ const AdminContextProvider = (props) => {
             });
 
             if (response.data.success) {
+                if (options.showToast) {
+                    toast.success("Teacher updated successfully");
+                }
                 getAllTeachers();
                 return true;
             } else {
+                if (options.showToast) {
+                    toast.error(response.data.message || "Failed to update teacher");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Error updating teacher');
+            handleApiError(error, 'Error updating teacher', options);
             return false;
         }
     }, [aToken, backendUrl, getAllTeachers, handleApiError]);
 
-    const deleteTeacher = useCallback(async (teacherId) => {
+    const deleteTeacher = useCallback(async (teacherId, options = { showToast: true }) => {
         try {
             const response = await axios.delete(`${backendUrl}/api/admin/teachers/${teacherId}`, {
                 headers: { Authorization: `Bearer ${aToken}` },
             });
 
             if (response.data.success) {
-                toast.success("Teacher deleted successfully");
+                if (options.showToast) {
+                    toast.success("Teacher deleted successfully");
+                }
                 getAllTeachers();
                 return true;
             } else {
-                toast.error(response.data.message || "Failed to delete teacher");
+                if (options.showToast) {
+                    toast.error(response.data.message || "Failed to delete teacher");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Error deleting teacher');
+            handleApiError(error, 'Error deleting teacher', options);
             return false;
         }
     }, [aToken, backendUrl, getAllTeachers, handleApiError]);
     
-    const updateStudent = useCallback(async (studentId, updates, imageFile) => { // Added imageFile
+    const updateStudent = useCallback(async (studentId, updates, imageFile, options = { showToast: true }) => { // Added imageFile
         const url = `${backendUrl}/api/admin/students/${studentId}`;
         try {
             const formData = new FormData();
@@ -177,40 +198,48 @@ const AdminContextProvider = (props) => {
             });
 
             if (response.data.success) {
-                toast.success("Student updated successfully");
+                if (options.showToast) {
+                    toast.success("Student updated successfully");
+                }
                 getAllStudents();
                 return true;
             } else {
-                toast.error(response.data.message || "Failed to update student");
+                if (options.showToast) {
+                    toast.error(response.data.message || "Failed to update student");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Error updating student');
+            handleApiError(error, 'Error updating student', options);
             return false;
         }
     }, [aToken, backendUrl, getAllStudents, handleApiError]);
 
-    const deleteStudent = useCallback(async (studentId) => {
+    const deleteStudent = useCallback(async (studentId, options = { showToast: true }) => {
         try {
             const response = await axios.delete(`${backendUrl}/api/admin/students/${studentId}`, {
                 headers: { Authorization: `Bearer ${aToken}` },
             });
 
             if (response.data.success) {
-                toast.success("Student deleted successfully");
+                if (options.showToast) {
+                    toast.success("Student deleted successfully");
+                }
                 getAllStudents();
                 return true;
             } else {
-                toast.error(response.data.message || "Failed to delete student");
+                if (options.showToast) {
+                    toast.error(response.data.message || "Failed to delete student");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Error deleting student');
+            handleApiError(error, 'Error deleting student', options);
             return false;
         }
     }, [aToken, backendUrl, getAllStudents, handleApiError]);
 
-    const addStudent = useCallback(async (studentData) => {
+    const addStudent = useCallback(async (studentData, options = { showToast: true }) => {
         try {
             const response = await axios.post(`${backendUrl}/api/admin/add-student`, studentData, {
                 headers: {
@@ -220,18 +249,24 @@ const AdminContextProvider = (props) => {
             });
 
             if (response.data.success) {
+                if (options.showToast) {
+                    toast.success("Student added successfully");
+                }
                 getAllStudents();
                 return true;
             } else {
+                if (options.showToast) {
+                    toast.error(response.data.message || "Failed to add student");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Error adding student');
+            handleApiError(error, 'Error adding student', options);
             return false;
         }
     }, [aToken, backendUrl, getAllStudents, handleApiError]);
 
-    const addTeacher = useCallback(async (teacherData) => {
+    const addTeacher = useCallback(async (teacherData, options = { showToast: true }) => {
         try {
             const response = await axios.post(`${backendUrl}/api/admin/add-teacher`, teacherData, {
                 headers: {
@@ -241,74 +276,98 @@ const AdminContextProvider = (props) => {
             });
 
             if (response.data.success) {
+                if (options.showToast) {
+                    toast.success("Teacher added successfully");
+                }
                 getAllTeachers();
                 return true;
             } else {
+                if (options.showToast) {
+                    toast.error(response.data.message || "Failed to add teacher");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Error adding teacher');
+            handleApiError(error, 'Error adding teacher', options);
             return false;
         }
     }, [aToken, backendUrl, getAllTeachers, handleApiError]);
 
-    const loginAdmin = useCallback(async (email, password) => {
+    const loginAdmin = useCallback(async (email, password, options = { showToast: true }) => {
         try {
             const response = await axios.post(`${backendUrl}/api/admin/login`, { email, password });
 
             if (response.data.success) {
                 updateAToken(response.data.token);
-                toast.success("Login successful");
+                if (options.showToast) {
+                    toast.success("Login successful");
+                }
                 return true;
             } else {
-                toast.error(response.data.message || "Login failed");
+                if (options.showToast) {
+                    toast.error(response.data.message || "Login failed");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Login error');
+            handleApiError(error, 'Login error', options);
             return false;
         }
     }, [backendUrl, handleApiError, updateAToken]);
 
-    const adminSignIn = useCallback(async (code) => {
+    const adminSignIn = useCallback(async (code, tokenOverride = null, options = { showToast: true }) => {
+        const currentToken = tokenOverride !== null ? tokenOverride : aToken;
         try {
-            const response = await axios.put(`${backendUrl}/api/admin/sign-in/${code}`, {}, {
-                headers: { Authorization: `Bearer ${aToken}` },
-            });
+            const headers = {};
+            if (currentToken) {
+                headers.Authorization = `Bearer ${currentToken}`;
+            }
+            const response = await axios.put(`${backendUrl}/api/admin/sign-in/${code}`, {}, { headers });
 
             if (response.data.success) {
-                toast.success("Sign in successful");
+                if (options.showToast) {
+                    toast.success("Sign in successful");
+                }
                 return true;
             } else {
-                toast.error(response.data.message || "Sign in failed");
+                if (options.showToast) {
+                    toast.error(response.data.message || "Sign in failed");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Sign in error');
+            handleApiError(error, 'Sign in error', options);
             return false;
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const adminSignOut = useCallback(async (code) => {
+    const adminSignOut = useCallback(async (code, tokenOverride = null, options = { showToast: true }) => {
+        const currentToken = tokenOverride !== null ? tokenOverride : aToken;
         try {
-            const response = await axios.put(`${backendUrl}/api/admin/sign-out/${code}`, {}, {
-                headers: { Authorization: `Bearer ${aToken}` },
-            });
+            const headers = {};
+            if (currentToken) {
+                headers.Authorization = `Bearer ${currentToken}`;
+            }
+            const response = await axios.put(`${backendUrl}/api/admin/sign-out/${code}`, {}, { headers });
 
             if (response.data.success) {
-                toast.success("Sign out successful");
+                if (options.showToast) {
+                    toast.success("Sign out successful");
+                }
                 return true;
             } else {
-                toast.error(response.data.message || "Sign out failed");
+                if (options.showToast) {
+                    toast.error(response.data.message || "Sign out failed");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Sign out error');
+            handleApiError(error, 'Sign out error', options);
             return false;
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const fetchAttendanceRecords = useCallback(async (date, userType) => {
+    const fetchAttendanceRecords = useCallback(async (date, userType, options = { showToast: true }) => {
         try {
             const isoDate = new Date(date).toISOString();
             console.log("Fetching attendance records for date:", isoDate, "and userType:", userType);
@@ -325,19 +384,19 @@ const AdminContextProvider = (props) => {
             if (response.data.success) {
                 return response.data.attendanceRecords.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             } else {
-                toast.error(response.data.message || "Failed to fetch attendance records");
+                if (options.showToast) {
+                    toast.error(response.data.message || "Failed to fetch attendance records");
+                }
                 return [];
             }
         } catch (error) {
             console.error("Error fetching attendance records:", error);
-            // It's better to throw the error or return a consistent error object
-            // so the calling component can handle it (e.g., show a specific message or state)
-            handleApiError(error, "Error fetching attendance records");
-            return []; // Or throw error;
+            handleApiError(error, "Error fetching attendance records", options);
+            return [];
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const getDashData = useCallback(async () => {
+    const getDashData = useCallback(async (options = { showToast: true }) => {
         try {
             const { data } = await axios.get(`${backendUrl}/api/admin/dashboard`, {
                 headers: { Authorization: `Bearer ${aToken}` }
@@ -345,15 +404,17 @@ const AdminContextProvider = (props) => {
             if (data.success) {
                 setDashData(data.dashData);
             } else {
-                toast.error(data.message);
+                if (options.showToast) {
+                    toast.error(data.message);
+                }
             }
         } catch (error) {
-            handleApiError(error, 'Error fetching dashboard data');
+            handleApiError(error, 'Error fetching dashboard data', options);
         }
     }, [aToken, backendUrl, handleApiError]);
 
     // Subject APIs
-    const getAllSubjects = useCallback(async () => {
+    const getAllSubjects = useCallback(async (options = { showToast: true }) => {
         try {
             const { data } = await axios.get(`${backendUrl}/api/admin/subjects`, {
                 headers: { Authorization: `Bearer ${aToken}` },
@@ -361,71 +422,85 @@ const AdminContextProvider = (props) => {
             if (data.success) {
                 return data.subjects;
             } else {
-                toast.error(data.message || "Failed to fetch subjects");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to fetch subjects");
+                }
                 return [];
             }
         } catch (error) {
-            handleApiError(error, "Error fetching subjects");
+            handleApiError(error, "Error fetching subjects", options);
             return [];
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const createSubject = useCallback(async (subjectData) => {
+    const createSubject = useCallback(async (subjectData, options = { showToast: true }) => {
         try {
             const { data } = await axios.post(`${backendUrl}/api/admin/subjects`, subjectData, {
                 headers: { Authorization: `Bearer ${aToken}` },
             });
             if (data.success) {
-                toast.success("Subject created successfully");
+                if (options.showToast) {
+                    toast.success("Subject created successfully");
+                }
                 return data.subject;
             } else {
-                toast.error(data.message || "Failed to create subject");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to create subject");
+                }
                 return null;
             }
         } catch (error) {
-            handleApiError(error, "Error creating subject");
+            handleApiError(error, "Error creating subject", options);
             return null;
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const updateSubject = useCallback(async (subjectId, updates) => {
+    const updateSubject = useCallback(async (subjectId, updates, options = { showToast: true }) => {
         try {
             const { data } = await axios.put(`${backendUrl}/api/admin/subjects/${subjectId}`, updates, {
                 headers: { Authorization: `Bearer ${aToken}` },
             });
             if (data.success) {
-                toast.success("Subject updated successfully");
+                if (options.showToast) {
+                    toast.success("Subject updated successfully");
+                }
                 return data.subject;
             } else {
-                toast.error(data.message || "Failed to update subject");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to update subject");
+                }
                 return null;
             }
         } catch (error) {
-            handleApiError(error, "Error updating subject");
+            handleApiError(error, "Error updating subject", options);
             return null;
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const deleteSubject = useCallback(async (subjectId) => {
+    const deleteSubject = useCallback(async (subjectId, options = { showToast: true }) => {
         try {
             const { data } = await axios.delete(`${backendUrl}/api/admin/subjects/${subjectId}`, {
                 headers: { Authorization: `Bearer ${aToken}` },
             });
             if (data.success) {
-                toast.success("Subject deleted successfully");
+                if (options.showToast) {
+                    toast.success("Subject deleted successfully");
+                }
                 return true;
             } else {
-                toast.error(data.message || "Failed to delete subject");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to delete subject");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, "Error deleting subject");
+            handleApiError(error, "Error deleting subject", options);
             return false;
         }
     }, [aToken, backendUrl, handleApiError]);
 
     // Schedule APIs
-    const getAllSchedules = useCallback(async () => {
+    const getAllSchedules = useCallback(async (options = { showToast: true }) => {
         try {
             const { data } = await axios.get(`${backendUrl}/api/admin/schedules`, {
                 headers: { Authorization: `Bearer ${aToken}` },
@@ -433,71 +508,85 @@ const AdminContextProvider = (props) => {
             if (data.success) {
                 return data.schedules;
             } else {
-                toast.error(data.message || "Failed to fetch schedules");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to fetch schedules");
+                }
                 return [];
             }
         } catch (error) {
-            handleApiError(error, "Error fetching schedules");
+            handleApiError(error, "Error fetching schedules", options);
             return [];
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const createSchedule = useCallback(async (scheduleData) => {
+    const createSchedule = useCallback(async (scheduleData, options = { showToast: true }) => {
         try {
             const { data } = await axios.post(`${backendUrl}/api/admin/schedules`, scheduleData, {
                 headers: { Authorization: `Bearer ${aToken}` },
             });
             if (data.success) {
-                toast.success("Schedule created successfully");
+                if (options.showToast) {
+                    toast.success("Schedule created successfully");
+                }
                 return data.schedule;
             } else {
-                toast.error(data.message || "Failed to create schedule");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to create schedule");
+                }
                 return null;
             }
         } catch (error) {
-            handleApiError(error, "Error creating schedule");
+            handleApiError(error, "Error creating schedule", options);
             return null;
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const updateSchedule = useCallback(async (scheduleId, updates) => {
+    const updateSchedule = useCallback(async (scheduleId, updates, options = { showToast: true }) => {
         try {
             const { data } = await axios.put(`${backendUrl}/api/admin/schedules/${scheduleId}`, updates, {
                 headers: { Authorization: `Bearer ${aToken}` },
             });
             if (data.success) {
-                toast.success("Schedule updated successfully");
+                if (options.showToast) {
+                    toast.success("Schedule updated successfully");
+                }
                 return data.schedule;
             } else {
-                toast.error(data.message || "Failed to update schedule");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to update schedule");
+                }
                 return null;
             }
         } catch (error) {
-            handleApiError(error, "Error updating schedule");
+            handleApiError(error, "Error updating schedule", options);
             return null;
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const deleteSchedule = useCallback(async (scheduleId) => {
+    const deleteSchedule = useCallback(async (scheduleId, options = { showToast: true }) => {
         try {
             const { data } = await axios.delete(`${backendUrl}/api/admin/schedules/${scheduleId}`, {
                 headers: { Authorization: `Bearer ${aToken}` },
             });
             if (data.success) {
-                toast.success("Schedule deleted successfully");
+                if (options.showToast) {
+                    toast.success("Schedule deleted successfully");
+                }
                 return true;
             } else {
-                toast.error(data.message || "Failed to delete schedule");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to delete schedule");
+                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, "Error deleting schedule");
+            handleApiError(error, "Error deleting schedule", options);
             return false;
         }
     }, [aToken, backendUrl, handleApiError]);
 
     // --- Analytics API Functions ---
-    const fetchAnalyticsSummary = useCallback(async (params = {}) => {
+    const fetchAnalyticsSummary = useCallback(async (params = {}, options = { showToast: true }) => {
         try {
             const queryParams = new URLSearchParams(params).toString();
             const { data } = await axios.get(`${backendUrl}/api/admin/analytics/summary?${queryParams}`, {
@@ -506,16 +595,18 @@ const AdminContextProvider = (props) => {
             if (data.success) {
                 return data.summary;
             } else {
-                toast.error(data.message || "Failed to fetch analytics summary");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to fetch analytics summary");
+                }
                 return null; // Or a default summary object
             }
         } catch (error) {
-            handleApiError(error, "Error fetching analytics summary");
+            handleApiError(error, "Error fetching analytics summary", options);
             return null; // Or a default summary object
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const fetchUserGrowthStats = useCallback(async (params = {}) => {
+    const fetchUserGrowthStats = useCallback(async (params = {}, options = { showToast: true }) => {
         try {
             const queryParams = new URLSearchParams(params).toString();
             const { data } = await axios.get(`${backendUrl}/api/admin/analytics/user-growth?${queryParams}`, {
@@ -524,19 +615,18 @@ const AdminContextProvider = (props) => {
             if (data.success) {
                 return data; 
             } else {
-                toast.error(data.message || "Failed to fetch user growth statistics");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to fetch user growth statistics");
+                }
                 return { userGrowth: [], granularity: 'daily', period: {} }; 
             }
         } catch (error) {
-            handleApiError(error, "Error fetching user growth statistics");
+            handleApiError(error, "Error fetching user growth statistics", options);
             return { userGrowth: [], granularity: 'daily', period: {} };
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    // Remove fetchAttendanceStatsByEducationLevel if no longer needed
-    // const fetchAttendanceStatsByEducationLevel = useCallback(async (params = {}) => { ... });
-
-    const fetchDailySignInStats = useCallback(async (params = {}) => {
+    const fetchDailySignInStats = useCallback(async (params = {}, options = { showToast: true }) => {
         try {
             const queryParams = new URLSearchParams(params).toString();
             const { data } = await axios.get(`${backendUrl}/api/admin/analytics/daily-sign-ins?${queryParams}`, {
@@ -545,11 +635,13 @@ const AdminContextProvider = (props) => {
             if (data.success) {
                 return data; // Return the whole data object { dailySignIns: [], period: {}, granularity: 'daily' }
             } else {
-                toast.error(data.message || "Failed to fetch daily sign-in statistics");
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to fetch daily sign-in statistics");
+                }
                 return { dailySignIns: [], granularity: 'daily', period: {} }; // Default structure
             }
         } catch (error) {
-            handleApiError(error, "Error fetching daily sign-in statistics");
+            handleApiError(error, "Error fetching daily sign-in statistics", options);
             return { dailySignIns: [], granularity: 'daily', period: {} }; // Default structure
         }
     }, [aToken, backendUrl, handleApiError]);
@@ -590,7 +682,6 @@ const AdminContextProvider = (props) => {
         // Analytics API Functions
         fetchAnalyticsSummary,
         fetchUserGrowthStats,
-        // fetchAttendanceStatsByEducationLevel, // Removed
         fetchDailySignInStats, // Added
     };
 

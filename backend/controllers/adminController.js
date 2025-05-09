@@ -281,26 +281,39 @@ const getUserByCode = async (req, res) => {
     const { code } = req.params;
 
     try {
-        let user = await studentModel.findOne({ code });
-        if (!user) user = await teacherModel.findOne({ code });
+        let user = await studentModel.findOne({ code }).select('-password'); // Exclude password
+        let userType = 'Student'; // Assume student first
+
+        if (!user) {
+            user = await teacherModel.findOne({ code }).select('-password'); // Exclude password
+            userType = 'Teacher'; // If found in teachers, update userType
+        }
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
+        // The logic to reset signInTime/signOutTime if it's a new day
         const today = new Date();
         const signInDate = user.signInTime ? new Date(user.signInTime) : null;
 
         if (signInDate && (today.getFullYear() !== signInDate.getFullYear() ||
             today.getMonth() !== signInDate.getMonth() ||
             today.getDate() !== signInDate.getDate())) {
+            // Reset times for the new day
             user.signInTime = null;
             user.signOutTime = null;
+            // Note: Saving the user here might be premature if the next step is sign-in/sign-out
+            // which will also save. Consider if this save is always needed or if the sign-in/out
+            // operation will handle updating these fields appropriately.
+            // For now, keeping it as it was, but it's a point of review.
             await user.save();
         }
 
-        res.status(200).json({ success: true, user });
+        // Send user and userType in the response
+        res.status(200).json({ success: true, user, userType });
     } catch (error) {
+        console.error("Error in getUserByCode:", error); // Log the error for debugging
         res.status(500).json({ success: false, message: "Error fetching user" });
     }
 };

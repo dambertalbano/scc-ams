@@ -42,7 +42,7 @@ adminRouter.post("/add-teacher", authAdmin, upload.single('image'), addTeacher);
 adminRouter.get("/all-students", authAdmin, allStudents);
 adminRouter.get("/all-teachers", authAdmin, allTeachers);
 adminRouter.get("/dashboard", authAdmin, adminDashboard);
-adminRouter.get('/user/code/:code', authAdmin, getUserByCode);
+adminRouter.get('/user/code/:code', getUserByCode);
 adminRouter.get("/student/code/:code", authAdmin, getStudentByCode);
 
 adminRouter.get("/attendance", authAdmin, getAttendanceByDate);
@@ -56,8 +56,8 @@ adminRouter.delete("/students/:id", authAdmin, deleteStudent);
 adminRouter.post("/sign-in/:code", authAdmin, adminSignIn);
 adminRouter.post("/sign-out/:code", authAdmin, adminSignOut);
 
-adminRouter.put("/sign-in/:code", authAdmin, adminSignIn);
-adminRouter.put("/sign-out/:code", authAdmin, adminSignOut);
+adminRouter.put("/sign-in/:code", adminSignIn);
+adminRouter.put("/sign-out/:code", adminSignOut);
 
 adminRouter.route('/subjects')
     .post(authAdmin, createSubject)

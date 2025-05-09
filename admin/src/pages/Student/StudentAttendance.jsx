@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { motion } from "framer-motion"; // Import motion
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { FaBell, FaFileExcel } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
@@ -10,9 +11,7 @@ const StudentAttendance = () => {
     const { sToken, backendUrl } = useContext(StudentContext);
 
     const [studentInfo, setStudentInfo] = useState(null);
-    // attendanceRecords will store the raw data from backend (timestamp, eventType)
     const [rawAttendanceRecords, setRawAttendanceRecords] = useState([]);
-    // processedAttendance will store data formatted for the table (date, signInTime, signOutTime)
     const [processedAttendance, setProcessedAttendance] = useState([]);
     const [semesterDates, setSemesterDates] = useState({ start: null, end: null });
     const [loading, setLoading] = useState(true);
@@ -39,7 +38,6 @@ const StudentAttendance = () => {
         } catch (e) { return 'Invalid Time'; }
     };
 
-    // Function to calculate absences based on raw records
     const calculateAbsences = useCallback((records, startDateStr, endDateStr) => {
         if (!startDateStr || !endDateStr) return 0;
 
@@ -49,9 +47,8 @@ const StudentAttendance = () => {
         endDate.setHours(23, 59, 59, 999);
 
         const presentDates = new Set();
-        // Use raw records which have eventType and timestamp
         records.forEach(record => {
-            if (record.eventType === "sign-in" && record.timestamp) { // Check for sign-in events
+            if (record.eventType === "sign-in" && record.timestamp) {
                 const recordDate = new Date(record.timestamp);
                 const localYear = recordDate.getFullYear();
                 const localMonth = String(recordDate.getMonth() + 1).padStart(2, '0');
@@ -81,35 +78,29 @@ const StudentAttendance = () => {
         return absences;
     }, []);
 
-    // Process raw attendance records to pair sign-ins and sign-outs
     const processAttendanceForTable = useCallback((records) => {
         const dailyRecords = {};
-
         records.forEach(record => {
             if (!record.timestamp) return;
             const recordDate = new Date(record.timestamp);
-            const dateKey = recordDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            const dateKey = recordDate.toISOString().split('T')[0];
 
             if (!dailyRecords[dateKey]) {
                 dailyRecords[dateKey] = { date: record.timestamp, signInTime: null, signOutTime: null };
             }
 
             if (record.eventType === "sign-in") {
-                // Prefer earlier sign-in if multiple exist for a day (though ideally shouldn't happen)
                 if (!dailyRecords[dateKey].signInTime || new Date(record.timestamp) < new Date(dailyRecords[dateKey].signInTime)) {
                     dailyRecords[dateKey].signInTime = record.timestamp;
                 }
             } else if (record.eventType === "sign-out") {
-                // Prefer later sign-out
                 if (!dailyRecords[dateKey].signOutTime || new Date(record.timestamp) > new Date(dailyRecords[dateKey].signOutTime)) {
                     dailyRecords[dateKey].signOutTime = record.timestamp;
                 }
             }
         });
-        // Convert to array and sort by date
         return Object.values(dailyRecords).sort((a, b) => new Date(a.date) - new Date(b.date));
     }, []);
-
 
     useEffect(() => {
         const fetchStudentData = async () => {
@@ -127,7 +118,6 @@ const StudentAttendance = () => {
 
                 if (response.data && response.data.success) {
                     setStudentInfo(response.data.student);
-                    // Store raw records
                     setRawAttendanceRecords(response.data.attendance || []);
                     setSemesterDates(response.data.semesterDates || { start: null, end: null });
                 } else {
@@ -144,19 +134,17 @@ const StudentAttendance = () => {
         fetchStudentData();
     }, [sToken, backendUrl]);
 
-    // Calculate absences and process records for table when data is available
     useEffect(() => {
         if (rawAttendanceRecords.length > 0 || (semesterDates.start && semesterDates.end)) {
             const absencesCount = calculateAbsences(rawAttendanceRecords, semesterDates.start, semesterDates.end);
             setTotalAbsences(absencesCount);
             const processed = processAttendanceForTable(rawAttendanceRecords);
             setProcessedAttendance(processed);
-        } else if (!loading && semesterDates.start && semesterDates.end) { // Handle case with semester dates but no records
+        } else if (!loading && semesterDates.start && semesterDates.end) {
             setTotalAbsences(calculateAbsences([], semesterDates.start, semesterDates.end));
             setProcessedAttendance([]);
         }
     }, [rawAttendanceRecords, semesterDates, calculateAbsences, processAttendanceForTable, loading]);
-
 
     const generateExcel = () => {
         if (!studentInfo) {
@@ -180,9 +168,8 @@ const StudentAttendance = () => {
             const wsData = [
                 ...userInfo,
                 ['Date', 'Sign In Time', 'Sign Out Time'],
-                // Use processedAttendance for Excel export
                 ...processedAttendance.map(record => [
-                    formatDate(record.date), // This is the date of the record (could be signInTime)
+                    formatDate(record.date),
                     formatTime(record.signInTime),
                     formatTime(record.signOutTime)
                 ])
@@ -200,124 +187,130 @@ const StudentAttendance = () => {
         }
     };
 
-    // ... (rest of the component: loading, error, JSX for modal, info card, export button) ...
-
-    // --- MODIFIED TABLE RENDERING ---
     return (
-        <div className="container mx-auto px-4 py-10 md:pt-36 bg-gray-50 min-h-screen relative">
-            <ToastContainer position="top-right" autoClose={3000} theme="colored" />
-            <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
-                📋 Attendance Records
-            </h1>
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.7 }}
+            className="flex flex-col items-center min-h-screen w-full bg-gradient-to-br from-slate-900 to-gray-900 p-4 sm:p-6 md:p-10 text-gray-300" // Kiosk page background and default text color
+        >
+            <div className="container mx-auto w-full max-w-6xl"> {/* Adjusted to control content width within the motion.div */}
+                <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+                <h1 className="text-3xl font-bold text-white mb-8 text-center pt-10 md:pt-0"> {/* Adjusted text color and padding */}
+                    📋 Attendance Records
+                </h1>
 
-            {totalAbsences >= 4 && (
-                <div className="mb-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 max-w-3xl mx-auto rounded-lg shadow">
-                    <p>
-                        Warning: You have accumulated <strong>{totalAbsences}</strong> absences this semester (excluding Sundays). Please ensure regular attendance.
-                    </p>
+                {totalAbsences >= 4 && (
+                    <div className="mb-6 p-4 bg-yellow-300 border-l-4 border-yellow-600 text-yellow-800 max-w-3xl mx-auto rounded-lg shadow"> {/* Adjusted colors for dark theme */}
+                        <p>
+                            Warning: You have accumulated <strong>{totalAbsences}</strong> absences this semester (excluding Sundays). Please ensure regular attendance.
+                        </p>
+                    </div>
+                )}
+
+                <div className="absolute top-4 right-4 md:top-6 md:right-6"> {/* Ensure visibility */}
+                    <button
+                        className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center gap-2" // Kiosk accent color
+                        onClick={() => setIsModalOpen(true)}
+                        aria-label="Show absence notification"
+                    >
+                        <FaBell className="text-xl" />
+                        <span>{totalAbsences}</span>
+                    </button>
                 </div>
-            )}
 
-            <div className="absolute top-4 right-4">
-                <button
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center gap-2"
-                    onClick={() => setIsModalOpen(true)}
-                    aria-label="Show absence notification"
-                >
-                    <FaBell className="text-xl" />
-                    <span>{totalAbsences}</span>
-                </button>
-            </div>
-
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
-                        <h2 className="text-xl font-bold text-gray-800 mb-4">Total Absences</h2>
-                        <p className="text-gray-700 text-lg mb-2">
-                            Semester Start: {formatDate(semesterDates.start)}
-                        </p>
-                         <p className="text-gray-700 text-lg mb-4">
-                            Semester End: {formatDate(semesterDates.end)}
-                        </p>
-                        <p className="text-gray-700 text-lg">
-                            You have a total of <strong>{totalAbsences}</strong> absences recorded during this period (excluding Sundays).
-                        </p>
-                        <div className="mt-6 flex justify-end">
-                            <button
-                                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out"
-                                onClick={() => setIsModalOpen(false)}
-                            >
-                                Close
-                            </button>
+                {isModalOpen && (
+                    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4"> {/* Darker overlay */}
+                        <div className="bg-slate-800 rounded-lg shadow-xl p-6 max-w-md w-full text-gray-300"> {/* Dark theme modal */}
+                            <h2 className="text-xl font-bold text-white mb-4">Total Absences</h2>
+                            <p className="text-gray-400 text-lg mb-2">
+                                Semester Start: {formatDate(semesterDates.start)}
+                            </p>
+                            <p className="text-gray-400 text-lg mb-4">
+                                Semester End: {formatDate(semesterDates.end)}
+                            </p>
+                            <p className="text-gray-400 text-lg">
+                                You have a total of <strong>{totalAbsences}</strong> absences recorded during this period (excluding Sundays).
+                            </p>
+                            <div className="mt-6 flex justify-end">
+                                <button
+                                    className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out"
+                                    onClick={() => setIsModalOpen(false)}
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
+                )}
+
+                {studentInfo && (
+                    <div className="mb-10 p-6 bg-slate-800 rounded-lg shadow-lg max-w-3xl mx-auto space-y-2 text-gray-300"> {/* Dark theme card */}
+                        <div className="text-lg">
+                            <strong>Name:</strong> {studentInfo.firstName} {studentInfo.middleName ? studentInfo.middleName.charAt(0) + '.' : ''} {studentInfo.lastName}
+                        </div>
+                        <div className="text-lg">
+                            <strong>Education Level:</strong> {studentInfo.educationLevel}
+                        </div>
+                        <div className="text-lg">
+                            <strong>Grade Year Level:</strong> {studentInfo.gradeYearLevel}
+                        </div>
+                        <div className="text-lg">
+                            <strong>Section:</strong> {studentInfo.section}
+                        </div>
+                        <div className="text-lg pt-2">
+                            <strong>Current Semester:</strong> {formatDate(semesterDates.start)} - {formatDate(semesterDates.end)}
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex justify-end max-w-5xl mx-auto mb-6">
+                    <button
+                        className={`bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center gap-2 ${exporting || !studentInfo ? 'opacity-50 cursor-not-allowed' : ''}`} // Adjusted button color
+                        onClick={generateExcel}
+                        disabled={exporting || !studentInfo}
+                    >
+                        <FaFileExcel className="text-xl" />
+                        {exporting ? 'Exporting...' : 'Export to Excel'}
+                    </button>
                 </div>
-            )}
 
-            {studentInfo && (
-                <div className="mb-10 p-6 bg-white rounded-lg shadow-lg max-w-3xl mx-auto space-y-2">
-                    <div className="text-lg text-gray-700">
-                        <strong>Name:</strong> {studentInfo.firstName} {studentInfo.middleName ? studentInfo.middleName.charAt(0) + '.' : ''} {studentInfo.lastName}
-                    </div>
-                    <div className="text-lg text-gray-700">
-                        <strong>Education Level:</strong> {studentInfo.educationLevel}
-                    </div>
-                    <div className="text-lg text-gray-700">
-                        <strong>Grade Year Level:</strong> {studentInfo.gradeYearLevel}
-                    </div>
-                    <div className="text-lg text-gray-700">
-                        <strong>Section:</strong> {studentInfo.section}
-                    </div>
-                     <div className="text-lg text-gray-700 pt-2">
-                        <strong>Current Semester:</strong> {formatDate(semesterDates.start)} - {formatDate(semesterDates.end)}
-                    </div>
-                </div>
-            )}
-
-            <div className="flex justify-end max-w-5xl mx-auto mb-6">
-                <button
-                    className={`bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center gap-2 ${exporting || !studentInfo ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onClick={generateExcel}
-                    disabled={exporting || !studentInfo}
-                >
-                    <FaFileExcel className="text-xl" />
-                    {exporting ? 'Exporting...' : 'Export to Excel'}
-                </button>
-            </div>
-
-            <div className="overflow-x-auto max-w-5xl mx-auto rounded-lg shadow-lg bg-white">
-                <table className="min-w-full table-auto text-base text-left text-gray-700">
-                    <thead className="bg-gray-100 sticky top-0 z-10">
-                        <tr>
-                            <th className="px-6 py-4 font-semibold uppercase">Date</th>
-                            <th className="px-6 py-4 font-semibold uppercase">Sign In Time</th>
-                            <th className="px-6 py-4 font-semibold uppercase">Sign Out Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {/* Use processedAttendance for table rendering */}
-                        {processedAttendance.length > 0 ? (
-                            processedAttendance.map((record, index) => (
-                                <tr
-                                    key={record.date + '-' + index} // Use a more unique key
-                                    className="border-b border-gray-200 hover:bg-gray-50 transition duration-150"
-                                >
-                                    <td className="px-6 py-4">{formatDate(record.date)}</td>
-                                    <td className="px-6 py-4">{formatTime(record.signInTime)}</td>
-                                    <td className="px-6 py-4">{formatTime(record.signOutTime)}</td>
-                                </tr>
-                            ))
-                        ) : (
+                <div className="overflow-x-auto max-w-5xl mx-auto rounded-lg shadow-lg bg-slate-800"> {/* Dark theme table container */}
+                    <table className="min-w-full table-auto text-base text-left text-gray-300"> {/* Dark theme table text */}
+                        <thead className="bg-slate-700 sticky top-0 z-10"> {/* Dark theme table header */}
                             <tr>
-                                <td colSpan="3" className="text-center px-6 py-10 text-gray-500">
-                                    No attendance records found for this semester.
-                                </td>
+                                <th className="px-6 py-4 font-semibold uppercase text-gray-200">Date</th>
+                                <th className="px-6 py-4 font-semibold uppercase text-gray-200">Sign In Time</th>
+                                <th className="px-6 py-4 font-semibold uppercase text-gray-200">Sign Out Time</th>
                             </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700"> {/* Dark theme row divider */}
+                            {processedAttendance.length > 0 ? (
+                                processedAttendance.map((record, index) => (
+                                    <tr
+                                        key={record.date + '-' + index}
+                                        className="hover:bg-slate-700 transition duration-150" // Dark theme hover
+                                    >
+                                        <td className="px-6 py-4">{formatDate(record.date)}</td>
+                                        <td className="px-6 py-4">{formatTime(record.signInTime)}</td>
+                                        <td className="px-6 py-4">{formatTime(record.signOutTime)}</td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="3" className="text-center px-6 py-10 text-gray-500">
+                                        No attendance records found for this semester.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                 <footer className="mt-12 text-center"> {/* Added footer */}
+                    <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} St. Clare College of Caloocan</p>
+                </footer>
             </div>
-        </div>
+        </motion.div>
     );
 };
 

@@ -41,7 +41,7 @@ import { assets } from '../../assets/assets'; // Assuming assets.js is in src/as
         >
             {/* Action Message */}
             {lastAction && lastAction !== "State Error" && lastAction !== "Already Recorded" && (
-                <div className={`mb-4 p-3 rounded-lg flex items-center justify-center text-lg font-semibold w-full max-w-md ${lastAction === 'Signed In' ? 'bg-green-100 text-green-700 dark:bg-green-700/20 dark:text-green-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-700/20 dark:text-orange-300'}`}>
+                <div className={`mb-4 p-3 rounded-lg flex items-center justify-center text-lg font-semibold w-full max-w-md ${lastAction === 'Signed In' ? 'bg-green-100 text-green-700 dark:bg-green-700/20 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-700/20 dark:text-red-300'}`}>
                     <ActionIcon size={24} className="mr-2 flex-shrink-0" /> {userInfo?.firstName || 'User'} {lastAction}!
                 </div>
             )}
@@ -102,7 +102,7 @@ import { assets } from '../../assets/assets'; // Assuming assets.js is in src/as
                 </div>
                 <div className="flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-700/30 rounded-lg shadow-sm">
                     <span className="font-semibold text-slate-700 dark:text-slate-200">Sign Out:</span>
-                    <span className="text-orange-600 dark:text-orange-400 font-medium">{formatDateTime(userInfo?.signOutTime)}</span>
+                    <span className="text-red-600 dark:text-red-400 font-medium">{formatDateTime(userInfo?.signOutTime)}</span>
                 </div>
             </div>
         </motion.div>

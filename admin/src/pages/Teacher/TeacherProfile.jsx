@@ -13,8 +13,11 @@ import {
 } from "../../components/TeacherComponents";
 import { TeacherContext } from "../../context/TeacherContext";
 
-const StatCard = ({ icon, label, value, colorClass = "text-gray-700" }) => (
-  <div className="bg-white p-4 rounded-lg shadow-md flex items-center space-x-3">
+const StatCard = ({ icon, label, value, colorClass = "text-gray-700", explanation }) => (
+  <div 
+    className="bg-white p-4 rounded-lg shadow-md flex items-center space-x-3"
+    title={explanation} // Use the title attribute for the browser's default tooltip
+  >
     <div className={`text-3xl ${colorClass}`}>{icon}</div>
     <div>
       <p className="text-sm text-gray-600">{label}</p>
@@ -38,7 +41,7 @@ const formatLocalDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime) => {
+const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime, scheduledJsDays) => {
   const startRow = 14;
   const absentColumn = 30;
   const tardyColumn = 31;
@@ -78,7 +81,10 @@ const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime) =
     headerDates.forEach((headerDateStr, columnIndex) => {
       if (headerDateStr && columnIndex >= 4 && columnIndex <= 29) {
         const isFutureDate = headerDateStr > todayDateStr;
-        if (!isFutureDate) {
+        const currentHeaderDate = new Date(headerDateStr + "T00:00:00");
+        const currentHeaderJsDay = currentHeaderDate.getDay();
+
+        if (!isFutureDate && scheduledJsDays.includes(currentHeaderJsDay)) {
           if (!attendanceByLocalDate[headerDateStr]) {
             totalAbsent++;
           } else {
@@ -119,7 +125,7 @@ const TeacherProfile = () => {
     firstName: "",
     middleName: "",
     lastName: "",
-    email: "",
+    email: "", // Keep email in formData for display
     number: "",
     address: "",
     code: "",
@@ -154,7 +160,7 @@ const TeacherProfile = () => {
           firstName: profileData.firstName || "",
           middleName: profileData.middleName || "",
           lastName: profileData.lastName || "",
-          email: profileData.email || "",
+          email: profileData.email || "", // Keep email for display
           number: profileData.number || "",
           address: profileData.address || "",
           code: profileData.code || "",
@@ -305,12 +311,16 @@ const TeacherProfile = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     try {
-        const success = await updateTeacherByProfile(formData);
+        // Create a new object for submission, excluding the email
+        const { email, ...dataToUpdate } = formData; 
+        const success = await updateTeacherByProfile(dataToUpdate);
         if (success) {
             fetchTeacherProfile(); // Refresh the profile data
         }
     } catch (error) {
         console.error("Error updating profile:", error);
+        // Potentially show a toast error to the user
+        toast.error(error.message || "Failed to update profile.");
     }
 };
 
@@ -418,7 +428,13 @@ const TeacherProfile = () => {
             "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3,
             "Thursday": 4, "Friday": 5, "Saturday": 6
           };
-          const scheduledJsDaysForExcel = Array.isArray(selectedSchedule.dayOfWeek) ? selectedSchedule.dayOfWeek.map(day => dayNameToNumber[day]).filter(num => num !== undefined) : [];
+          let scheduledJsDaysForExcel = [];
+          if (Array.isArray(selectedSchedule.dayOfWeek)) {
+            scheduledJsDaysForExcel = selectedSchedule.dayOfWeek.map(day => dayNameToNumber[day]).filter(num => num !== undefined);
+          } else if (typeof selectedSchedule.dayOfWeek === 'string') {
+            const dayArray = selectedSchedule.dayOfWeek.split(',').map(d => d.trim());
+            scheduledJsDaysForExcel = dayArray.map(day => dayNameToNumber[day]).filter(num => num !== undefined);
+          }
 
           const startDataRow = 14;
           const dailyTotals = Array(26).fill(0);
@@ -438,20 +454,20 @@ const TeacherProfile = () => {
                 const todayDateStr = formatLocalDate(new Date());
                 const isFutureDate = headerDateStr > todayDateStr;
 
-                const currentHeaderDate = new Date(headerDateStr + "T12:00:00Z"); // Ensure it's parsed as UTC then get local day
-                const currentHeaderJsDay = currentHeaderDate.getUTCDay(); // Or .getDay() if headerDateStr is local
+                const currentHeaderDate = new Date(headerDateStr + "T12:00:00Z");
+                const currentHeaderJsDay = currentHeaderDate.getUTCDay();
 
                 if (isFutureDate) {
                     cell.value = null;
-                } else if (scheduledJsDaysForExcel.includes(currentHeaderJsDay)) { // Check if it's a scheduled day
+                } else if (scheduledJsDaysForExcel.includes(currentHeaderJsDay)) {
                     if (localAttendanceDates.has(headerDateStr)) {
                         cell.value = "P";
                         dailyTotals[columnIndex - 4]++;
                     } else {
-                        cell.value = "/"; // Absent on a scheduled day
+                        cell.value = "/";
                     }
                 } else {
-                    cell.value = null; // Not a scheduled day for this class, so no mark
+                    cell.value = null;
                 }
               } else if (columnIndex >= 4 && columnIndex <= 29) {
                 row.getCell(columnIndex).value = null;
@@ -465,7 +481,7 @@ const TeacherProfile = () => {
             if (headerDates[colIndex]) {
                  const headerDateForTotal = new Date(headerDates[colIndex] + "T12:00:00Z");
                  const headerJsDayForTotal = headerDateForTotal.getUTCDay();
-                 if (scheduledJsDaysForExcel.includes(headerJsDayForTotal)) { // Only sum totals for scheduled days
+                 if (scheduledJsDaysForExcel.includes(headerJsDayForTotal)) {
                     totalRow.getCell(colIndex).value = total > 0 ? total : null;
                  } else {
                     totalRow.getCell(colIndex).value = null;
@@ -475,7 +491,7 @@ const TeacherProfile = () => {
             }
           });
 
-          addMonthlyTotals(worksheet, students, headerDates, scheduleStartTimeForExcel);
+          addMonthlyTotals(worksheet, students, headerDates, scheduleStartTimeForExcel, scheduledJsDaysForExcel);
 
           const buffer = await workbook.xlsx.writeBuffer();
           const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -583,12 +599,47 @@ const TeacherProfile = () => {
             {loadingStats && <p className="text-gray-600">Loading statistics...</p>}
             {!loadingStats && assignmentAttendanceStats && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                <StatCard icon={<FaUsers />} label="Total Students" value={assignmentAttendanceStats.totalStudents} />
-                <StatCard icon={<FaPercentage />} label="Overall Attendance" value={`${assignmentAttendanceStats.overallAttendancePercentage}%`} colorClass="text-blue-500" />
-                <StatCard icon={<FaCheckCircle />} label="Total Present (Student-Days)" value={assignmentAttendanceStats.totalPresentInstances} colorClass="text-green-500" />
-                <StatCard icon={<FaExclamationTriangle />} label="Total Absences (Student-Days)" value={assignmentAttendanceStats.totalAbsentInstances} colorClass="text-red-500" />
-                <StatCard icon={<FaCalendarAlt />} label="Perfect Attendance" value={assignmentAttendanceStats.studentsWithPerfectAttendance} colorClass="text-yellow-500" />
-                <StatCard icon={<FaExclamationTriangle />} label="Students with 3+ Absences" value={assignmentAttendanceStats.studentsWithHighAbsences} colorClass="text-orange-500" />
+                <StatCard 
+                  icon={<FaUsers />} 
+                  label="Total Students" 
+                  value={assignmentAttendanceStats.totalStudents} 
+                  explanation="Total number of students enrolled in the selected schedule."
+                />
+                <StatCard 
+                  icon={<FaPercentage />} 
+                  label="Overall Attendance" 
+                  value={`${assignmentAttendanceStats.overallAttendancePercentage}%`} 
+                  colorClass="text-blue-500"
+                  explanation="Percentage of actual student attendance against total possible attendance days for all students in the selected period and schedule."
+                />
+                <StatCard 
+                  icon={<FaCheckCircle />} 
+                  label="Total Present (Student-Days)" 
+                  value={assignmentAttendanceStats.totalPresentInstances} 
+                  colorClass="text-green-500"
+                  explanation="The sum of all days each student was marked present within the selected period for scheduled class days."
+                />
+                <StatCard 
+                  icon={<FaExclamationTriangle />} 
+                  label="Total Absences (Student-Days)" 
+                  value={assignmentAttendanceStats.totalAbsentInstances} 
+                  colorClass="text-red-500"
+                  explanation="The sum of all days each student was marked absent within the selected period for scheduled class days."
+                />
+                <StatCard 
+                  icon={<FaCalendarAlt />} 
+                  label="Perfect Attendance" 
+                  value={assignmentAttendanceStats.studentsWithPerfectAttendance} 
+                  colorClass="text-yellow-500"
+                  explanation="Number of students who were present on every scheduled class day within the selected period."
+                />
+                <StatCard 
+                  icon={<FaExclamationTriangle />} 
+                  label="Students with 3+ Absences" 
+                  value={assignmentAttendanceStats.studentsWithHighAbsences} 
+                  colorClass="text-orange-500"
+                  explanation="Number of students who have accumulated 3 or more absences on scheduled class days within the selected period."
+                />
               </div>
             )}
             {!loadingStats && !assignmentAttendanceStats && <p className="text-gray-500">No statistics to display for the selected criteria, or data could not be loaded.</p>}

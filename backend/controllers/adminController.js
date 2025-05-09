@@ -611,8 +611,18 @@ const createSchedule = async (req, res) => {
     try {
         const { subjectId, teacherId, section, gradeYearLevel, educationLevel, dayOfWeek, startTime, endTime, semester } = req.body;
 
-        if (!subjectId || !teacherId || !section || !gradeYearLevel || !educationLevel || !dayOfWeek || !startTime || !endTime || !semester) {
-            return res.status(400).json({ success: false, message: 'All schedule fields are required' });
+        // Updated validation for dayOfWeek
+        if (!subjectId || !teacherId || !section || !gradeYearLevel || !educationLevel || !startTime || !endTime || !semester ||
+            !dayOfWeek || !Array.isArray(dayOfWeek) || dayOfWeek.length === 0) {
+            return res.status(400).json({ success: false, message: 'All schedule fields are required, and dayOfWeek must be a non-empty array.' });
+        }
+
+        // Optional: Validate each day in the dayOfWeek array if the enum in the model isn't sufficient for your needs here
+        const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        for (const day of dayOfWeek) {
+            if (!validDays.includes(day)) {
+                return res.status(400).json({ success: false, message: `Invalid day provided: ${day}.` });
+            }
         }
 
         // Check if teacher exists
@@ -621,13 +631,19 @@ const createSchedule = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Assigned teacher not found' });
         }
 
+        // Check if subject exists
+        const subject = await subjectModel.findById(subjectId);
+        if (!subject) {
+            return res.status(404).json({ success: false, message: 'Assigned subject not found' });
+        }
+
         const newSchedule = await scheduleModel.create({
             subjectId,
             teacherId,
             section,
             gradeYearLevel,
             educationLevel,
-            dayOfWeek,
+            dayOfWeek, // Pass the array directly
             startTime,
             endTime,
             semester
@@ -635,8 +651,10 @@ const createSchedule = async (req, res) => {
 
         // Add schedule reference to teacher
         if (newSchedule && teacher) {
-            teacher.schedules.push(newSchedule._id);
-            await teacher.save();
+            if (!teacher.schedules.includes(newSchedule._id)) { // Ensure it's not already there
+                teacher.schedules.push(newSchedule._id);
+                await teacher.save();
+            }
         }
 
         res.status(201).json({ success: true, message: 'Schedule created successfully', schedule: newSchedule });
@@ -840,15 +858,26 @@ const getAnalyticsSummary = async (req, res) => {
         const totalTeachers = await teacherModel.countDocuments();
         const totalUsers = totalStudents + totalTeachers;
 
-        const signInRecords = await attendanceModel.find({
+        // Fetch all current valid student and teacher IDs
+        const allStudentDocs = await studentModel.find({}, '_id').lean();
+        const allTeacherDocs = await teacherModel.find({}, '_id').lean();
+        const validStudentIds = new Set(allStudentDocs.map(s => s._id.toString()));
+        const validTeacherIds = new Set(allTeacherDocs.map(t => t._id.toString()));
+
+        const signInUserIdsFromAttendance = await attendanceModel.find({
             eventType: 'sign-in',
             timestamp: { $gte: startDate, $lte: endDate }
         }).distinct('user');
 
-        const uniqueActiveUsers = signInRecords.length;
+        // Filter out user IDs from attendance that no longer exist in student or teacher collections
+        const validSignInUserIds = signInUserIdsFromAttendance.filter(userId =>
+            validStudentIds.has(userId.toString()) || validTeacherIds.has(userId.toString())
+        );
+
+        const uniqueActiveUsers = validSignInUserIds.length;
         const overallActivityRate = totalUsers > 0 ? (uniqueActiveUsers / totalUsers) * 100 : 0;
 
-        const daysInPeriod = eachDayOfInterval({ start: startDate, end: endDate > new Date() ? new Date() : endDate }); // Iterate up to today if endDate is in future
+        const daysInPeriod = eachDayOfInterval({ start: startDate, end: endDate > new Date() ? new Date() : endDate });
         let dailyAttendanceRatesSum = 0;
         let daysWithAttendanceData = 0;
 
@@ -856,16 +885,20 @@ const getAnalyticsSummary = async (req, res) => {
             const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
             const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59, 999);
 
-            const dailySignIns = await attendanceModel.find({
+            const dailySignInUserIdsFromAttendance = await attendanceModel.find({
                 eventType: 'sign-in',
                 timestamp: { $gte: dayStart, $lte: dayEnd }
             }).distinct('user');
 
+            const validDailySignInUserIds = dailySignInUserIdsFromAttendance.filter(userId =>
+                validStudentIds.has(userId.toString()) || validTeacherIds.has(userId.toString())
+            );
+
             if (totalUsers > 0) {
-                const dailyRate = (dailySignIns.length / totalUsers) * 100;
+                const dailyRate = (validDailySignInUserIds.length / totalUsers) * 100;
                 dailyAttendanceRatesSum += dailyRate;
             }
-            daysWithAttendanceData++; // Count day even if no signins, for averaging
+            daysWithAttendanceData++;
         }
         
         const averageDailyAttendanceRate = daysWithAttendanceData > 0 ? dailyAttendanceRatesSum / daysWithAttendanceData : 0;
@@ -874,8 +907,8 @@ const getAnalyticsSummary = async (req, res) => {
             success: true,
             summary: {
                 totalUsers,
-                activeTeachers: totalTeachers,
-                activeStudents: totalStudents,
+                activeTeachers: totalTeachers, // This still represents total registered teachers
+                activeStudents: totalStudents, // This still represents total registered students
                 overallActivityRate: parseFloat(overallActivityRate.toFixed(2)),
                 averageDailyAttendanceRate: parseFloat(averageDailyAttendanceRate.toFixed(2)),
                 period: {

@@ -20,18 +20,11 @@ const scheduleSchema = new mongoose.Schema(
       required: true,
     },
     dayOfWeek: {
-      type: String,
-      enum: [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        // "Sunday", // You had Sunday in a previous version, decide if it's needed
-      ],
+      type: [String],
       required: true,
-    },
+      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      validate: [function(val) { return val.length > 0; }, 'At least one day must be selected for the schedule.']
+  },
     startTime: {
       type: String,
       required: true,

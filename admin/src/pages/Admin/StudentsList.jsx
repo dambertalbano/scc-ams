@@ -125,42 +125,6 @@ const StudentsList = () => {
                     </button>
                     {isFilterDropdownOpen && (
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                            <label className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <input
-                                    type="checkbox"
-                                    checked={filters.withEmail}
-                                    onChange={() => handleFilterChange('withEmail')}
-                                    className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                With Email
-                            </label>
-                            <label className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <input
-                                    type="checkbox"
-                                    checked={filters.noEmail}
-                                    onChange={() => handleFilterChange('noEmail')}
-                                    className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                No Email
-                            </label>
-                            <label className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <input
-                                    type="checkbox"
-                                    checked={filters.withContact}
-                                    onChange={() => handleFilterChange('withContact')}
-                                    className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                With Contact
-                            </label>
-                            <label className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <input
-                                    type="checkbox"
-                                    checked={filters.noContact}
-                                    onChange={() => handleFilterChange('noContact')}
-                                    className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                No Contact
-                            </label>
                             <select
                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full border-b"
                                 value={filters.educationLevel}
@@ -192,25 +156,14 @@ const StudentsList = () => {
                                 <option value="Grade 11 B&P">Grade 11 B&P</option>
                                 <option value="Grade 11 TS">Grade 11 TS</option>
                                 <option value="Grade 11 ICT">Grade 11 ICT</option>
+                                <option value="Grade 11 ABM">Grade 11 ABM</option>
                                 <option value="Grade 12 HUMMS">Grade 12 HUMMS</option>
                                 <option value="Grade 12 A&D">Grade 12 A&D</option>
                                 <option value="Grade 12 F&B">Grade 12 F&B</option>
                                 <option value="Grade 12 B&P">Grade 12 B&P</option>
                                 <option value="Grade 12 TS">Grade 12 TS</option>
                                 <option value="Grade 12 ICT">Grade 12 ICT</option>
-                            </select>
-                            <select
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
-                                value={filters.section}
-                                onChange={(e) => handleFilterChange('section', e.target.value)}
-                            >
-                                <option value="">Section</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-
+                                <option value="Grade 12 ABM">Grade 12 ABM</option>
                             </select>
                         </div>
                     )}

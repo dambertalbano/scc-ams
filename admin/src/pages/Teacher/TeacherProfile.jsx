@@ -176,8 +176,26 @@ const TeacherProfile = () => {
     fetchTeacherProfile();
   }, [fetchTeacherProfile]);
 
-  const calculateClassAttendanceStats = useCallback((students, periodStartDate, periodEndDate) => {
+  const calculateClassAttendanceStats = useCallback((students, periodStartDate, periodEndDate, scheduleDays) => {
     if (!students || students.length === 0 || !periodStartDate || !periodEndDate) {
+      return {
+        totalStudents: 0,
+        overallAttendancePercentage: 0,
+        totalPresentInstances: 0,
+        totalAbsentInstances: 0,
+        studentsWithPerfectAttendance: 0,
+        studentsWithHighAbsences: 0,
+      };
+    }
+
+    const dayNameToNumber = {
+      "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3,
+      "Thursday": 4, "Friday": 5, "Saturday": 6
+    };
+    const scheduledJsDays = Array.isArray(scheduleDays) ? scheduleDays.map(day => dayNameToNumber[day]).filter(num => num !== undefined) : [];
+
+    if (scheduledJsDays.length === 0) {
+      console.warn("No valid schedule days provided for stats calculation.");
       return {
         totalStudents: 0,
         overallAttendancePercentage: 0,
@@ -216,8 +234,8 @@ const TeacherProfile = () => {
       today.setHours(23,59,59,999);
 
       while (currentDateIter <= pEndDate && currentDateIter <= today) {
-        const dayOfWeek = currentDateIter.getDay();
-        if (dayOfWeek !== 0) {
+        const currentJsDay = currentDateIter.getDay();
+        if (scheduledJsDays.includes(currentJsDay)) {
           studentPossibleDays++;
           const dateStr = currentDateIter.toISOString().split('T')[0];
           if (presentDatesForStudent.has(dateStr)) {
@@ -253,7 +271,7 @@ const TeacherProfile = () => {
       const formattedStartDate = formatQueryDate(startDate);
       const formattedEndDate = formatQueryDate(endDate);
 
-      if (!selectedSchedule || !formattedStartDate || !formattedEndDate) {
+      if (!selectedSchedule || !formattedStartDate || !formattedEndDate || !selectedSchedule.dayOfWeek) {
         setAssignmentAttendanceStats(null);
         setAssignmentStudentsForStats([]);
         return;
@@ -265,7 +283,7 @@ const TeacherProfile = () => {
 
         if (data && data.success) {
           setAssignmentStudentsForStats(data.students || []);
-          const stats = calculateClassAttendanceStats(data.students || [], startDate, endDate);
+          const stats = calculateClassAttendanceStats(data.students || [], startDate, endDate, selectedSchedule.dayOfWeek);
           setAssignmentAttendanceStats(stats);
         } else {
           toast.error(data?.message || "Failed to fetch student data for statistics.");
@@ -396,6 +414,12 @@ const TeacherProfile = () => {
             }
           });
 
+          const dayNameToNumber = {
+            "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3,
+            "Thursday": 4, "Friday": 5, "Saturday": 6
+          };
+          const scheduledJsDaysForExcel = Array.isArray(selectedSchedule.dayOfWeek) ? selectedSchedule.dayOfWeek.map(day => dayNameToNumber[day]).filter(num => num !== undefined) : [];
+
           const startDataRow = 14;
           const dailyTotals = Array(26).fill(0);
 
@@ -413,11 +437,22 @@ const TeacherProfile = () => {
                 const cell = row.getCell(columnIndex);
                 const todayDateStr = formatLocalDate(new Date());
                 const isFutureDate = headerDateStr > todayDateStr;
-                if (isFutureDate) cell.value = null;
-                else if (localAttendanceDates.has(headerDateStr)) {
-                  cell.value = "P";
-                  dailyTotals[columnIndex - 4]++;
-                } else cell.value = "/";
+
+                const currentHeaderDate = new Date(headerDateStr + "T12:00:00Z"); // Ensure it's parsed as UTC then get local day
+                const currentHeaderJsDay = currentHeaderDate.getUTCDay(); // Or .getDay() if headerDateStr is local
+
+                if (isFutureDate) {
+                    cell.value = null;
+                } else if (scheduledJsDaysForExcel.includes(currentHeaderJsDay)) { // Check if it's a scheduled day
+                    if (localAttendanceDates.has(headerDateStr)) {
+                        cell.value = "P";
+                        dailyTotals[columnIndex - 4]++;
+                    } else {
+                        cell.value = "/"; // Absent on a scheduled day
+                    }
+                } else {
+                    cell.value = null; // Not a scheduled day for this class, so no mark
+                }
               } else if (columnIndex >= 4 && columnIndex <= 29) {
                 row.getCell(columnIndex).value = null;
               }
@@ -427,8 +462,17 @@ const TeacherProfile = () => {
           const totalRow = worksheet.getRow(62);
           dailyTotals.forEach((total, index) => {
             const colIndex = index + 4;
-            if (headerDates[colIndex]) totalRow.getCell(colIndex).value = total > 0 ? total : null;
-            else totalRow.getCell(colIndex).value = null;
+            if (headerDates[colIndex]) {
+                 const headerDateForTotal = new Date(headerDates[colIndex] + "T12:00:00Z");
+                 const headerJsDayForTotal = headerDateForTotal.getUTCDay();
+                 if (scheduledJsDaysForExcel.includes(headerJsDayForTotal)) { // Only sum totals for scheduled days
+                    totalRow.getCell(colIndex).value = total > 0 ? total : null;
+                 } else {
+                    totalRow.getCell(colIndex).value = null;
+                 }
+            } else {
+                totalRow.getCell(colIndex).value = null;
+            }
           });
 
           addMonthlyTotals(worksheet, students, headerDates, scheduleStartTimeForExcel);

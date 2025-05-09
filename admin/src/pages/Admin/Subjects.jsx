@@ -1,19 +1,23 @@
 import axios from 'axios';
-import { AlertTriangle, Edit3, PlusCircle, Save, Trash2, XCircle } from 'lucide-react'; // Added AlertTriangle
+import { AlertTriangle, Edit3, PlusCircle, Save, Trash2, XCircle } from 'lucide-react';
 import React, { useContext, useEffect, useState } from 'react';
-import { AdminContext } from '../../context/AdminContext'; // Adjust path if needed
+import { AdminContext } from '../../context/AdminContext';
 
 const Subjects = () => {
     const { backendUrl, aToken } = useContext(AdminContext);
 
     const [subjects, setSubjects] = useState([]);
-    const [isLoading, setIsLoading] = useState(false); // Main loading for table/initial fetch
-    const [isFormLoading, setIsFormLoading] = useState(false); // Separate loading for form submission
+    const [isLoading, setIsLoading] = useState(false);
+    const [isFormLoading, setIsFormLoading] = useState(false);
     const [error, setError] = useState('');
 
     const [isAdding, setIsAdding] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentSubject, setCurrentSubject] = useState(null);
+
+    // State for delete confirmation modal
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [subjectToDeleteId, setSubjectToDeleteId] = useState(null);
 
     const initialFormData = {
         name: '',
@@ -117,25 +121,41 @@ const Subjects = () => {
         }
     };
 
-    const handleDelete = async (subjectId) => {
-        if (window.confirm('Are you sure you want to delete this subject? This action cannot be undone.')) {
-            setIsLoading(true); // Use main loading for delete action
-            setError('');
-            try {
-                const response = await axios.delete(`${backendUrl}/api/admin/subjects/${subjectId}`, {
-                    headers: { Authorization: `Bearer ${aToken}` }
-                });
-                if (response.data.success) {
-                    fetchSubjects();
-                } else {
-                    setError(response.data.message || 'Failed to delete subject');
-                }
-            } catch (err) {
-                setError(err.response?.data?.message || err.message || 'An error occurred while deleting subject.');
-                console.error("Delete Subject Error:", err);
-            } finally {
-                setIsLoading(false);
+    // Opens the delete confirmation modal
+    const handleDelete = (subjectId) => {
+        setSubjectToDeleteId(subjectId);
+        setShowDeleteModal(true);
+    };
+
+    // Closes the delete confirmation modal
+    const cancelDeleteHandler = () => {
+        setShowDeleteModal(false);
+        setSubjectToDeleteId(null);
+    };
+
+    // Handles the actual deletion after confirmation
+    const confirmDeleteHandler = async () => {
+        if (!subjectToDeleteId) return;
+
+        setIsLoading(true); // Use main loading for delete action
+        setError('');
+        setShowDeleteModal(false); // Close modal immediately
+
+        try {
+            const response = await axios.delete(`${backendUrl}/api/admin/subjects/${subjectToDeleteId}`, {
+                headers: { Authorization: `Bearer ${aToken}` }
+            });
+            if (response.data.success) {
+                fetchSubjects();
+            } else {
+                setError(response.data.message || 'Failed to delete subject');
             }
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || 'An error occurred while deleting subject.');
+            console.error("Delete Subject Error:", err);
+        } finally {
+            setIsLoading(false);
+            setSubjectToDeleteId(null); // Reset the ID
         }
     };
 
@@ -178,12 +198,6 @@ const Subjects = () => {
                             <input type="text" id="code" name="code" value={formData.code} onChange={handleInputChange} required
                                 className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
                         </div>
-                        <div>
-                            <label htmlFor="semesterId" className="block text-sm font-medium text-gray-700 mb-1">Semester:</label>
-                            <input type="text" id="semesterId" name="semesterId" value={formData.semesterId} onChange={handleInputChange}
-                                placeholder="Enter Semester"
-                                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-                        </div>
                         <div className="flex items-center justify-end space-x-3 pt-2">
                             <button type="button" onClick={handleCancel} disabled={isFormLoading}
                                 className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-md shadow-sm flex items-center">
@@ -199,6 +213,36 @@ const Subjects = () => {
                 </div>
             )}
 
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-auto">
+                        <h3 className="text-lg font-medium leading-6 text-gray-900 mb-2">Confirm Deletion</h3>
+                        <div className="mt-2">
+                            <p className="text-sm text-gray-500">
+                                Are you sure you want to delete this subject? This action cannot be undone.
+                            </p>
+                        </div>
+                        <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                            <button
+                                type="button"
+                                onClick={confirmDeleteHandler}
+                                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:col-start-2 sm:text-sm"
+                            >
+                                Confirm Delete
+                            </button>
+                            <button
+                                type="button"
+                                onClick={cancelDeleteHandler}
+                                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isLoading && !subjects.length && <p className="text-center text-gray-500 py-5">Loading subjects...</p>}
             {!isLoading && !subjects.length && !isAdding && !isEditing && (
                 <p className="text-center text-gray-500 py-5">No subjects found. Add one to get started!</p>
@@ -211,7 +255,6 @@ const Subjects = () => {
                             <tr>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semester</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -220,9 +263,6 @@ const Subjects = () => {
                                 <tr key={subject._id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{subject.name}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{subject.code}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {subject.semesterId ? (subject.semesterId.name || subject.semesterId) : 'N/A'}
-                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                                         <button
                                             onClick={() => handleEditClick(subject)}
@@ -233,8 +273,8 @@ const Subjects = () => {
                                             <Edit3 size={18} />
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(subject._id)}
-                                            disabled={isLoading || isAdding || isEditing} // Consider using isFormLoading for form-related disables
+                                            onClick={() => handleDelete(subject._id)} // This now opens the modal
+                                            disabled={isLoading || isAdding || isEditing}
                                             className="text-red-600 hover:text-red-900 disabled:text-gray-300 disabled:cursor-not-allowed"
                                             title="Delete"
                                         >

@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { AlertTriangle, Edit3, PlusCircle, Save, Trash2, XCircle } from 'lucide-react'; // Added AlertTriangle for error
+import { AlertTriangle, Edit3, PlusCircle, Save, Trash2, XCircle } from 'lucide-react';
 import React, { useContext, useEffect, useState } from 'react';
-import { AdminContext } from '../../context/AdminContext'; // Adjust path if needed
+import { AdminContext } from '../../context/AdminContext';
 
 const Schedules = () => {
     const { backendUrl, aToken } = useContext(AdminContext);
@@ -18,13 +18,17 @@ const Schedules = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [currentSchedule, setCurrentSchedule] = useState(null);
 
+    const daysOfWeekOptions = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const educationLevels = ["Primary", "Secondary"];
+    const semesters = ["1st Sem", "2nd Sem"];
+
     const initialFormData = {
         subjectId: '',
         teacherId: '',
         section: '',
         gradeYearLevel: '',
         educationLevel: 'Secondary',
-        dayOfWeek: 'Monday',
+        dayOfWeek: [],
         startTime: '08:00',
         endTime: '09:00',
         semester: '1st Sem'
@@ -66,7 +70,7 @@ const Schedules = () => {
 
     const fetchTeachersForDropdown = async () => {
         try {
-            const response = await axios.get(`${backendUrl}/api/admin/all-teachers`, { // Ensure this endpoint is correct
+            const response = await axios.get(`${backendUrl}/api/admin/all-teachers`, {
                 headers: { Authorization: `Bearer ${aToken}` }
             });
             if (response.data.success) {
@@ -88,6 +92,18 @@ const Schedules = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleDayOfWeekChange = (e) => {
+        const { value, checked } = e.target;
+        setFormData(prev => {
+            const currentDays = prev.dayOfWeek;
+            if (checked) {
+                return { ...prev, dayOfWeek: [...currentDays, value] };
+            } else {
+                return { ...prev, dayOfWeek: currentDays.filter(day => day !== value) };
+            }
+        });
     };
 
     const resetFormDataAndState = () => {
@@ -113,7 +129,7 @@ const Schedules = () => {
             section: schedule.section,
             gradeYearLevel: schedule.gradeYearLevel,
             educationLevel: schedule.educationLevel,
-            dayOfWeek: schedule.dayOfWeek,
+            dayOfWeek: Array.isArray(schedule.dayOfWeek) ? schedule.dayOfWeek : (schedule.dayOfWeek ? [schedule.dayOfWeek] : []),
             startTime: schedule.startTime,
             endTime: schedule.endTime,
             semester: schedule.semester,
@@ -131,6 +147,11 @@ const Schedules = () => {
 
         if (formData.startTime >= formData.endTime) {
             setError("End time must be after start time.");
+            setIsFormLoading(false);
+            return;
+        }
+        if (!formData.dayOfWeek || formData.dayOfWeek.length === 0) {
+            setError("Please select at least one day of the week.");
             setIsFormLoading(false);
             return;
         }
@@ -184,10 +205,6 @@ const Schedules = () => {
     };
 
     if (!aToken) return <p className="text-center text-red-500 mt-10">Please log in to manage schedules.</p>;
-
-    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const educationLevels = ["Primary", "Secondary"];
-    const semesters = ["1st Sem", "2nd Sem"];
 
     return (
         <div className="container mx-auto p-4 md:p-6">
@@ -255,22 +272,33 @@ const Schedules = () => {
                                 </select>
                             </div>
                             <div>
-                                <label htmlFor="dayOfWeek" className="block text-sm font-medium text-gray-700 mb-1">Day of Week:</label>
-                                <select id="dayOfWeek" name="dayOfWeek" value={formData.dayOfWeek} onChange={handleInputChange} required
-                                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                    {daysOfWeek.map(day => <option key={day} value={day}>{day}</option>)}
-                                </select>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Day(s) of Week:</label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-2 border border-gray-300 rounded-md">
+                                    {daysOfWeekOptions.map(day => (
+                                        <label key={day} className="flex items-center space-x-2 text-sm">
+                                            <input
+                                                type="checkbox"
+                                                name="dayOfWeek"
+                                                value={day}
+                                                checked={formData.dayOfWeek.includes(day)}
+                                                onChange={handleDayOfWeekChange}
+                                                className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                            />
+                                            <span>{day}</span>
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">Start Time (HH:MM):</label>
+                                <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">Start Time:</label>
                                 <input type="time" id="startTime" name="startTime" value={formData.startTime} onChange={handleInputChange} required
                                     className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
                             </div>
                             <div>
-                                <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-1">End Time (HH:MM):</label>
+                                <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-1">End Time:</label>
                                 <input type="time" id="endTime" name="endTime" value={formData.endTime} onChange={handleInputChange} required
                                     className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
                             </div>
@@ -313,7 +341,7 @@ const Schedules = () => {
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade/Year</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day(s)</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semester</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -330,7 +358,9 @@ const Schedules = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sch.section}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sch.gradeYearLevel} ({sch.educationLevel})</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sch.dayOfWeek}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {Array.isArray(sch.dayOfWeek) ? sch.dayOfWeek.join(', ') : sch.dayOfWeek}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sch.startTime} - {sch.endTime}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sch.semester}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">

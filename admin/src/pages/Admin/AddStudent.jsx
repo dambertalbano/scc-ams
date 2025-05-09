@@ -190,7 +190,7 @@ const AddStudent = () => {
     return (
         <div className="flex justify-center items-center min-h-[90vh] w-full">
             <form onSubmit={onSubmitHandler} className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg">
-                <h2 className="text-xl font-semibold mb-4 text-center">Add Student</h2>
+            <h2 className="text-xl font-semibold mb-4 text-center">Add Student</h2>
 
                 <div className="flex flex-col items-center mb-4">
                     <label htmlFor="doc-img" className="cursor-pointer">

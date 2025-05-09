@@ -52,7 +52,7 @@ const TeacherAttendance = () => {
 
     useEffect(() => {
         fetchTeacherInfo();
-    }, [fetchTeacherInfo]);
+    }, []);
 
     useEffect(() => {
         if (!selectedSchedule) {
@@ -129,6 +129,65 @@ const TeacherAttendance = () => {
             minute: '2-digit',
         });
     }, []);
+
+    // Helper function to convert a day string (potentially multiple days) to an array of day numbers
+    const getScheduleDayNumbers = (dayString) => {
+        if (!dayString || typeof dayString !== 'string') return [];
+
+        const dayMap = {
+            'SUN': 0, 'SUNDAY': 0,
+            'M': 1, 'MON': 1, 'MONDAY': 1,
+            'T': 2, 'TUE': 2, 'TUES': 2, 'TUESDAY': 2,
+            'W': 3, 'WED': 3, 'WEDNESDAY': 3,
+            'TH': 4, 'THUR': 4, 'THURSDAY': 4,
+            'F': 5, 'FRI': 5, 'FRIDAY': 5,
+            'SAT': 6, 'SATURDAY': 6,
+        };
+
+        // Normalize the input: split by space or comma, trim, and convert to uppercase
+        const dayTokens = dayString.toUpperCase().split(/[\s,]+/).map(token => token.trim()).filter(Boolean);
+        
+        const dayNumbers = dayTokens.reduce((acc, token) => {
+            if (dayMap.hasOwnProperty(token)) {
+                if (!acc.includes(dayMap[token])) { // Avoid duplicate day numbers
+                    acc.push(dayMap[token]);
+                }
+            }
+            return acc;
+        }, []);
+        
+        return dayNumbers.sort((a,b) => a - b); // Return sorted array of day numbers
+    };
+
+    // Filter function for the DatePicker
+    const filterDateByScheduleDay = (date) => {
+        const currentDayJs = date.getDay(); // 0 for Sunday, 1 for Monday, etc.
+
+        if (!selectedSchedule) {
+            return true;
+        }
+
+        let dayOfWeekString = selectedSchedule.dayOfWeek;
+
+        // Check if dayOfWeek is an array, and if so, convert it to a comma-separated string
+        if (Array.isArray(selectedSchedule.dayOfWeek)) {
+            dayOfWeekString = selectedSchedule.dayOfWeek.join(',');
+        }
+
+        // Now check if the (potentially converted) dayOfWeekString is a valid non-empty string
+        if (typeof dayOfWeekString !== 'string' || dayOfWeekString.trim() === "") {
+            return true;
+        }
+        
+        const scheduleDayNumbers = getScheduleDayNumbers(dayOfWeekString);
+
+        if (scheduleDayNumbers.length === 0) {
+            return true;
+        }
+
+        const isAllowed = scheduleDayNumbers.includes(currentDayJs);
+        return isAllowed;
+    };
 
     const getSignInTime = (student) => {
         return student.signInTime
@@ -286,10 +345,60 @@ const TeacherAttendance = () => {
                         className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={selectedSchedule?._id || ""}
                         onChange={(e) => {
+                            const scheduleId = e.target.value;
                             const schedule = schedules.find(
-                                (s) => s._id === e.target.value
+                                (s) => s._id === scheduleId
                             );
-                            setSelectedSchedule(schedule);
+                            setSelectedSchedule(schedule); // This state update is asynchronous
+
+                            // Adjust currentDate based on the NEWLY selected 'schedule' object
+                            if (schedule && schedule.dayOfWeek) {
+                                const scheduleDayNumbers = getScheduleDayNumbers(schedule.dayOfWeek);
+                                if (scheduleDayNumbers.length > 0) {
+                                    let newCurrentDate = new Date(currentDate); // Start with existing currentDate
+                                    if (!scheduleDayNumbers.includes(newCurrentDate.getDay())) {
+                                        // The current date is not valid for the new schedule.
+                                        // Find the next valid day in the new schedule, starting from today.
+                                        let tempDate = new Date(currentDate); // Use a temporary date for iteration
+                                        let foundValid = false;
+                                        for (let i = 0; i < 7; i++) { // Check the next 7 days
+                                            if (scheduleDayNumbers.includes(tempDate.getDay())) {
+                                                newCurrentDate = new Date(tempDate);
+                                                foundValid = true;
+                                                break;
+                                            }
+                                            tempDate.setDate(tempDate.getDate() + 1);
+                                        }
+                                        // If no valid day found in the next 7 days (e.g. schedule is only for one day far in future)
+                                        // then set to the first day of the schedule in the current week of the original 'currentDate'
+                                        // or the next week if that day has passed.
+                                        if (!foundValid) {
+                                            tempDate = new Date(currentDate); // Reset tempDate
+                                            const firstDayInNewSchedule = scheduleDayNumbers[0];
+                                            const currentDayInOriginalWeek = tempDate.getDay();
+                                            tempDate.setDate(tempDate.getDate() - currentDayInOriginalWeek + firstDayInNewSchedule);
+                                            if (tempDate < currentDate && currentDayInOriginalWeek > firstDayInNewSchedule) {
+                                                tempDate.setDate(tempDate.getDate() + 7); // Advance to next week
+                                            }
+                                            // Final check if the day is correct
+                                            if (!scheduleDayNumbers.includes(tempDate.getDay())) {
+                                                // If still not matching, iterate to find the very next occurrence
+                                                tempDate = new Date(currentDate); // Start from original
+                                                while(!scheduleDayNumbers.includes(tempDate.getDay())) {
+                                                    tempDate.setDate(tempDate.getDate() + 1);
+                                                }
+                                            }
+                                            newCurrentDate = tempDate;
+                                        }
+                                    }
+                                    setCurrentDate(newCurrentDate);
+                                }
+                                // If scheduleDayNumbers is empty (e.g. "XYZ"), filter will allow all days, currentDate can remain.
+                            } else if (!schedule) { // "-- Select Schedule --"
+                                // Allow all dates, currentDate can remain or be reset
+                                // setCurrentDate(new Date()); // Optional: reset to today
+                            }
+                            // If schedule is selected but has no dayOfWeek, filter will allow all days.
                         }}
                     >
                         <option value="">-- Select Schedule --</option>
@@ -333,6 +442,7 @@ const TeacherAttendance = () => {
                                 selected={currentDate}
                                 onChange={handleDateChange}
                                 inline
+                                filterDate={filterDateByScheduleDay}
                             />
                         </div>
                     )}

@@ -2,7 +2,7 @@ import axios from "axios";
 import { endOfMonth, format, isValid, startOfMonth } from 'date-fns';
 import ExcelJS from "exceljs";
 import { motion } from "framer-motion";
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { FaCalendarAlt, FaCheckCircle, FaExclamationTriangle, FaPercentage, FaUsers } from "react-icons/fa";
@@ -326,7 +326,11 @@ const TeacherProfile = () => {
           const worksheet = workbook.getWorksheet(1);
           if (!worksheet) throw new Error("Could not find the worksheet in the template.");
 
-          const monthForReport = new Date(startDate).toLocaleString("default", { month: "long" });
+          const reportMonthDate = new Date(startDate);
+          const monthForReport = reportMonthDate.toLocaleString("default", { month: "long" });
+          const reportYear = reportMonthDate.getFullYear();
+          const reportMonthIndex = reportMonthDate.getMonth();
+
           const gradeLevel = selectedSchedule.gradeYearLevel;
           const section = selectedSchedule.section;
           const subjectName = selectedSchedule.subjectId?.name || 'N/A';
@@ -346,34 +350,43 @@ const TeacherProfile = () => {
           worksheet.getCell("X8").value = `${gradeLevel}`;
           worksheet.getCell("AE8").value = `${section}`;
 
-          const headerDates = [];
-          const reportStartYear = new Date(startDate).getFullYear();
-          const reportStartMonth = new Date(startDate).getMonth();
-          const compareStartDate = new Date(startDate); compareStartDate.setHours(0, 0, 0, 0);
-          const compareEndDate = new Date(endDate); compareEndDate.setHours(23, 59, 59, 999);
+          const dateHeaderRowNumber = 11;
+          const dayInitialHeaderRowNumber = dateHeaderRowNumber + 1;
+          const firstDayColumn = 4;
+          const maxDayColumnsInTemplate = 26;
+          const lastPhysicalDayColumn = firstDayColumn + maxDayColumnsInTemplate - 1;
 
-          worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            if (colNumber >= 4 && colNumber <= 29) {
-              let rawCellValue = cell.value;
-              if (typeof rawCellValue === "object" && rawCellValue !== null) {
-                if (rawCellValue.richText) rawCellValue = rawCellValue.richText.map(rt => rt.text).join("");
-                else if (rawCellValue.hasOwnProperty('result')) rawCellValue = rawCellValue.result;
-                else rawCellValue = null;
-              }
-              const dayOfMonth = rawCellValue !== null ? parseInt(String(rawCellValue).trim(), 10) : NaN;
-              if (!isNaN(dayOfMonth) && dayOfMonth >= 1 && dayOfMonth <= 31) {
-                const checkDate = new Date(reportStartYear, reportStartMonth, dayOfMonth, 12, 0, 0);
-                if (checkDate >= compareStartDate && checkDate <= compareEndDate) {
-                  headerDates[colNumber] = formatLocalDate(checkDate);
-                } else {
-                  headerDates[colNumber] = undefined;
-                }
-              } else {
-                headerDates[colNumber] = undefined;
-              }
-            }
-          });
+          const daysInSelectedMonth = new Date(reportYear, reportMonthIndex + 1, 0).getDate();
+          const dayInitialsMap = ["S", "M", "T", "W", "TH", "F", "S"];
+
+          const dateHeaderRow = worksheet.getRow(dateHeaderRowNumber);
+          const dayInitialHeaderRow = worksheet.getRow(dayInitialHeaderRowNumber);
           
+          const newHeaderDates = Array(lastPhysicalDayColumn + 1).fill(undefined);
+          let currentHeaderWriteCol = firstDayColumn;
+
+          for (let dayOfMonth = 1; dayOfMonth <= daysInSelectedMonth; dayOfMonth++) {
+            if (currentHeaderWriteCol > lastPhysicalDayColumn) break;
+
+            const dateForHeader = new Date(reportYear, reportMonthIndex, dayOfMonth);
+            const dayOfWeek = dateForHeader.getDay();
+
+            if (dayOfWeek !== 0) {
+              dateHeaderRow.getCell(currentHeaderWriteCol).value = dayOfMonth;
+              dayInitialHeaderRow.getCell(currentHeaderWriteCol).value = dayInitialsMap[dayOfWeek];
+              newHeaderDates[currentHeaderWriteCol] = formatLocalDate(dateForHeader);
+              currentHeaderWriteCol++;
+            }
+          }
+          
+          for (let colToClear = currentHeaderWriteCol; colToClear <= lastPhysicalDayColumn; colToClear++) {
+            dateHeaderRow.getCell(colToClear).value = null;
+            dayInitialHeaderRow.getCell(colToClear).value = null;
+            newHeaderDates[colToClear] = undefined; 
+          }
+          
+          const headerDates = newHeaderDates; 
+
           const dayNameToNumber = { "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6 };
           let scheduledJsDaysForExcel = [];
           if (Array.isArray(selectedSchedule.dayOfWeek)) {
@@ -384,7 +397,7 @@ const TeacherProfile = () => {
           }
 
           const startDataRow = 14;
-          const dailyTotals = Array(26).fill(0);
+          const dailyTotals = Array(maxDayColumnsInTemplate).fill(0);
 
           students.forEach((student, index) => {
             const row = worksheet.getRow(startDataRow + index);
@@ -395,9 +408,11 @@ const TeacherProfile = () => {
                 localAttendanceDates.add(formatLocalDate(new Date(record.timestamp)));
               });
             }
-            headerDates.forEach((headerDateStr, columnIndex) => {
-              if (headerDateStr && columnIndex >= 4 && columnIndex <= 29) {
-                const cell = row.getCell(columnIndex);
+            for (let columnIndex = firstDayColumn; columnIndex <= lastPhysicalDayColumn; columnIndex++) {
+              const headerDateStr = headerDates[columnIndex];
+              const cell = row.getCell(columnIndex);
+
+              if (headerDateStr) {
                 const todayDateStr = formatLocalDate(new Date());
                 const isFutureDate = headerDateStr > todayDateStr;
 
@@ -409,32 +424,32 @@ const TeacherProfile = () => {
                 } else if (scheduledJsDaysForExcel.includes(currentHeaderJsDay)) {
                     if (localAttendanceDates.has(headerDateStr)) {
                         cell.value = "P";
-                        dailyTotals[columnIndex - 4]++;
+                        dailyTotals[columnIndex - firstDayColumn]++;
                     } else {
                         cell.value = "/";
                     }
                 } else {
                     cell.value = null;
                 }
-              } else if (columnIndex >= 4 && columnIndex <= 29) {
-                row.getCell(columnIndex).value = null;
+              } else {
+                cell.value = null;
               }
-            });
+            }
           });
 
           const totalRow = worksheet.getRow(62);
           dailyTotals.forEach((total, index) => {
-            const colIndex = index + 4;
-            if (headerDates[colIndex]) {
-                 const headerDateForTotal = new Date(headerDates[colIndex] + "T12:00:00Z");
+            const colIndexInSheet = index + firstDayColumn;
+            if (headerDates[colIndexInSheet]) {
+                 const headerDateForTotal = new Date(headerDates[colIndexInSheet] + "T12:00:00Z");
                  const headerJsDayForTotal = headerDateForTotal.getUTCDay();
                  if (scheduledJsDaysForExcel.includes(headerJsDayForTotal)) {
-                    totalRow.getCell(colIndex).value = total > 0 ? total : null;
+                    totalRow.getCell(colIndexInSheet).value = total > 0 ? total : null;
                  } else {
-                    totalRow.getCell(colIndex).value = null;
+                    totalRow.getCell(colIndexInSheet).value = null;
                  }
             } else {
-                totalRow.getCell(colIndex).value = null;
+                totalRow.getCell(colIndexInSheet).value = null;
             }
           });
 

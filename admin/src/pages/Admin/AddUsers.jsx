@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { AddStudentCard, AddTeachersCard } from '../../components/UserCard';
 
 const AddUsers = () => {

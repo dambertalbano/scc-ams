@@ -14,7 +14,7 @@ export default {
       },
       colors: {
         'primary': '#5F6FFF',
-        'customRed': '#A81010', 
+        'customRed': '#A81010',
         'customGreen': '#008040',
         'navbar': '#0E1111',
       },

@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import React from 'react';
 import { FiUsers } from "react-icons/fi";
 import { useNavigate } from 'react-router-dom';
 
@@ -18,7 +17,7 @@ const UserCard = ({ title, navigateTo }) => {
           className="relative w-full max-w-[350px] h-[200px] sm:h-[200px] rounded-xl cursor-pointer bg-white border border-gray-300 overflow-hidden group shadow-lg flex flex-col items-center justify-center"
       >
           {/* Background Gradient Animation */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#A81010] to-red-700 translate-y-[100%] group-hover:translate-y-[0%] transition-transform duration-300" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate to-gray-700 translate-y-[100%] group-hover:translate-y-[0%] transition-transform duration-300" />
 
           {/* Large Background Icon */}
           <FiUsers className="absolute z-0 -top-12 -right-12 text-9xl text-gray-100 group-hover:text-gray-100 group-hover:rotate-12 transition-transform duration-300" />

@@ -1,7 +1,7 @@
 import '@fontsource/inter';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import React, { forwardRef, useContext, useEffect, useState } from 'react'; // Import forwardRef
+import { forwardRef, useContext, useEffect, useState } from 'react'; // Import forwardRef
 import { FiMenu, FiX } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { assets } from '../assets/assets';

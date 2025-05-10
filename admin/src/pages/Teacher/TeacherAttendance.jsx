@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { motion } from "framer-motion"; // Import motion
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { FaCalendarAlt, FaFileExcel, FaSearch, FaTimes } from 'react-icons/fa';
@@ -171,6 +171,14 @@ const TeacherAttendance = () => {
     const getSignInTime = (student) => student.signInTime ? formatTime(student.signInTime) : "N/A";
     const getSignOutTime = (student) => student.signOutTime ? formatTime(student.signOutTime) : "N/A";
 
+    const formatLocalDateForExcel = (date) => {
+        if (!date) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-indexed
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const generateExcel = async () => {
         if (!templateFile) {
             alert("Please upload the SF2 Excel template first.");
@@ -184,10 +192,14 @@ const TeacherAttendance = () => {
         reader.onload = async (e) => {
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.load(e.target.result);
-            const worksheet = workbook.getWorksheet(1);
-            const month = currentDate.toLocaleString('default', { month: 'long' });
+            const worksheet = workbook.getWorksheet(1); // Assuming SF2 is the first sheet
+
+            const year = currentDate.getFullYear();
+            const monthIndex = currentDate.getMonth(); // 0-indexed (0 for Jan, 11 for Dec)
+            const monthName = currentDate.toLocaleString('default', { month: 'long' });
             const { gradeYearLevel, section, subjectId } = currentScheduleDetails;
             const subjectName = subjectId?.name || 'N/A';
+
             const formatTeacherName = (teacher) => {
                 if (!teacher) return "N/A";
                 const lastName = teacher.lastName?.charAt(0).toUpperCase() + teacher.lastName?.slice(1).toLowerCase() || "";
@@ -196,53 +208,108 @@ const TeacherAttendance = () => {
                 return `${lastName}, ${firstName} ${middleInitial}`;
             };
             const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
+
+            // Update header cells (adjust cell references as per your template)
             worksheet.getCell("AE86").value = teacherName;
-            worksheet.getCell("AA6").value = month;
+            worksheet.getCell("AA6").value = monthName;
             worksheet.getCell("W8").value = gradeYearLevel;
             worksheet.getCell("AD8").value = section;
-            const dateToColumnMap = {};
-            worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                if (colNumber >= 4 && colNumber <= 29) {
-                    let raw = cell.value;
-                    if (typeof raw === "object" && raw !== null) {
-                        raw = raw.richText ? raw.richText.map(rt => rt.text).join("") : (raw.result || null);
-                    }
-                    const parsed = raw !== null ? parseInt(String(raw).trim(), 10) : NaN;
-                    if (!isNaN(parsed)) {
-                        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), parsed);
-                        dateToColumnMap[date.toISOString().split("T")[0]] = colNumber;
+            // worksheet.getCell("C8").value = subjectName; // Example
+
+            // --- Overwrite Date Headers (Excluding Sundays) ---
+            const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+            const dateHeaderRowNumber = 11; // Row where day numbers (1, 2, ...) are
+            const dayInitialHeaderRowNumber = dateHeaderRowNumber + 1; // Row for M, T, W, TH, F, S
+            const firstDayColumn = 4;       // Column index for day 1 (e.g., D=4 if not Sunday)
+            const maxPhysicalDayColumnsInTemplate = 31; 
+            const lastPhysicalDayColumnInTemplate = firstDayColumn + maxPhysicalDayColumnsInTemplate - 1;
+
+            const dayInitials = ["S", "M", "T", "W", "TH", "F", "S"]; // Sunday is 0, Monday is 1 ... Saturday is 6
+
+            const dateHeaderRow = worksheet.getRow(dateHeaderRowNumber);
+            const dayInitialHeaderRow = worksheet.getRow(dayInitialHeaderRowNumber); // Get the row for day initials
+            let currentHeaderWriteColumn = firstDayColumn;
+
+            // Write actual day numbers and day initials for the current month, skipping Sundays
+            for (let dayOfMonth = 1; dayOfMonth <= daysInMonth; dayOfMonth++) {
+                const dateForHeader = new Date(year, monthIndex, dayOfMonth);
+                const dayOfWeek = dateForHeader.getDay(); // 0 for Sunday, 1 for Monday, etc.
+
+                if (dayOfWeek !== 0) { // Not a Sunday
+                    if (currentHeaderWriteColumn <= lastPhysicalDayColumnInTemplate) {
+                        // Write Day Number
+                        dateHeaderRow.getCell(currentHeaderWriteColumn).value = dayOfMonth;
+                        // Write Day Initial
+                        dayInitialHeaderRow.getCell(currentHeaderWriteColumn).value = dayInitials[dayOfWeek];
+                        
+                        // Optional: Add styling if needed, e.g., alignment
+                        // dateHeaderRow.getCell(currentHeaderWriteColumn).alignment = { horizontal: 'center' };
+                        // dayInitialHeaderRow.getCell(currentHeaderWriteColumn).alignment = { horizontal: 'center' };
+                        currentHeaderWriteColumn++;
                     }
                 }
-            });
-            const selectedDateISO = currentDate.toISOString().split("T")[0];
-            const selectedColumn = dateToColumnMap[selectedDateISO];
-            if (!selectedColumn) {
-                alert("Selected date is not found in the SF2 template's header.");
-                return;
             }
+
+            // Clear any remaining day headers in the template from the previous write position
+            for (let colToClear = currentHeaderWriteColumn; colToClear <= lastPhysicalDayColumnInTemplate; colToClear++) {
+                dateHeaderRow.getCell(colToClear).value = null; // Clear the cell in date number row
+                dayInitialHeaderRow.getCell(colToClear).value = null; // Clear the cell in day initial row
+            }
+            // --- End Overwrite Date Headers ---
+
+            // Determine the column for the selected date, accounting for skipped Sundays
+            const selectedDayOfMonth = currentDate.getDate();
+            let selectedColumn = firstDayColumn -1; 
+            if (currentDate.getDay() === 0) { 
+                alert("Attendance cannot be recorded for a Sunday as it's excluded from headers.");
+                return; 
+            }
+
+            for(let dayIter = 1; dayIter <= selectedDayOfMonth; dayIter++){
+                const iterDate = new Date(year, monthIndex, dayIter);
+                if(iterDate.getDay() !== 0){ 
+                    selectedColumn++;
+                }
+            }
+            
+            if (selectedColumn >= currentHeaderWriteColumn && selectedDayOfMonth <= daysInMonth) {
+                console.warn("Selected column calculation might be off or selected date is beyond written headers.");
+                 selectedColumn = currentHeaderWriteColumn -1; 
+            }
+
+
             const sortedStudents = [...students].sort((a, b) => (a.lastName || "").toLowerCase().localeCompare((b.lastName || "").toLowerCase()));
             let totalPresent = 0;
+            const selectedDateLocalString = formatLocalDateForExcel(currentDate);
+
             sortedStudents.forEach((student, index) => {
-                const row = worksheet.getRow(14 + index);
-                row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
-                const signInDate = student.signInTime ? new Date(student.signInTime).toISOString().split("T")[0] : null;
-                const signOutDate = student.signOutTime ? new Date(student.signOutTime).toISOString().split("T")[0] : null;
-                if (selectedDateISO === signInDate || selectedDateISO === signOutDate) {
+                const rowNumber = 14 + index; 
+                const row = worksheet.getRow(rowNumber);
+                row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`; 
+
+                const signInDateLocalString = student.signInTime ? formatLocalDateForExcel(new Date(student.signInTime)) : null;
+                const signOutDateLocalString = student.signOutTime ? formatLocalDateForExcel(new Date(student.signOutTime)) : null;
+
+                if (selectedColumn >= firstDayColumn && (selectedDateLocalString === signInDateLocalString || selectedDateLocalString === signOutDateLocalString)) {
                     row.getCell(selectedColumn).value = "P";
                     totalPresent++;
-                } else {
-                    row.getCell(selectedColumn).value = "A";
+                } else if (selectedColumn >= firstDayColumn) {
+                    row.getCell(selectedColumn).value = "A"; 
                 }
                 row.commit();
             });
-            worksheet.getCell(62, selectedColumn).value = totalPresent;
+
+            if (selectedColumn >= firstDayColumn) {
+                worksheet.getCell(62, selectedColumn).value = totalPresent; 
+            }
+
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `SF2_${gradeYearLevel}_${section}_${subjectName.replace(/\s+/g, '_')}_${month}_${currentDate.getFullYear()}.xlsx`;
+            link.download = `SF2_${gradeYearLevel}_${section}_${subjectName.replace(/\s+/g, '_')}_${monthName}_${year}.xlsx`;
             link.click();
-            URL.revokeObjectURL(link.href); // Clean up
+            URL.revokeObjectURL(link.href);
         };
         reader.readAsArrayBuffer(templateFile);
     };

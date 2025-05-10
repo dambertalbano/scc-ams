@@ -19,6 +19,8 @@ import AttendanceStudentCard from './pages/Admin/AttendanceStudentCard';
 import AttendanceTeacherCard from './pages/Admin/AttendanceTeacherCard';
 import Dashboard from './pages/Admin/Dashboard';
 import EditUser from './pages/Admin/EditUser';
+import Feedback from './pages/Admin/Feedback';
+import FeedbackDetailPage from './pages/Admin/FeedbackDetailPage';
 import Manage from './pages/Admin/Manage';
 import RFID_Scan from './pages/Admin/RFID_Scan';
 import Schedules from './pages/Admin/Schedules';
@@ -125,6 +127,8 @@ const App = () => {
                     <Route path='/kiosk-scan' element={<KioskScanPage />} />
                     <Route path='/use-rfid-scan' element={aToken ? <UseRfidScanLogic /> : <LandingPage />} />
                     <Route path='/manage' element={aToken ? <Manage /> : <LandingPage />} />
+                    <Route path="feedback" element={<Feedback />} />
+                    <Route path="feedback/:feedbackId" element={<FeedbackDetailPage />} />
 
                 </Routes>
             </div>

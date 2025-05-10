@@ -4,9 +4,9 @@ import express from "express";
 import connectCloudinary from "./config/cloudinary.js";
 import connectDB from "./config/mongodb.js";
 import adminRouter from "./routes/adminRoute.js";
+import feedbackRouter from './routes/feedbackRoute.js'; // <-- Import feedback router
 import studentRouter from "./routes/studentRoute.js";
 import teacherRouter from './routes/teacherRoute.js';
-
 // --- ADD THIS LOG ---
 console.log(">>>> SERVER.JS TOP LEVEL - Express app created <<<<");
 // --- END ADDED LOG ---
@@ -49,6 +49,8 @@ app.use(cors({
 app.use("/api/admin", adminRouter);
 app.use("/api/student", studentRouter);
 app.use("/api/teacher", teacherRouter);
+app.use("/api/feedback", feedbackRouter); // <-- Add feedback router here
+
 
 app.get("/", (req, res) => {
     res.send("API Working");

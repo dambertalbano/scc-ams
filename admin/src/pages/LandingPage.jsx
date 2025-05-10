@@ -1,15 +1,29 @@
 import { motion } from "framer-motion"; // Import motion
+import { X } from 'lucide-react'; // Import X icon for closing modal
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import admin_logo from "../assets/admin_logo.svg";
 import bgSolid from "../assets/bg-solid.png";
 import scc_bg from "../assets/scc_bg.webp";
 
+// Access the environment variable
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 export default function LandingPage() {
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [termsButtonEnabled, setTermsButtonEnabled] = useState(false);
   const [privacyButtonEnabled, setPrivacyButtonEnabled] = useState(false);
+
+  // State for Feedback Modal
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackData, setFeedbackData] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSubmitStatus, setFeedbackSubmitStatus] = useState({ type: "", message: "" }); // type: 'success' or 'error'
 
   const handleOpenTerms = () => {
     setShowTerms(true);
@@ -27,6 +41,74 @@ export default function LandingPage() {
 
   const handleClosePrivacy = () => setShowPrivacy(false);
 
+  const handleOpenFeedbackModal = () => {
+    setShowFeedbackModal(true);
+    setFeedbackSubmitStatus({ type: "", message: "" }); // Reset status when opening
+  };
+
+  const handleCloseFeedbackModal = () => {
+    setShowFeedbackModal(false);
+    // Only reset form if submission wasn't successful, or always reset
+    if (feedbackSubmitStatus.type !== 'success') {
+        setFeedbackData({ name: "", email: "", message: "" });
+    }
+    setIsSubmittingFeedback(false);
+    // feedbackSubmitStatus is reset when modal is opened next
+  };
+
+  const handleFeedbackChange = (e) => {
+    const { name, value } = e.target;
+    setFeedbackData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    if (!feedbackData.message.trim()) {
+      setFeedbackSubmitStatus({ type: "error", message: "Message cannot be empty." });
+      return;
+    }
+    setIsSubmittingFeedback(true);
+    setFeedbackSubmitStatus({ type: "", message: "" });
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/feedback`, { // Use the environment variable
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: feedbackData.name,
+          email: feedbackData.email,
+          message: feedbackData.message,
+          source: 'LandingPage',
+        }),
+      });
+
+      if (response.ok) {
+        const responseData = await response.json();
+        setFeedbackSubmitStatus({ type: "success", message: responseData.message || "Feedback submitted successfully!" });
+        setFeedbackData({ name: "", email: "", message: "" });
+      } else {
+        // Attempt to parse error response if not OK, but handle cases where it might not be JSON
+        let errorMessage = "Failed to submit feedback. Please try again.";
+        try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+        } catch (jsonError) {
+            // If response is not JSON (e.g. plain text 404 page), use the status text
+            errorMessage = `Failed to submit feedback. Server responded with ${response.status}: ${response.statusText}`;
+            console.error("Response was not JSON:", await response.text());
+        }
+        setFeedbackSubmitStatus({ type: "error", message: errorMessage });
+      }
+    } catch (error) {
+      console.error("Feedback submission network error:", error);
+      setFeedbackSubmitStatus({ type: "error", message: "A network error occurred. Please try again." });
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   const pageVariants = {
     initial: { opacity: 0 },
     in: { opacity: 1 },
@@ -39,20 +121,8 @@ export default function LandingPage() {
     duration: 0.7,
   };
 
-  const rightPanelVariants = {
-    initial: { opacity: 0, y: 20 },
-    in: { opacity: 1, y: 0 },
-    out: { opacity: 0, y: -20 },
-  };
-
-  const rightPanelTransition = {
-    type: "spring",
-    stiffness: 100,
-    delay: 0.3, // Delay for right panel to come after left
-  };
-
   return (
-    <motion.div // Overall page container for smooth transitions if used with AnimatePresence
+    <motion.div // Overall page container
       initial="initial"
       animate="in"
       exit="out"
@@ -73,7 +143,7 @@ export default function LandingPage() {
       <motion.div
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }} // Slight delay for staggered effect
+        transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
         className="w-full md:w-5/12 h-full bg-gray-100 flex flex-col justify-center items-center p-6 md:p-10 shadow-lg"
         style={{ backgroundImage: `url(${bgSolid})` }}
       >
@@ -110,14 +180,14 @@ export default function LandingPage() {
         >
           <Link
             to="/student-login"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded w-full mb-4 text-center transition-transform transform hover:scale-105"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded w-full mb-4 text-center transition-transform transform hover:scale-105 shadow-md hover:shadow-lg"
           >
             Student
           </Link>
 
           <Link
             to="/teacher-login"
-            className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded w-full mb-4 text-center transition-transform transform hover:scale-105"
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded w-full mb-4 text-center transition-transform transform hover:scale-105 shadow-md hover:shadow-lg"
           >
             Teachers
           </Link>
@@ -127,18 +197,37 @@ export default function LandingPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9 }}
-          className="text-sm text-center text-white mt-4"
+          className="text-sm text-center text-white mt-6 px-2"
         >
-          By using this service, you understood and agree to the SCC Online Services
-          <button onClick={handleOpenTerms} className="text-blue-400 hover:text-blue-300 hover:underline ml-1">
+          By using this service, you acknowledge you have read, understood, and agree to the SCC Online Services
+          <button onClick={handleOpenTerms} className="text-blue-400 hover:text-blue-300 hover:underline mx-1 font-medium">
             Terms of Use
           </button>
-          and
-          <button onClick={handleOpenPrivacy} className="text-blue-400 hover:text-blue-300 hover:underline ml-1">
+          and our
+          <button onClick={handleOpenPrivacy} className="text-blue-400 hover:text-blue-300 hover:underline ml-1 font-medium">
             Privacy Statement
           </button>
           .
         </motion.p>
+
+        {/* Enhanced Feedback Section - Now a button to open modal */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.0, type: "spring", stiffness: 100 }}
+          className="mt-5 text-center w-full max-w-xs"
+        >
+          <p className="text-xs text-gray-200 mb-2">
+            Encountered an issue or have suggestions?
+          </p>
+          <button
+            onClick={handleOpenFeedbackModal}
+            className="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-5 rounded-lg text-sm shadow-md hover:shadow-lg transition-all duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75"
+            aria-label="Send feedback"
+          >
+            Send Feedback
+          </button>
+        </motion.div>
       </motion.div>
 
       {/* Terms of Use Modal */}
@@ -243,6 +332,108 @@ export default function LandingPage() {
                 Continue
               </button>
             </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-[60] p-4" // Higher z-index
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Send Feedback</h2>
+              <button onClick={handleCloseFeedbackModal} className="text-gray-500 hover:text-gray-700" disabled={isSubmittingFeedback}>
+                <X size={24} />
+              </button>
+            </div>
+            {feedbackSubmitStatus.type === "success" ? (
+              <div className="text-center py-8">
+                <svg className="w-16 h-16 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                <p className="mt-4 text-lg font-medium text-gray-700">{feedbackSubmitStatus.message}</p>
+                <p className="text-sm text-gray-500">Thank you for your input.</p>
+                 <button
+                    onClick={handleCloseFeedbackModal}
+                    className="mt-6 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  >
+                    Close
+                  </button>
+              </div>
+            ) : (
+              <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="feedbackName" className="block text-sm font-medium text-gray-700">Name (Optional)</label>
+                  <input
+                    type="text"
+                    name="name"
+                    id="feedbackName"
+                    value={feedbackData.name}
+                    onChange={handleFeedbackChange}
+                    disabled={isSubmittingFeedback}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="feedbackEmail" className="block text-sm font-medium text-gray-700">Email (Optional, for follow-up)</label>
+                  <input
+                    type="email"
+                    name="email"
+                    id="feedbackEmail"
+                    value={feedbackData.email}
+                    onChange={handleFeedbackChange}
+                    disabled={isSubmittingFeedback}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="feedbackMessage" className="block text-sm font-medium text-gray-700">Message</label>
+                  <textarea
+                    name="message"
+                    id="feedbackMessage"
+                    rows="4"
+                    value={feedbackData.message}
+                    onChange={handleFeedbackChange}
+                    required
+                    disabled={isSubmittingFeedback}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  ></textarea>
+                </div>
+                {feedbackSubmitStatus.type === "error" && (
+                  <p className="text-sm text-red-600">{feedbackSubmitStatus.message}</p>
+                )}
+                <div className="flex justify-end space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCloseFeedbackModal}
+                    disabled={isSubmittingFeedback}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingFeedback}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:bg-red-400 flex items-center justify-center min-w-[120px]" // Added min-width
+                  >
+                    {isSubmittingFeedback ? (
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : "Submit Feedback"}
+                  </button>
+                </div>
+              </form>
+            )}
           </motion.div>
         </motion.div>
       )}

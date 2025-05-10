@@ -106,6 +106,10 @@ const Navbar = forwardRef((props, ref) => {
                     title: 'Analytics',
                     path: '/analytics',
                 },
+                {
+                    title: 'Feedbacks',
+                    path: '/feedback',
+                },
             ];
         } else if (dToken) {
             return [

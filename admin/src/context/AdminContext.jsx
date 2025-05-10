@@ -12,6 +12,12 @@ const AdminContextProvider = (props) => {
     const [students, setStudents] = useState([]);
     const [teachers, setTeachers] = useState([]);
     const [dashData, setDashData] = useState(null);
+    const [feedbackStats, setFeedbackStats] = useState({ // New state for feedback stats
+        totalFeedback: 0,
+        newFeedbackCount: 0,
+        viewedFeedbackCount: 0,
+        archivedFeedbackCount: 0,
+    });
 
     useEffect(() => {
         const storedAToken = localStorage.getItem('aToken');
@@ -646,6 +652,117 @@ const AdminContextProvider = (props) => {
         }
     }, [aToken, backendUrl, handleApiError]);
 
+    // --- Feedback API Functions ---
+    const getFeedbackStats = useCallback(async (options = { showToast: false }) => {
+        if (!aToken) return null;
+        try {
+            const { data } = await axios.get(`${backendUrl}/api/admin/feedback/stats`, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (data) { // Assuming the stats endpoint directly returns the stats object
+                setFeedbackStats(data); // Update context state
+                return data;
+            } else {
+                if (options.showToast) {
+                    toast.error("Failed to fetch feedback stats");
+                }
+                return null;
+            }
+        } catch (error) {
+            handleApiError(error, "Error fetching feedback stats", options);
+            return null;
+        }
+    }, [aToken, backendUrl, handleApiError]);
+
+    const getAllFeedback = useCallback(async (page = 1, limit = 10, options = { showToast: true }) => {
+        if (!aToken) return null;
+        try {
+            const { data } = await axios.get(`${backendUrl}/api/admin/feedback?page=${page}&limit=${limit}`, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            // The backend returns { feedbackItems, currentPage, totalPages, totalFeedback }
+            if (data && data.feedbackItems) {
+                return data; // Return the whole pagination object
+            } else {
+                if (options.showToast) {
+                    toast.error(data.message || "Failed to fetch feedback items");
+                }
+                return { feedbackItems: [], currentPage: 1, totalPages: 1, totalFeedback: 0 }; // Default structure
+            }
+        } catch (error) {
+            handleApiError(error, "Error fetching feedback items", options);
+            return { feedbackItems: [], currentPage: 1, totalPages: 1, totalFeedback: 0 };
+        }
+    }, [aToken, backendUrl, handleApiError]);
+
+    const getFeedbackById = useCallback(async (feedbackId, options = { showToast: true }) => {
+        if (!aToken) return null;
+        try {
+            const { data } = await axios.get(`${backendUrl}/api/admin/feedback/${feedbackId}`, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            // Backend returns the feedback item directly or within a wrapper
+            if (data) { // Assuming it returns the feedback item directly
+                return data;
+            } else {
+                if (options.showToast) {
+                    toast.error("Failed to fetch feedback details");
+                }
+                return null;
+            }
+        } catch (error) {
+            handleApiError(error, "Error fetching feedback details", options);
+            return null;
+        }
+    }, [aToken, backendUrl, handleApiError]);
+
+    const updateFeedbackStatus = useCallback(async (feedbackId, status, options = { showToast: true }) => {
+        if (!aToken) return false;
+        try {
+            const response = await axios.patch(`${backendUrl}/api/admin/feedback/${feedbackId}/status`, { status }, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (response.data && response.data.feedbackItem) { // Assuming backend returns { message, feedbackItem }
+                if (options.showToast) {
+                    toast.success(response.data.message || "Feedback status updated");
+                }
+                getFeedbackStats({ showToast: false }); // Refresh stats silently
+                return response.data.feedbackItem;
+            } else {
+                if (options.showToast) {
+                    toast.error(response.data.message || "Failed to update feedback status");
+                }
+                return null;
+            }
+        } catch (error) {
+            handleApiError(error, "Error updating feedback status", options);
+            return null;
+        }
+    }, [aToken, backendUrl, handleApiError, getFeedbackStats]);
+
+    const deleteFeedbackItem = useCallback(async (feedbackId, options = { showToast: true }) => {
+        if (!aToken) return false;
+        try {
+            const response = await axios.delete(`${backendUrl}/api/admin/feedback/${feedbackId}`, {
+                headers: { Authorization: `Bearer ${aToken}` },
+            });
+            if (response.data && response.data.message) { // Assuming backend returns { message } on success
+                if (options.showToast) {
+                    toast.success(response.data.message || "Feedback deleted successfully");
+                }
+                getFeedbackStats({ showToast: false }); // Refresh stats silently
+                return true;
+            } else {
+                if (options.showToast) {
+                    toast.error(response.data.message || "Failed to delete feedback");
+                }
+                return false;
+            }
+        } catch (error) {
+            handleApiError(error, "Error deleting feedback", options);
+            return false;
+        }
+    }, [aToken, backendUrl, handleApiError, getFeedbackStats]);
 
     const contextValue = {
         aToken,
@@ -683,6 +800,13 @@ const AdminContextProvider = (props) => {
         fetchAnalyticsSummary,
         fetchUserGrowthStats,
         fetchDailySignInStats, // Added
+        // Feedback API Functions
+        feedbackStats, // Expose stats state
+        getFeedbackStats,
+        getAllFeedback,
+        getFeedbackById,
+        updateFeedbackStatus,
+        deleteFeedbackItem,
     };
 
     return <AdminContext.Provider value={contextValue}>{props.children}</AdminContext.Provider>;

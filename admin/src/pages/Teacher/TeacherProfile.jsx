@@ -43,10 +43,10 @@ const formatLocalDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime, scheduledJsDays) => {
+const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime, scheduledJsDays, firstDayColumnIndex, lastDayColumnIndex) => {
   const startRow = 14;
-  const absentColumn = 30;
-  const tardyColumn = 31;
+  const absentColumn = lastDayColumnIndex + 1;
+  const tardyColumn = lastDayColumnIndex + 2;
 
   let tardyThresholdHours = null;
   let tardyThresholdMinutes = null;
@@ -74,25 +74,31 @@ const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime, s
         if (!attendanceByLocalDate[recordLocalDateStr]) {
           attendanceByLocalDate[recordLocalDateStr] = [];
         }
-        attendanceByLocalDate[recordLocalDateStr].push(recordTimestamp);
+        if (record.eventType === 'sign-in') {
+          if (!attendanceByLocalDate[recordLocalDateStr].length || recordTimestamp < attendanceByLocalDate[recordLocalDateStr][0]) {
+            attendanceByLocalDate[recordLocalDateStr] = [recordTimestamp];
+          }
+        } else if (record.eventType === 'sign-out' && !attendanceByLocalDate[recordLocalDateStr].length) {
+          attendanceByLocalDate[recordLocalDateStr] = [recordTimestamp];
+        }
       });
     }
 
     const todayDateStr = formatLocalDate(new Date());
 
-    headerDates.forEach((headerDateStr, columnIndex) => {
-      if (headerDateStr && columnIndex >= 4 && columnIndex <= 29) {
+    for (let columnIndex = firstDayColumnIndex; columnIndex <= lastDayColumnIndex; columnIndex++) {
+      const headerDateStr = headerDates[columnIndex];
+
+      if (headerDateStr) {
         const isFutureDate = headerDateStr > todayDateStr;
-        const currentHeaderDate = new Date(headerDateStr + "T00:00:00");
-        const currentHeaderJsDay = currentHeaderDate.getDay();
+        const currentHeaderDate = new Date(headerDateStr + "T12:00:00Z");
+        const currentHeaderJsDay = currentHeaderDate.getUTCDay();
 
         if (!isFutureDate && scheduledJsDays.includes(currentHeaderJsDay)) {
-          if (!attendanceByLocalDate[headerDateStr]) {
+          if (!attendanceByLocalDate[headerDateStr] || attendanceByLocalDate[headerDateStr].length === 0) {
             totalAbsent++;
           } else {
-            const recordsForDay = attendanceByLocalDate[headerDateStr];
-            recordsForDay.sort((a, b) => a.getTime() - b.getTime());
-            const firstSignInTime = recordsForDay[0];
+            const firstSignInTime = attendanceByLocalDate[headerDateStr][0];
 
             if (firstSignInTime && tardyThresholdHours !== null && tardyThresholdMinutes !== null) {
               const signInHour = firstSignInTime.getHours();
@@ -105,7 +111,7 @@ const addMonthlyTotals = (worksheet, students, headerDates, scheduleStartTime, s
           }
         }
       }
-    });
+    }
     row.getCell(absentColumn).value = totalAbsent > 0 ? totalAbsent : null;
     row.getCell(tardyColumn).value = totalTardy > 0 ? totalTardy : null;
   });
@@ -345,15 +351,15 @@ const TeacherProfile = () => {
           };
 
           const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
-          worksheet.getCell("AF86").value = teacherName;
-          worksheet.getCell("AB6").value = `${monthForReport}`;
-          worksheet.getCell("X8").value = `${gradeLevel}`;
-          worksheet.getCell("AE8").value = `${section}`;
+          worksheet.getCell("AJ86").value = teacherName;
+          worksheet.getCell("AA6").value = `${monthForReport}`;
+          worksheet.getCell("W8").value = `${gradeLevel}`;
+          worksheet.getCell("AI8").value = `${section}`;
 
           const dateHeaderRowNumber = 11;
           const dayInitialHeaderRowNumber = dateHeaderRowNumber + 1;
           const firstDayColumn = 4;
-          const maxDayColumnsInTemplate = 26;
+          const maxDayColumnsInTemplate = 31;
           const lastPhysicalDayColumn = firstDayColumn + maxDayColumnsInTemplate - 1;
 
           const daysInSelectedMonth = new Date(reportYear, reportMonthIndex + 1, 0).getDate();
@@ -371,12 +377,10 @@ const TeacherProfile = () => {
             const dateForHeader = new Date(reportYear, reportMonthIndex, dayOfMonth);
             const dayOfWeek = dateForHeader.getDay();
 
-            if (dayOfWeek !== 0) {
-              dateHeaderRow.getCell(currentHeaderWriteCol).value = dayOfMonth;
-              dayInitialHeaderRow.getCell(currentHeaderWriteCol).value = dayInitialsMap[dayOfWeek];
-              newHeaderDates[currentHeaderWriteCol] = formatLocalDate(dateForHeader);
-              currentHeaderWriteCol++;
-            }
+            dateHeaderRow.getCell(currentHeaderWriteCol).value = dayOfMonth;
+            dayInitialHeaderRow.getCell(currentHeaderWriteCol).value = dayInitialsMap[dayOfWeek];
+            newHeaderDates[currentHeaderWriteCol] = formatLocalDate(dateForHeader);
+            currentHeaderWriteCol++;
           }
           
           for (let colToClear = currentHeaderWriteCol; colToClear <= lastPhysicalDayColumn; colToClear++) {
@@ -405,7 +409,9 @@ const TeacherProfile = () => {
             const localAttendanceDates = new Set();
             if (student.attendanceInRange && Array.isArray(student.attendanceInRange)) {
               student.attendanceInRange.forEach(record => {
-                localAttendanceDates.add(formatLocalDate(new Date(record.timestamp)));
+                if (record.eventType === 'sign-in') { 
+                  localAttendanceDates.add(formatLocalDate(new Date(record.timestamp)));
+                }
               });
             }
             for (let columnIndex = firstDayColumn; columnIndex <= lastPhysicalDayColumn; columnIndex++) {
@@ -453,7 +459,7 @@ const TeacherProfile = () => {
             }
           });
 
-          addMonthlyTotals(worksheet, students, headerDates, scheduleStartTimeForExcel, scheduledJsDaysForExcel);
+          addMonthlyTotals(worksheet, students, headerDates, scheduleStartTimeForExcel, scheduledJsDaysForExcel, firstDayColumn, lastPhysicalDayColumn);
 
           const buffer = await workbook.xlsx.writeBuffer();
           const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });

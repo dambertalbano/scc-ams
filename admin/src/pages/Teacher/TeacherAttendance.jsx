@@ -209,97 +209,100 @@ const TeacherAttendance = () => {
             };
             const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
 
-            // Update header cells (adjust cell references as per your template)
-            worksheet.getCell("AE86").value = teacherName;
-            worksheet.getCell("AA6").value = monthName;
-            worksheet.getCell("W8").value = gradeYearLevel;
-            worksheet.getCell("AD8").value = section;
-            // worksheet.getCell("C8").value = subjectName; // Example
+            const monthForReport = monthName;
+            const gradeLevel = gradeYearLevel;
 
-            // --- Overwrite Date Headers (Excluding Sundays) ---
+            worksheet.getCell("AJ86").value = teacherName;
+            worksheet.getCell("AA6").value = `${monthForReport}`;
+            worksheet.getCell("W8").value = `${gradeLevel}`;
+            worksheet.getCell("AI8").value = `${section}`;
+
+            // --- Overwrite Date Headers (Including ALL Days) ---
             const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
             const dateHeaderRowNumber = 11; // Row where day numbers (1, 2, ...) are
             const dayInitialHeaderRowNumber = dateHeaderRowNumber + 1; // Row for M, T, W, TH, F, S
-            const firstDayColumn = 4;       // Column index for day 1 (e.g., D=4 if not Sunday)
-            const maxPhysicalDayColumnsInTemplate = 31; 
+            const firstDayColumn = 4;       // Column index for day 1 (e.g., D=4)
+            const maxPhysicalDayColumnsInTemplate = 31; // Max day columns in template (e.g., D to AH for 31 days)
             const lastPhysicalDayColumnInTemplate = firstDayColumn + maxPhysicalDayColumnsInTemplate - 1;
 
             const dayInitials = ["S", "M", "T", "W", "TH", "F", "S"]; // Sunday is 0, Monday is 1 ... Saturday is 6
 
             const dateHeaderRow = worksheet.getRow(dateHeaderRowNumber);
-            const dayInitialHeaderRow = worksheet.getRow(dayInitialHeaderRowNumber); // Get the row for day initials
+            const dayInitialHeaderRow = worksheet.getRow(dayInitialHeaderRowNumber);
             let currentHeaderWriteColumn = firstDayColumn;
 
-            // Write actual day numbers and day initials for the current month, skipping Sundays
+            // Write actual day numbers and day initials for the current month
             for (let dayOfMonth = 1; dayOfMonth <= daysInMonth; dayOfMonth++) {
+                if (currentHeaderWriteColumn > lastPhysicalDayColumnInTemplate) {
+                    break; // Stop if we exceed the template's physical day columns
+                }
                 const dateForHeader = new Date(year, monthIndex, dayOfMonth);
                 const dayOfWeek = dateForHeader.getDay(); // 0 for Sunday, 1 for Monday, etc.
 
-                if (dayOfWeek !== 0) { // Not a Sunday
-                    if (currentHeaderWriteColumn <= lastPhysicalDayColumnInTemplate) {
-                        // Write Day Number
-                        dateHeaderRow.getCell(currentHeaderWriteColumn).value = dayOfMonth;
-                        // Write Day Initial
-                        dayInitialHeaderRow.getCell(currentHeaderWriteColumn).value = dayInitials[dayOfWeek];
-                        
-                        // Optional: Add styling if needed, e.g., alignment
-                        // dateHeaderRow.getCell(currentHeaderWriteColumn).alignment = { horizontal: 'center' };
-                        // dayInitialHeaderRow.getCell(currentHeaderWriteColumn).alignment = { horizontal: 'center' };
-                        currentHeaderWriteColumn++;
-                    }
-                }
+                // Write Day Number
+                dateHeaderRow.getCell(currentHeaderWriteColumn).value = dayOfMonth;
+                // Write Day Initial
+                dayInitialHeaderRow.getCell(currentHeaderWriteColumn).value = dayInitials[dayOfWeek];
+                
+                // Optional: Add styling if needed
+                // dateHeaderRow.getCell(currentHeaderWriteColumn).alignment = { horizontal: 'center' };
+                // dayInitialHeaderRow.getCell(currentHeaderWriteColumn).alignment = { horizontal: 'center' };
+                currentHeaderWriteColumn++;
             }
 
             // Clear any remaining day headers in the template from the previous write position
             for (let colToClear = currentHeaderWriteColumn; colToClear <= lastPhysicalDayColumnInTemplate; colToClear++) {
-                dateHeaderRow.getCell(colToClear).value = null; // Clear the cell in date number row
-                dayInitialHeaderRow.getCell(colToClear).value = null; // Clear the cell in day initial row
+                dateHeaderRow.getCell(colToClear).value = null; 
+                dayInitialHeaderRow.getCell(colToClear).value = null;
             }
             // --- End Overwrite Date Headers ---
 
-            // Determine the column for the selected date, accounting for skipped Sundays
+            // Determine the column for the selected date (currentDate)
             const selectedDayOfMonth = currentDate.getDate();
-            let selectedColumn = firstDayColumn -1; 
-            if (currentDate.getDay() === 0) { 
-                alert("Attendance cannot be recorded for a Sunday as it's excluded from headers.");
-                return; 
-            }
+            // Direct calculation as all days are now potentially in the header
+            const selectedColumn = firstDayColumn + selectedDayOfMonth - 1; 
 
-            for(let dayIter = 1; dayIter <= selectedDayOfMonth; dayIter++){
-                const iterDate = new Date(year, monthIndex, dayIter);
-                if(iterDate.getDay() !== 0){ 
-                    selectedColumn++;
-                }
+            // Ensure selectedColumn is within the template's bounds
+            if (selectedColumn > lastPhysicalDayColumnInTemplate) {
+                // This should not happen if maxPhysicalDayColumnsInTemplate is 31
+                // and firstDayColumn is 4, as 4 + 31 - 1 = 34 (AH), which covers all days.
+                console.error("Calculated selectedColumn is out of template bounds.");
+                alert("Error: The selected date column is outside the template's range.");
+                return;
             }
-            
-            if (selectedColumn >= currentHeaderWriteColumn && selectedDayOfMonth <= daysInMonth) {
-                console.warn("Selected column calculation might be off or selected date is beyond written headers.");
-                 selectedColumn = currentHeaderWriteColumn -1; 
-            }
-
 
             const sortedStudents = [...students].sort((a, b) => (a.lastName || "").toLowerCase().localeCompare((b.lastName || "").toLowerCase()));
             let totalPresent = 0;
             const selectedDateLocalString = formatLocalDateForExcel(currentDate);
 
+            // This component's Excel export focuses on marking attendance for the *currentDate* only.
+            // Other date columns in student rows will remain blank.
             sortedStudents.forEach((student, index) => {
-                const rowNumber = 14 + index; 
+                const rowNumber = 14 + index; // Assuming student data starts at row 14
                 const row = worksheet.getRow(rowNumber);
                 row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`; 
 
                 const signInDateLocalString = student.signInTime ? formatLocalDateForExcel(new Date(student.signInTime)) : null;
                 const signOutDateLocalString = student.signOutTime ? formatLocalDateForExcel(new Date(student.signOutTime)) : null;
 
-                if (selectedColumn >= firstDayColumn && (selectedDateLocalString === signInDateLocalString || selectedDateLocalString === signOutDateLocalString)) {
+                // Mark 'P' or 'A' only in the column corresponding to currentDate
+                if (selectedDateLocalString === signInDateLocalString || selectedDateLocalString === signOutDateLocalString) {
                     row.getCell(selectedColumn).value = "P";
                     totalPresent++;
-                } else if (selectedColumn >= firstDayColumn) {
+                } else {
+                    // Check if the currentDate is a scheduled day for this class before marking 'A'
+                    // This check is important if you only want 'A' on actual class days.
+                    // For a simple daily attendance sheet, you might always mark 'A' if not 'P'.
+                    // The filterDateByScheduleDay is used for the calendar, apply similar logic if needed here.
+                    // For now, if not 'P' on selectedDate, mark 'A'.
                     row.getCell(selectedColumn).value = "A"; 
                 }
                 row.commit();
             });
 
-            if (selectedColumn >= firstDayColumn) {
+            // Update total present for the selected day (currentDate)
+            // Assuming totals are in row 62
+            if (selectedColumn >= firstDayColumn && selectedColumn <= lastPhysicalDayColumnInTemplate) {
                 worksheet.getCell(62, selectedColumn).value = totalPresent; 
             }
 

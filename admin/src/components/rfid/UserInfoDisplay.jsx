@@ -3,6 +3,7 @@ import {
     CheckCircle,
     Fingerprint,
     GraduationCap,
+    Home, // Added Home icon
     LogIn,
     LogOut,
     UserCircle2,
@@ -31,6 +32,9 @@ import { assets } from '../../assets/assets'; // Assuming assets.js is in src/as
 
 
     const ActionIcon = lastAction === 'Signed In' ? LogIn : lastAction === 'Signed Out' ? LogOut : CheckCircle;
+
+    // Determine effective role for conditional rendering
+    const effectiveRole = userInfo?.role || (userInfo?.studentNumber ? 'Student' : (userInfo?.teacherId ? 'Teacher' : 'N/A'));
 
     return (
         <motion.div
@@ -67,12 +71,12 @@ import { assets } from '../../assets/assets'; // Assuming assets.js is in src/as
                 <div className="flex items-center">
                     <UserSquare2 size={20} className="mr-3 text-slate-500 dark:text-slate-400 flex-shrink-0" />
                     <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">Role:</span>
-                    <span className="ml-2 text-sm text-slate-800 dark:text-slate-100 font-semibold">{userInfo?.role || (userInfo?.studentNumber ? 'Student' : (userInfo?.teacherId ? 'Teacher' : 'N/A'))}</span>
+                    <span className="ml-2 text-sm text-slate-800 dark:text-slate-100 font-semibold">{effectiveRole}</span>
                 </div>
                 {userInfo?.studentNumber && (
                     <div className="flex items-center">
                         <UserCircle2 size={20} className="mr-3 text-slate-500 dark:text-slate-400 flex-shrink-0" />
-                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">Student No:</span>
+                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">Student Number:</span>
                         <span className="ml-2 text-sm text-slate-800 dark:text-slate-100 font-semibold">{userInfo.studentNumber}</span>
                     </div>
                 )}
@@ -83,7 +87,17 @@ import { assets } from '../../assets/assets'; // Assuming assets.js is in src/as
                         <span className="ml-2 text-sm text-slate-800 dark:text-slate-100 font-semibold">{userInfo.teacherId}</span>
                     </div>
                 )}
-                {userInfo?.educationLevel && (
+                {/* Conditional display for Teacher Address OR Student Details */}
+                {effectiveRole === 'Teacher' && userInfo?.address && (
+                    <div className="flex items-start">
+                        <Home size={20} className="mr-3 text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">Address:</span>
+                        <span className="ml-2 text-sm text-slate-800 dark:text-slate-100 font-semibold">
+                            {userInfo.address}
+                        </span>
+                    </div>
+                )}
+                {effectiveRole === 'Student' && userInfo?.educationLevel && (
                     <div className="flex items-start"> {/* items-start for multi-line text */}
                         <GraduationCap size={20} className="mr-3 text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5" />
                         <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">Details:</span>

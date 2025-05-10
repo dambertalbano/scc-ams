@@ -41,18 +41,24 @@ const loginStudent = async (req, res) => {
 // --- studentProfile ---
 const studentProfile = async (req, res) => {
     try {
-        // Assuming authStudent middleware adds student info to req.student
         const studentId = req.student.id;
 
         if (!mongoose.Types.ObjectId.isValid(studentId)) {
             return res.status(400).json({ success: false, message: 'Invalid student ID' });
         }
 
-        const profileData = await studentModel.findById(studentId).select('-password').lean();
+        const studentDoc = await studentModel.findById(studentId).select('-password').lean();
 
-        if (!profileData) {
+        if (!studentDoc) {
             return res.status(404).json({ success: false, message: 'Student not found' });
         }
+
+        const attendanceRecords = await attendanceModel.find({ user: studentId, userType: 'Student' }).sort({ timestamp: 1 }).lean();
+
+        const profileData = {
+            ...studentDoc,
+            attendance: attendanceRecords
+        };
 
         res.json({ success: true, profileData });
     } catch (error) {
@@ -219,11 +225,6 @@ const getStudentsBySemester = async (req, res) => {
     }
 };
 
-
-// --- NEW: getStudentAttendanceProfile ---
-// @desc    Get student profile, semester dates, and semester attendance
-// @route   GET /api/student/attendance-profile
-// @access  Private (Student)
 const getStudentAttendanceProfile = async (req, res) => {
     try {
         const studentId = req.student.id;

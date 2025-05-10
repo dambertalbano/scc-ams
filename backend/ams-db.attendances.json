@@ -7501,4 +7501,326 @@
     "$date": "2025-04-30T09:00:23.256Z"
   },
   "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681b0b66a93f1d6bad310a36"
+  },
+  "user": {
+    "$oid": "681b0b4da93f1d6bad310a2e"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-07T07:27:34.536Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e45edfb160933a9b3156e"
+  },
+  "user": {
+    "$oid": "681e45e0fb160933a9b31569"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T18:14:05.620Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e461cfb160933a9b31575"
+  },
+  "user": {
+    "$oid": "681e45e0fb160933a9b31569"
+  },
+  "userType": "Student",
+  "eventType": "sign-out",
+  "timestamp": {
+    "$date": "2025-05-09T18:14:52.597Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e492bfb160933a9b31592"
+  },
+  "user": {
+    "$oid": "681e48e1fb160933a9b3158a"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T18:27:55.600Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e4adffb160933a9b3159c"
+  },
+  "user": {
+    "$oid": "681e48e1fb160933a9b3158a"
+  },
+  "userType": "Student",
+  "eventType": "sign-out",
+  "timestamp": {
+    "$date": "2025-05-09T18:35:11.946Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e4d4f57989d8ba46c01df"
+  },
+  "user": {
+    "$oid": "681e4d4757989d8ba46c01d7"
+  },
+  "userType": "Teacher",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T18:45:35.089Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e4da857989d8ba46c023b"
+  },
+  "user": {
+    "$oid": "681e4d4757989d8ba46c01d7"
+  },
+  "userType": "Teacher",
+  "eventType": "sign-out",
+  "timestamp": {
+    "$date": "2025-05-09T18:47:04.214Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6d777428092e64495fd9"
+  },
+  "user": {
+    "$oid": "68084fcdf1c0c2c1047746e9"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:02:47.206Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6e277428092e64495fe2"
+  },
+  "user": {
+    "$oid": "68084fcdf1c0c2c1047746e9"
+  },
+  "userType": "Student",
+  "eventType": "sign-out",
+  "timestamp": {
+    "$date": "2025-05-09T21:05:43.380Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6ed07428092e64495feb"
+  },
+  "user": {
+    "$oid": "68085050f1c0c2c1047746eb"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:08:32.942Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6f4f7428092e64495ff4"
+  },
+  "user": {
+    "$oid": "68084b88f1c0c2c1047746d7"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-10T21:10:39.932Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6f637428092e64495ffb"
+  },
+  "user": {
+    "$oid": "68085050f1c0c2c1047746eb"
+  },
+  "userType": "Student",
+  "eventType": "sign-out",
+  "timestamp": {
+    "$date": "2025-05-09T21:10:59.883Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6f667428092e64496002"
+  },
+  "user": {
+    "$oid": "68084f23f1c0c2c1047746e7"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:11:02.950Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6fa87428092e6449600b"
+  },
+  "user": {
+    "$oid": "68086419f4ccfae93d895892"
+  },
+  "userType": "Teacher",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:12:08.675Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6faa7428092e64496015"
+  },
+  "user": {
+    "$oid": "6808639bf4ccfae93d89588f"
+  },
+  "userType": "Teacher",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:12:10.425Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6fab7428092e6449601d"
+  },
+  "user": {
+    "$oid": "6808536ef1c0c2c1047746ff"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:12:11.854Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6fae7428092e64496025"
+  },
+  "user": {
+    "$oid": "68085307f1c0c2c1047746fd"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:12:14.009Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6faf7428092e6449602b"
+  },
+  "user": {
+    "$oid": "680852a4f1c0c2c1047746fb"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:12:15.017Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6fb07428092e64496032"
+  },
+  "user": {
+    "$oid": "6808523af1c0c2c1047746f1"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:12:16.206Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6fb17428092e6449603a"
+  },
+  "user": {
+    "$oid": "68085183f1c0c2c1047746ef"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:12:17.467Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6fb27428092e64496040"
+  },
+  "user": {
+    "$oid": "68085106f1c0c2c1047746ed"
+  },
+  "userType": "Student",
+  "eventType": "sign-in",
+  "timestamp": {
+    "$date": "2025-05-09T21:12:18.930Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6fd47428092e64496048"
+  },
+  "user": {
+    "$oid": "68086419f4ccfae93d895892"
+  },
+  "userType": "Teacher",
+  "eventType": "sign-out",
+  "timestamp": {
+    "$date": "2025-05-09T21:12:52.692Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "681e6fd87428092e64496051"
+  },
+  "user": {
+    "$oid": "6808639bf4ccfae93d89588f"
+  },
+  "userType": "Teacher",
+  "eventType": "sign-out",
+  "timestamp": {
+    "$date": "2025-05-09T21:12:56.167Z"
+  },
+  "__v": 0
 }]

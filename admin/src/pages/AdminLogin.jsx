@@ -3,7 +3,6 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import bgSolid from '../assets/bg-solid.png';
 import { AdminContext } from '../context/AdminContext';
 
 const AdminLogin = () => {
@@ -68,14 +67,16 @@ const AdminLogin = () => {
     };
 
     return (
-        <div
-            className="min-h-screen flex items-center justify-center bg-cover bg-center p-4 sm:p-6 md:p-10"
-            style={{ backgroundImage: `url(${bgSolid})` }}
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.7 }}
+            className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-gray-800 p-4 sm:p-6 md:p-10"
         >
             <motion.form
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
                 onSubmit={onSubmitHandler}
                 className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl p-6 sm:p-10 md:p-14 bg-white rounded-lg sm:rounded-xl md:rounded-2xl shadow-lg sm:shadow-xl md:shadow-2xl"
             >
@@ -154,7 +155,7 @@ const AdminLogin = () => {
                     </button>
                 </div>
             </motion.form>
-        </div>
+        </motion.div>
     );
 };
 

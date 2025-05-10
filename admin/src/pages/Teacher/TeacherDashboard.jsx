@@ -1,29 +1,29 @@
 import axios from 'axios';
-import { format } from 'date-fns'; // Import date-fns for formatting
+import { format } from 'date-fns';
+import { motion } from "framer-motion";
 import { Loader } from "lucide-react";
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { FiInfo } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import UserInfoDisplay from '../../components/rfid/UserInfoDisplay'; // Import the shared UserInfoDisplay
 import { TeacherContext } from '../../context/TeacherContext';
 
 const TeacherDashboard = () => {
     const [teacherInfo, setTeacherInfo] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); 
     const [error, setError] = useState(null);
     const { dToken, backendUrl } = useContext(TeacherContext);
 
     const fetchTeacherInfoAndTodaysAttendance = useCallback(async () => {
-        setLoading(true);
         setError(null);
         try {
-            const today = format(new Date(), 'yyyy-MM-dd'); // Get today's date in YYYY-MM-DD format
-            const response = await axios.get(`${backendUrl}/api/teacher/profile?date=${today}`, { // Append date to API call
+            const today = format(new Date(), 'yyyy-MM-dd');
+            const response = await axios.get(`${backendUrl}/api/teacher/profile?date=${today}`, {
                 headers: {
                     Authorization: `Bearer ${dToken}`,
                 },
             });
             if (response.data.success) {
-                // Assuming profileData now includes signInTime and signOutTime for today if available
                 setTeacherInfo(response.data.profileData);
             } else {
                 toast.error(response.data.message || "Failed to fetch teacher information.");
@@ -42,96 +42,56 @@ const TeacherDashboard = () => {
         fetchTeacherInfoAndTodaysAttendance();
     }, [fetchTeacherInfoAndTodaysAttendance]);
 
-    const formatName = (user) => {
-        if (!user) return '';
-        return `${user?.firstName} ${user?.middleName ? user?.middleName + ' ' : ''}${user?.lastName}`;
+    const prepareLastScan = (todaysAttendance) => {
+        if (!todaysAttendance) return null;
+
+        const { signInTime, signOutTime } = todaysAttendance;
+
+        if (signOutTime) {
+            return { timestamp: signOutTime, eventType: 'sign-out' };
+        }
+        if (signInTime) {
+            return { timestamp: signInTime, eventType: 'sign-in' };
+        }
+        return null;
     };
 
     return (
-        <div className="flex justify-center items-center min-h-screen w-full bg-gray-100 p-4">
-            <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-2xl w-full">
-                <div className="flex items-center justify-center mb-6 text-customRed">
-                    {!loading && (
-                        <div className="flex items-center justify-center text-customRed">
-                            <FiInfo className="w-8 h-8" />
-                            <h2 className="text-3xl font-bold ml-2">Teacher Information</h2>
-                        </div>
-                    )}
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.7 }}
+            className="flex flex-col justify-center items-center min-h-screen w-full bg-gradient-to-br from-slate-900 to-gray-900 p-4 sm:p-6 md:p-10 text-gray-300" 
+        >
+            <div className="bg-slate-800 p-6 sm:p-8 rounded-xl shadow-2xl text-center max-w-2xl w-full"> 
+                <div className="flex items-center justify-center mb-6">
+                    <FiInfo className="w-8 h-8 text-red-500" /> 
+                    <h2 className="text-3xl sm:text-4xl font-bold text-white ml-2">Teacher Information</h2> 
                 </div>
                 {loading ? (
-                    <div className="flex justify-center items-center">
-                        <Loader className="w-5 h-5 text-customRed animate-spin mr-2" />
-                        <span className="text-customRed">Loading Information...</span>
+                    <div className="flex flex-col items-center justify-center min-h-[300px]"> 
+                        <Loader className="w-12 h-12 text-red-500 animate-spin mr-2 mb-4" /> 
+                        <p className="text-xl font-semibold text-gray-200">Loading Information...</p> 
                     </div>
                 ) : error ? (
-                    <p className="text-red-500 text-center">{error}</p>
+                    <div className="min-h-[300px] flex flex-col justify-center items-center">
+                        <p className="text-red-400 text-center text-lg">{error}</p> 
+                    </div>
                 ) : teacherInfo ? (
-                    <UserInfoDisplay userInfo={teacherInfo} formatName={formatName} />
+                    <UserInfoDisplay 
+                        userInfo={teacherInfo} 
+                        lastScan={prepareLastScan(teacherInfo.todaysAttendance)}
+                    />
                 ) : (
-                    <p>No teacher information available.</p>
+                    <div className="min-h-[300px] flex flex-col justify-center items-center">
+                        <p className="text-gray-400">No teacher information available.</p> 
+                    </div>
                 )}
             </div>
-        </div>
-    );
-};
-
-const UserInfoDisplay = ({ userInfo, formatName }) => {
-    const formatDateTime = (dateTimeString) => {
-        if (!dateTimeString) return 'No Data';
-        try {
-            const date = new Date(dateTimeString);
-            if (isNaN(date.getTime())) {
-                return 'Invalid Date';
-            }
-            return date.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            });
-        } catch (error) {
-            console.error("Error formatting date:", error);
-            return 'Invalid Date';
-        }
-    };
-
-    return (
-        <div className="mt-6 bg-white rounded-xl shadow-md overflow-hidden w-full">
-            {/* Profile Header */}
-            <div className="flex flex-col sm:flex-row items-center gap-6 px-6 py-6 bg-gradient-to-br from-red-50 to-white">
-                <img
-                    src={userInfo?.image || 'https://via.placeholder.com/150'}
-                    alt="Teacher"
-                    className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border object-cover shadow-md"
-                />
-                <div className="text-center sm:text-left">
-                    <h3 className="text-2xl font-bold text-gray-800">{formatName(userInfo)}</h3>
-                    <p className="text-sm text-gray-500">{userInfo?.email}</p>
-                </div>
-            </div>
-
-            {/* Info Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 py-4 text-gray-700 border-t">
-                <p><strong>Address:</strong> {userInfo?.address || 'N/A'}</p>
-                <p><strong>Contact Number:</strong> {userInfo?.number || 'N/A'}</p>
-                {userInfo?.position && <p><strong>Position:</strong> {userInfo?.position}</p>}
-            </div>
-
-            {/* Sign-in/out Footer - Updated to use todaysAttendance */}
-            <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-4 border-t bg-gray-50">
-                <p className="text-green-600 font-medium">
-                    <strong>Sign In Time (Today):</strong> {formatDateTime(userInfo?.todaysAttendance?.signInTime)}
-                </p>
-                {userInfo?.todaysAttendance?.signOutTime ? (
-                    <p className="text-red-500 font-medium mt-2 sm:mt-0">
-                        <strong>Sign Out Time (Today):</strong> {formatDateTime(userInfo?.todaysAttendance?.signOutTime)}
-                    </p>
-                ) : (
-                    <p className="text-gray-600 font-medium mt-2 sm:mt-0">
-                        <strong>Sign Out Time (Today):</strong> Not yet signed out
-                    </p>
-                )}
-            </div>
-        </div>
+            <footer className="mt-8 text-center">
+                <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} St. Clare College of Caloocan</p> 
+            </footer>
+        </motion.div>
     );
 };
 

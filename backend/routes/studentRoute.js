@@ -2,9 +2,7 @@ import express from 'express';
 // Import the new controller function
 import {
     getStudentAttendance,
-    getStudentAttendanceProfile // <-- Import added
-    ,
-
+    getStudentAttendanceProfile,
     loginStudent,
     studentProfile,
     updateStudentProfile

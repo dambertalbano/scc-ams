@@ -1,3 +1,4 @@
+import { motion } from "framer-motion"; // Import motion
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import admin_logo from "../assets/admin_logo.svg";
@@ -26,59 +27,139 @@ export default function LandingPage() {
 
   const handleClosePrivacy = () => setShowPrivacy(false);
 
+  const pageVariants = {
+    initial: { opacity: 0 },
+    in: { opacity: 1 },
+    out: { opacity: 0 },
+  };
+
+  const pageTransition = {
+    type: "tween",
+    ease: "anticipate",
+    duration: 0.7,
+  };
+
+  const rightPanelVariants = {
+    initial: { opacity: 0, y: 20 },
+    in: { opacity: 1, y: 0 },
+    out: { opacity: 0, y: -20 },
+  };
+
+  const rightPanelTransition = {
+    type: "spring",
+    stiffness: 100,
+    delay: 0.3, // Delay for right panel to come after left
+  };
+
   return (
-    <div className="flex flex-col md:flex-row h-screen">
+    <motion.div // Overall page container for smooth transitions if used with AnimatePresence
+      initial="initial"
+      animate="in"
+      exit="out"
+      variants={pageVariants}
+      transition={pageTransition}
+      className="flex flex-col md:flex-row h-screen"
+    >
       {/* Left Side - Building Image */}
-      <div
+      <motion.div
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
         className="hidden md:block w-full md:w-7/12 h-1/3 md:h-full bg-cover bg-center"
         style={{ backgroundImage: `url(${scc_bg})` }}
-      ></div>
+      ></motion.div>
 
       {/* Right Side - Login Section */}
-      <div
+      <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }} // Slight delay for staggered effect
         className="w-full md:w-5/12 h-full bg-gray-100 flex flex-col justify-center items-center p-6 md:p-10 shadow-lg"
         style={{ backgroundImage: `url(${bgSolid})` }}
       >
-        <img src={admin_logo} alt="SCC Logo" className="w-16 h-16 md:w-20 md:h-20 mb-4" />
-        <h1 className="text-2xl md:text-3xl font-bold text-white text-center">Hi, Clareans!</h1>
-        <p className="text-white mb-6 text-center">Please click or tap your destination.</p>
-
-        <Link
-          to="/student-login"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded w-full max-w-xs mb-4 text-center"
+        <motion.img 
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 120, delay: 0.5 }}
+          src={admin_logo} 
+          alt="SCC Logo" 
+          className="w-16 h-16 md:w-20 md:h-20 mb-4" 
+        />
+        <motion.h1 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", delay: 0.6 }}
+          className="text-2xl md:text-3xl font-bold text-white text-center"
         >
-          Student
-        </Link>
-
-        <Link
-          to="/teacher-login"
-          className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded w-full max-w-xs mb-4 text-center"
+          Hi, Clareans!
+        </motion.h1>
+        <motion.p 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", delay: 0.7 }}
+          className="text-white mb-6 text-center"
         >
-          Teachers
-        </Link>
+          Please click or tap your destination.
+        </motion.p>
 
-        <p className="text-sm text-center text-white">
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          transition={{ delay: 0.8 }} 
+          className="w-full max-w-xs flex flex-col items-center"
+        >
+          <Link
+            to="/student-login"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded w-full mb-4 text-center transition-transform transform hover:scale-105"
+          >
+            Student
+          </Link>
+
+          <Link
+            to="/teacher-login"
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded w-full mb-4 text-center transition-transform transform hover:scale-105"
+          >
+            Teachers
+          </Link>
+        </motion.div>
+
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.9 }}
+          className="text-sm text-center text-white mt-4"
+        >
           By using this service, you understood and agree to the SCC Online Services
-          <button onClick={handleOpenTerms} className="text-blue-600 hover:underline ml-1">
+          <button onClick={handleOpenTerms} className="text-blue-400 hover:text-blue-300 hover:underline ml-1">
             Terms of Use
           </button>
           and
-          <button onClick={handleOpenPrivacy} className="text-blue-600 hover:underline ml-1">
+          <button onClick={handleOpenPrivacy} className="text-blue-400 hover:text-blue-300 hover:underline ml-1">
             Privacy Statement
           </button>
           .
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
 
       {/* Terms of Use Modal */}
       {showTerms && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white rounded-md p-6 w-11/12 md:w-1/2 max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl md:text-2xl font-bold mb-4">Terms of Use</h2>
-            <p className="mb-4">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4"
+        >
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-md p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-xl"
+          >
+            <h2 className="text-xl md:text-2xl font-bold mb-4 text-gray-800">Terms of Use</h2>
+            <p className="mb-4 text-gray-700">
               Welcome to SCC AMS (St. Clare College Attendance Management System). By accessing or using this system, you agree to be bound by these Terms of Use. Please read them carefully.
             </p>
-            <ul className="list-disc pl-6 mb-4">
+            <ul className="list-disc pl-6 mb-4 space-y-2 text-gray-700">
               <li>
                 <strong>Acceptance of Terms:</strong> By accessing or using SCC AMS, you agree to comply with and be legally bound by these Terms of Use and our Privacy Policy.
               </li>
@@ -98,10 +179,10 @@ export default function LandingPage() {
                 <strong>Termination of Access:</strong> SCC AMS reserves the right to suspend or terminate access for any user who violates these terms.
               </li>
             </ul>
-            <div className="text-right">
+            <div className="text-right mt-6">
               <button
                 onClick={handleCloseTerms}
-                className={`bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ${
+                className={`bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-opacity ${
                   termsButtonEnabled ? "" : "opacity-50 cursor-not-allowed"
                 }`}
                 disabled={!termsButtonEnabled}
@@ -109,19 +190,29 @@ export default function LandingPage() {
                 Continue
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* Privacy Statement Modal */}
       {showPrivacy && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white rounded-md p-6 w-11/12 md:w-1/2 max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl md:text-2xl font-bold mb-4">Privacy Statement</h2>
-            <p className="mb-4">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4"
+        >
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-md p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-xl"
+          >
+            <h2 className="text-xl md:text-2xl font-bold mb-4 text-gray-800">Privacy Statement</h2>
+            <p className="mb-4 text-gray-700">
               At SCC AMS, we are committed to protecting the privacy and personal information of all users, including students, faculty, and staff. This Privacy Statement outlines how we collect, use, store, and protect your data.
             </p>
-            <ul className="list-disc pl-6 mb-4">
+            <ul className="list-disc pl-6 mb-4 space-y-2 text-gray-700">
               <li>
                 <strong>Information We Collect:</strong> Personal information such as name, ID, contact details, and attendance timestamps.
               </li>
@@ -141,10 +232,10 @@ export default function LandingPage() {
                 <strong>User Rights:</strong> Users can access, correct, or request deletion of their data by contacting the system administrator.
               </li>
             </ul>
-            <div className="text-right">
+            <div className="text-right mt-6">
               <button
                 onClick={handleClosePrivacy}
-                className={`bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ${
+                className={`bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-opacity ${
                   privacyButtonEnabled ? "" : "opacity-50 cursor-not-allowed"
                 }`}
                 disabled={!privacyButtonEnabled}
@@ -152,9 +243,9 @@ export default function LandingPage() {
                 Continue
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

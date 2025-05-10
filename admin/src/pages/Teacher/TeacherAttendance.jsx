@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { motion } from "framer-motion"; // Import motion
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -21,7 +22,7 @@ const TeacherAttendance = () => {
     const [currentScheduleDetails, setCurrentScheduleDetails] = useState(null);
 
     const fetchTeacherInfo = useCallback(async () => {
-        setLoading(true);
+        // setLoading(true); // Keep loading true until all initial data is potentially fetched
         setError(null);
         try {
             const response = await fetch(`${backendUrl}/api/teacher/profile`, {
@@ -39,6 +40,11 @@ const TeacherAttendance = () => {
             if (data.success) {
                 setTeacherInfo(data.profileData);
                 setSchedules(data.profileData.schedules || []);
+                // If no schedule is selected yet, and there are schedules, select the first one by default
+                // Or, if you want to wait for user selection, remove this block
+                if (!selectedSchedule && data.profileData.schedules && data.profileData.schedules.length > 0) {
+                    // setSelectedSchedule(data.profileData.schedules[0]); // Optionally auto-select first schedule
+                }
             } else {
                 setError(data.message || 'Failed to fetch teacher profile.');
             }
@@ -46,19 +52,20 @@ const TeacherAttendance = () => {
             console.error('Error fetching teacher profile:', err);
             setError(err.message || 'Failed to fetch teacher profile.');
         } finally {
-            setLoading(false);
+            // setLoading(false); // Moved loading(false) to the end of student fetching
         }
-    }, [dToken, backendUrl]);
+    }, [dToken, backendUrl, selectedSchedule]);
 
     useEffect(() => {
         fetchTeacherInfo();
-    }, []);
+    }, [fetchTeacherInfo]); // Removed empty dependency array to allow re-fetch if context changes, though dToken/backendUrl are stable
 
     useEffect(() => {
         if (!selectedSchedule) {
             setStudents([]);
             setFilteredStudents([]);
             setCurrentScheduleDetails(null);
+            setLoading(false); // Set loading to false if no schedule is selected
             return;
         }
 
@@ -115,11 +122,11 @@ const TeacherAttendance = () => {
     const handleDateChange = useCallback((date) => {
         setCurrentDate(date);
         setIsCalendarOpen(false);
-    }, [setCurrentDate]);
+    }, []); // Removed setCurrentDate from deps as it's stable
 
     const toggleCalendar = useCallback(() => {
         setIsCalendarOpen(prev => !prev);
-    }, [setIsCalendarOpen]);
+    }, []); // Removed setIsCalendarOpen from deps
 
     const formatTime = useCallback((dateString) => {
         if (!dateString) return "N/A";
@@ -130,76 +137,39 @@ const TeacherAttendance = () => {
         });
     }, []);
 
-    // Helper function to convert a day string (potentially multiple days) to an array of day numbers
     const getScheduleDayNumbers = (dayString) => {
         if (!dayString || typeof dayString !== 'string') return [];
-
         const dayMap = {
-            'SUN': 0, 'SUNDAY': 0,
-            'M': 1, 'MON': 1, 'MONDAY': 1,
-            'T': 2, 'TUE': 2, 'TUES': 2, 'TUESDAY': 2,
-            'W': 3, 'WED': 3, 'WEDNESDAY': 3,
-            'TH': 4, 'THUR': 4, 'THURSDAY': 4,
-            'F': 5, 'FRI': 5, 'FRIDAY': 5,
+            'SUN': 0, 'SUNDAY': 0, 'M': 1, 'MON': 1, 'MONDAY': 1,
+            'T': 2, 'TUE': 2, 'TUES': 2, 'TUESDAY': 2, 'W': 3, 'WED': 3, 'WEDNESDAY': 3,
+            'TH': 4, 'THUR': 4, 'THURSDAY': 4, 'F': 5, 'FRI': 5, 'FRIDAY': 5,
             'SAT': 6, 'SATURDAY': 6,
         };
-
-        // Normalize the input: split by space or comma, trim, and convert to uppercase
         const dayTokens = dayString.toUpperCase().split(/[\s,]+/).map(token => token.trim()).filter(Boolean);
-        
         const dayNumbers = dayTokens.reduce((acc, token) => {
-            if (dayMap.hasOwnProperty(token)) {
-                if (!acc.includes(dayMap[token])) { // Avoid duplicate day numbers
-                    acc.push(dayMap[token]);
-                }
+            if (dayMap.hasOwnProperty(token) && !acc.includes(dayMap[token])) {
+                acc.push(dayMap[token]);
             }
             return acc;
         }, []);
-        
-        return dayNumbers.sort((a,b) => a - b); // Return sorted array of day numbers
+        return dayNumbers.sort((a, b) => a - b);
     };
 
-    // Filter function for the DatePicker
     const filterDateByScheduleDay = (date) => {
-        const currentDayJs = date.getDay(); // 0 for Sunday, 1 for Monday, etc.
-
-        if (!selectedSchedule) {
-            return true;
-        }
-
+        const currentDayJs = date.getDay();
+        if (!selectedSchedule) return true;
         let dayOfWeekString = selectedSchedule.dayOfWeek;
-
-        // Check if dayOfWeek is an array, and if so, convert it to a comma-separated string
         if (Array.isArray(selectedSchedule.dayOfWeek)) {
             dayOfWeekString = selectedSchedule.dayOfWeek.join(',');
         }
-
-        // Now check if the (potentially converted) dayOfWeekString is a valid non-empty string
-        if (typeof dayOfWeekString !== 'string' || dayOfWeekString.trim() === "") {
-            return true;
-        }
-        
+        if (typeof dayOfWeekString !== 'string' || dayOfWeekString.trim() === "") return true;
         const scheduleDayNumbers = getScheduleDayNumbers(dayOfWeekString);
-
-        if (scheduleDayNumbers.length === 0) {
-            return true;
-        }
-
-        const isAllowed = scheduleDayNumbers.includes(currentDayJs);
-        return isAllowed;
+        if (scheduleDayNumbers.length === 0) return true;
+        return scheduleDayNumbers.includes(currentDayJs);
     };
 
-    const getSignInTime = (student) => {
-        return student.signInTime
-            ? formatTime(student.signInTime)
-            : "N/A";
-    };
-
-    const getSignOutTime = (student) => {
-        return student.signOutTime
-            ? formatTime(student.signOutTime)
-            : "N/A";
-    };
+    const getSignInTime = (student) => student.signInTime ? formatTime(student.signInTime) : "N/A";
+    const getSignOutTime = (student) => student.signOutTime ? formatTime(student.signOutTime) : "N/A";
 
     const generateExcel = async () => {
         if (!templateFile) {
@@ -210,326 +180,285 @@ const TeacherAttendance = () => {
             alert("Please select a schedule before generating the report.");
             return;
         }
-
         const reader = new FileReader();
-
         reader.onload = async (e) => {
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.load(e.target.result);
-
             const worksheet = workbook.getWorksheet(1);
-
             const month = currentDate.toLocaleString('default', { month: 'long' });
-            const gradeLevel = currentScheduleDetails.gradeYearLevel;
-            const section = currentScheduleDetails.section;
-            const subjectName = currentScheduleDetails.subjectId?.name || 'N/A';
-
+            const { gradeYearLevel, section, subjectId } = currentScheduleDetails;
+            const subjectName = subjectId?.name || 'N/A';
             const formatTeacherName = (teacher) => {
                 if (!teacher) return "N/A";
-                const lastName = teacher.lastName
-                    ? teacher.lastName.charAt(0).toUpperCase() + teacher.lastName.slice(1).toLowerCase()
-                    : "";
-                const firstName = teacher.firstName
-                    ? teacher.firstName.charAt(0).toUpperCase() + teacher.firstName.slice(1).toLowerCase()
-                    : "";
-                const middleInitial = teacher.middleName
-                    ? `${teacher.middleName.charAt(0).toUpperCase()}.`
-                    : "";
+                const lastName = teacher.lastName?.charAt(0).toUpperCase() + teacher.lastName?.slice(1).toLowerCase() || "";
+                const firstName = teacher.firstName?.charAt(0).toUpperCase() + teacher.firstName?.slice(1).toLowerCase() || "";
+                const middleInitial = teacher.middleName ? `${teacher.middleName.charAt(0).toUpperCase()}.` : "";
                 return `${lastName}, ${firstName} ${middleInitial}`;
             };
-
             const teacherName = teacherInfo ? formatTeacherName(teacherInfo) : "N/A";
-
             worksheet.getCell("AE86").value = teacherName;
-            worksheet.getCell("AA6").value = `${month}`;
-            worksheet.getCell("W8").value = `${gradeLevel}`;
-            worksheet.getCell("AD8").value = `${section}`;
-
+            worksheet.getCell("AA6").value = month;
+            worksheet.getCell("W8").value = gradeYearLevel;
+            worksheet.getCell("AD8").value = section;
             const dateToColumnMap = {};
             worksheet.getRow(11).eachCell({ includeEmpty: true }, (cell, colNumber) => {
                 if (colNumber >= 4 && colNumber <= 29) {
                     let raw = cell.value;
                     if (typeof raw === "object" && raw !== null) {
-                        if (raw.richText) {
-                            raw = raw.richText.map((rt) => rt.text).join("");
-                        } else if (raw.result) {
-                            raw = raw.result;
-                        } else {
-                            raw = null;
-                        }
+                        raw = raw.richText ? raw.richText.map(rt => rt.text).join("") : (raw.result || null);
                     }
                     const parsed = raw !== null ? parseInt(String(raw).trim(), 10) : NaN;
                     if (!isNaN(parsed)) {
                         const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), parsed);
-                        const isoDate = date.toISOString().split("T")[0];
-                        dateToColumnMap[isoDate] = colNumber;
+                        dateToColumnMap[date.toISOString().split("T")[0]] = colNumber;
                     }
                 }
             });
-
-            const selectedDate = currentDate.toISOString().split("T")[0];
-            const selectedColumn = dateToColumnMap[selectedDate];
-
+            const selectedDateISO = currentDate.toISOString().split("T")[0];
+            const selectedColumn = dateToColumnMap[selectedDateISO];
             if (!selectedColumn) {
-                alert("Selected date is not found in the SF2 template's header. Please check the template or selected date.");
+                alert("Selected date is not found in the SF2 template's header.");
                 return;
             }
-
-            const sortedStudents = [...students].sort((a, b) => {
-                const lastNameA = (a.lastName || "").toLowerCase();
-                const lastNameB = (b.lastName || "").toLowerCase();
-                return lastNameA.localeCompare(lastNameB);
-            });
-
-            const startRow = 14;
+            const sortedStudents = [...students].sort((a, b) => (a.lastName || "").toLowerCase().localeCompare((b.lastName || "").toLowerCase()));
             let totalPresent = 0;
-
             sortedStudents.forEach((student, index) => {
-                const row = worksheet.getRow(startRow + index);
+                const row = worksheet.getRow(14 + index);
                 row.getCell(2).value = `${student.lastName}, ${student.firstName} ${student.middleName || ""}`;
-
-                const signInDate = student.signInTime
-                    ? new Date(student.signInTime).toISOString().split("T")[0]
-                    : null;
-                const signOutDate = student.signOutTime
-                    ? new Date(student.signOutTime).toISOString().split("T")[0]
-                    : null;
-
-                if (selectedDate === signInDate || selectedDate === signOutDate) {
+                const signInDate = student.signInTime ? new Date(student.signInTime).toISOString().split("T")[0] : null;
+                const signOutDate = student.signOutTime ? new Date(student.signOutTime).toISOString().split("T")[0] : null;
+                if (selectedDateISO === signInDate || selectedDateISO === signOutDate) {
                     row.getCell(selectedColumn).value = "P";
                     totalPresent++;
                 } else {
                     row.getCell(selectedColumn).value = "A";
                 }
-
                 row.commit();
             });
-
-            const totalRow = 62;
-            worksheet.getCell(totalRow, selectedColumn).value = totalPresent;
-
+            worksheet.getCell(62, selectedColumn).value = totalPresent;
             const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            });
+            const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `SF2_${gradeLevel}_${section}_${subjectName.replace(/\s+/g, '_')}_${month}_${currentDate.getFullYear()}.xlsx`;
+            link.download = `SF2_${gradeYearLevel}_${section}_${subjectName.replace(/\s+/g, '_')}_${month}_${currentDate.getFullYear()}.xlsx`;
             link.click();
+            URL.revokeObjectURL(link.href); // Clean up
         };
-
         reader.readAsArrayBuffer(templateFile);
     };
 
-    if (loading && !students.length) {
+    if (loading && !teacherInfo) { // Initial loading for teacher profile
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gray-100 p-6">
-                <div className="loader">Loading...</div>
-            </div>
+            <motion.div className="flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-slate-900 to-gray-900 p-6 text-gray-300">
+                <div className="loader text-xl">Loading Teacher Profile...</div> {/* Kiosk style loader text */}
+            </motion.div>
+        );
+    }
+    
+    // Error fetching teacher profile
+    if (error && !teacherInfo) {
+        return (
+            <motion.div className="flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-slate-900 to-gray-900 p-6 text-red-400">
+                Error: {error}
+            </motion.div>
         );
     }
 
-    if (error && !selectedSchedule) {
-        return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
-    }
-
     return (
-        <div className="container mx-auto p-4">
-            <h1 className="text-2xl font-semibold mb-4">Student Attendance</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Select Schedule:
-                    </label>
-                    <select
-                        className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={selectedSchedule?._id || ""}
-                        onChange={(e) => {
-                            const scheduleId = e.target.value;
-                            const schedule = schedules.find(
-                                (s) => s._id === scheduleId
-                            );
-                            setSelectedSchedule(schedule); // This state update is asynchronous
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.7 }}
+            className="flex flex-col items-center min-h-screen w-full bg-gradient-to-br from-slate-900 to-gray-900 p-4 sm:p-6 md:p-10 text-gray-300"
+        >
+            <div className="w-full max-w-7xl"> {/* Container for content */}
+                <h1 className="text-3xl font-bold text-white mb-8 text-center">Student Attendance</h1>
 
-                            // Adjust currentDate based on the NEWLY selected 'schedule' object
-                            if (schedule && schedule.dayOfWeek) {
-                                const scheduleDayNumbers = getScheduleDayNumbers(schedule.dayOfWeek);
-                                if (scheduleDayNumbers.length > 0) {
-                                    let newCurrentDate = new Date(currentDate); // Start with existing currentDate
-                                    if (!scheduleDayNumbers.includes(newCurrentDate.getDay())) {
-                                        // The current date is not valid for the new schedule.
-                                        // Find the next valid day in the new schedule, starting from today.
-                                        let tempDate = new Date(currentDate); // Use a temporary date for iteration
-                                        let foundValid = false;
-                                        for (let i = 0; i < 7; i++) { // Check the next 7 days
-                                            if (scheduleDayNumbers.includes(tempDate.getDay())) {
-                                                newCurrentDate = new Date(tempDate);
-                                                foundValid = true;
-                                                break;
-                                            }
-                                            tempDate.setDate(tempDate.getDate() + 1);
-                                        }
-                                        // If no valid day found in the next 7 days (e.g. schedule is only for one day far in future)
-                                        // then set to the first day of the schedule in the current week of the original 'currentDate'
-                                        // or the next week if that day has passed.
-                                        if (!foundValid) {
-                                            tempDate = new Date(currentDate); // Reset tempDate
-                                            const firstDayInNewSchedule = scheduleDayNumbers[0];
-                                            const currentDayInOriginalWeek = tempDate.getDay();
-                                            tempDate.setDate(tempDate.getDate() - currentDayInOriginalWeek + firstDayInNewSchedule);
-                                            if (tempDate < currentDate && currentDayInOriginalWeek > firstDayInNewSchedule) {
-                                                tempDate.setDate(tempDate.getDate() + 7); // Advance to next week
-                                            }
-                                            // Final check if the day is correct
-                                            if (!scheduleDayNumbers.includes(tempDate.getDay())) {
-                                                // If still not matching, iterate to find the very next occurrence
-                                                tempDate = new Date(currentDate); // Start from original
-                                                while(!scheduleDayNumbers.includes(tempDate.getDay())) {
-                                                    tempDate.setDate(tempDate.getDate() + 1);
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">
+                            Select Schedule:
+                        </label>
+                        <select
+                            className="border border-slate-600 bg-slate-700 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-300"
+                            value={selectedSchedule?._id || ""}
+                            onChange={(e) => {
+                                const scheduleId = e.target.value;
+                                const schedule = schedules.find((s) => s._id === scheduleId);
+                                setSelectedSchedule(schedule);
+                                if (schedule && schedule.dayOfWeek) {
+                                    const scheduleDayNumbers = getScheduleDayNumbers(schedule.dayOfWeek);
+                                    if (scheduleDayNumbers.length > 0) {
+                                        let newCurrentDate = new Date(currentDate);
+                                        if (!scheduleDayNumbers.includes(newCurrentDate.getDay())) {
+                                            let tempDate = new Date(currentDate);
+                                            let foundValid = false;
+                                            for (let i = 0; i < 7; i++) {
+                                                if (scheduleDayNumbers.includes(tempDate.getDay())) {
+                                                    newCurrentDate = new Date(tempDate);
+                                                    foundValid = true;
+                                                    break;
                                                 }
+                                                tempDate.setDate(tempDate.getDate() + 1);
                                             }
-                                            newCurrentDate = tempDate;
+                                            if (!foundValid) {
+                                                tempDate = new Date(currentDate);
+                                                const firstDayInNewSchedule = scheduleDayNumbers[0];
+                                                const currentDayInOriginalWeek = tempDate.getDay();
+                                                tempDate.setDate(tempDate.getDate() - currentDayInOriginalWeek + firstDayInNewSchedule);
+                                                if (tempDate < currentDate && currentDayInOriginalWeek > firstDayInNewSchedule) {
+                                                    tempDate.setDate(tempDate.getDate() + 7);
+                                                }
+                                                if (!scheduleDayNumbers.includes(tempDate.getDay())) {
+                                                    tempDate = new Date(currentDate);
+                                                    while(!scheduleDayNumbers.includes(tempDate.getDay())) {
+                                                        tempDate.setDate(tempDate.getDate() + 1);
+                                                    }
+                                                }
+                                                newCurrentDate = tempDate;
+                                            }
                                         }
+                                        setCurrentDate(newCurrentDate);
                                     }
-                                    setCurrentDate(newCurrentDate);
                                 }
-                                // If scheduleDayNumbers is empty (e.g. "XYZ"), filter will allow all days, currentDate can remain.
-                            } else if (!schedule) { // "-- Select Schedule --"
-                                // Allow all dates, currentDate can remain or be reset
-                                // setCurrentDate(new Date()); // Optional: reset to today
-                            }
-                            // If schedule is selected but has no dayOfWeek, filter will allow all days.
-                        }}
-                    >
-                        <option value="">-- Select Schedule --</option>
-                        {schedules.map((schedule) => (
-                            <option key={schedule._id} value={schedule._id}>
-                                {`${schedule.subjectId?.name || 'N/A'} (${schedule.subjectId?.code || 'N/A'}) - ${schedule.section} - ${schedule.dayOfWeek} ${schedule.startTime}-${schedule.endTime}`}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Select Date:
-                    </label>
-                    <div className="flex items-center border border-gray-300 rounded-lg">
-                        <input
-                            type="text"
-                            className="px-4 py-2 w-full focus:outline-none rounded-l-lg"
-                            value={currentDate.toLocaleDateString()}
-                            readOnly
-                            onClick={toggleCalendar}
-                        />
-                        <button
-                            className="bg-gray-200 hover:bg-gray-300 rounded-r-lg p-3"
-                            onClick={toggleCalendar}
+                            }}
                         >
-                            <FaCalendarAlt />
-                        </button>
-                    </div>
-                    {isCalendarOpen && (
-                        <div className="absolute top-full mt-1 left-0 md:left-auto md:right-0 bg-white rounded-lg shadow-lg p-2 z-50">
-                            <div className="flex justify-end">
-                                <button
-                                    className="text-gray-500 hover:text-gray-700 p-1"
-                                    onClick={toggleCalendar}
-                                >
-                                    <FaTimes size={12} />
-                                </button>
-                            </div>
-                            <DatePicker
-                                selected={currentDate}
-                                onChange={handleDateChange}
-                                inline
-                                filterDate={filterDateByScheduleDay}
-                            />
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <div className="relative mb-4">
-                <input
-                    type="text"
-                    className="border rounded px-4 py-2 w-full pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Search by Name, Student Number, etc."
-                    value={searchTerm}
-                    onChange={handleSearch}
-                    disabled={!selectedSchedule}
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaSearch className="text-gray-500" />
-                </div>
-            </div>
-
-            <div className="mb-4 flex items-center gap-4">
-                <div>
-                    <label htmlFor="template-upload" className="block text-sm font-medium text-gray-700 mb-1">Upload SF2 Template:</label>
-                    <input
-                        id="template-upload"
-                        type="file"
-                        accept=".xlsx, .xls"
-                        onChange={(e) => setTemplateFile(e.target.files[0])}
-                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                </div>
-                <button
-                    className="self-end bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
-                    onClick={generateExcel}
-                    disabled={!templateFile || !selectedSchedule || loading}
-                >
-                    <FaFileExcel className="inline mr-2" /> Generate Excel
-                </button>
-            </div>
-            {error && selectedSchedule && <div className="text-red-500 mb-4">Error fetching students: {error}</div>}
-
-            {loading && <div className="text-center py-4">Loading student data...</div>}
-
-            {!loading && selectedSchedule && filteredStudents.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <table className="min-w-full bg-white border border-gray-200">
-                        <thead>
-                            <tr className="bg-gray-100">
-                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Student Number</th>
-                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Name</th>
-                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Education Level</th>
-                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Grade Year Level</th>
-                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Section</th>
-                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Sign-in Time</th>
-                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Sign-out Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredStudents.map((student) => (
-                                <tr key={student._id} className="hover:bg-gray-50">
-                                    <td className="border px-4 py-2">{student.studentNumber}</td>
-                                    <td className="border px-4 py-2">{`${student.firstName} ${student.lastName}`}</td>
-                                    <td className="border px-4 py-2">{student.educationLevel}</td>
-                                    <td className="border px-4 py-2">{student.gradeYearLevel}</td>
-                                    <td className="border px-4 py-2">{student.section}</td>
-                                    <td className="border px-4 py-2">{getSignInTime(student)}</td>
-                                    <td className="border px-4 py-2">{getSignOutTime(student)}</td>
-                                </tr>
+                            <option value="" className="bg-slate-700 text-gray-300">-- Select Schedule --</option>
+                            {schedules.map((schedule) => (
+                                <option key={schedule._id} value={schedule._id} className="bg-slate-700 text-gray-300">
+                                    {`${schedule.subjectId?.name || 'N/A'} (${schedule.subjectId?.code || 'N/A'}) - ${schedule.section} - ${schedule.dayOfWeek} ${schedule.startTime}-${schedule.endTime}`}
+                                </option>
                             ))}
-                        </tbody>
-                    </table>
-                </div>
-            ) : (
-                !loading && selectedSchedule && (
-                    <div className="flex flex-col items-center justify-center min-h-[200px] w-full bg-gray-50 p-6 rounded-lg border">
-                        <p className="text-gray-500">
-                            {searchTerm ? "No students match your search criteria for this schedule and date." : "No attendance data found for this schedule and date, or no students assigned."}
-                        </p>
+                        </select>
                     </div>
-                )
-            )}
-            {!selectedSchedule && !loading && (
-                <div className="flex flex-col items-center justify-center min-h-[200px] w-full bg-gray-50 p-6 rounded-lg border">
-                    <p className="text-gray-500">Please select a schedule to view attendance.</p>
+                    <div className="relative">
+                        <label className="block text-sm font-medium text-gray-400 mb-1">
+                            Select Date:
+                        </label>
+                        <div className="flex items-center border border-slate-600 bg-slate-700 rounded-lg">
+                            <input
+                                type="text"
+                                className="px-4 py-2 w-full focus:outline-none rounded-l-lg bg-slate-700 text-gray-300 cursor-pointer"
+                                value={currentDate.toLocaleDateString()}
+                                readOnly
+                                onClick={toggleCalendar}
+                            />
+                            <button
+                                className="bg-slate-600 hover:bg-slate-500 rounded-r-lg p-3 text-gray-300"
+                                onClick={toggleCalendar}
+                            >
+                                <FaCalendarAlt />
+                            </button>
+                        </div>
+                        {isCalendarOpen && (
+                            <div className="absolute top-full mt-1 left-0 md:left-auto md:right-0 bg-slate-700 rounded-lg shadow-lg p-2 z-50 border border-slate-600">
+                                <div className="flex justify-end">
+                                    <button
+                                        className="text-gray-400 hover:text-gray-200 p-1"
+                                        onClick={toggleCalendar}
+                                    >
+                                        <FaTimes size={12} />
+                                    </button>
+                                </div>
+                                {/* DatePicker needs custom styling for dark mode. This is a basic container. */}
+                                {/* You might need to override DatePicker's internal styles or use a dark-theme-compatible one. */}
+                                <DatePicker
+                                    selected={currentDate}
+                                    onChange={handleDateChange}
+                                    inline
+                                    filterDate={filterDateByScheduleDay}
+                                    // Add custom class names if DatePicker supports it for theming
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
-            )}
-        </div>
+
+                <div className="relative mb-6">
+                    <input
+                        type="text"
+                        className="border border-slate-600 bg-slate-700 rounded-lg px-4 py-2 w-full pl-10 focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-300 placeholder-gray-500"
+                        placeholder="Search by Name, Student Number, etc."
+                        value={searchTerm}
+                        onChange={handleSearch}
+                        disabled={!selectedSchedule}
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FaSearch className="text-gray-500" />
+                    </div>
+                </div>
+
+                <div className="mb-6 flex flex-col sm:flex-row items-center gap-4 p-4 bg-slate-800 rounded-lg">
+                    <div>
+                        <label htmlFor="template-upload" className="block text-sm font-medium text-gray-400 mb-1">Upload SF2 Template:</label>
+                        <input
+                            id="template-upload"
+                            type="file"
+                            accept=".xlsx, .xls"
+                            onChange={(e) => setTemplateFile(e.target.files[0])}
+                            className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-600 file:text-gray-300 hover:file:bg-slate-500 cursor-pointer"
+                        />
+                    </div>
+                    <button
+                        className="self-stretch sm:self-end bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50 transition duration-150 ease-in-out flex items-center justify-center mt-2 sm:mt-0"
+                        onClick={generateExcel}
+                        disabled={!templateFile || !selectedSchedule || loading}
+                    >
+                        <FaFileExcel className="inline mr-2" /> Generate Excel
+                    </button>
+                </div>
+                {error && selectedSchedule && <div className="text-red-400 mb-4 text-center">Error fetching students: {error}</div>}
+
+                {loading && selectedSchedule && <div className="text-center py-4 text-gray-400">Loading student data...</div>}
+
+                {!loading && selectedSchedule && filteredStudents.length > 0 ? (
+                    <div className="overflow-x-auto bg-slate-800 rounded-lg shadow-md">
+                        <table className="min-w-full table-auto text-base text-left text-gray-300">
+                            <thead className="bg-slate-700">
+                                <tr>
+                                    <th className="px-4 py-3 font-semibold uppercase text-gray-200">Student Number</th>
+                                    <th className="px-4 py-3 font-semibold uppercase text-gray-200">Name</th>
+                                    <th className="px-4 py-3 font-semibold uppercase text-gray-200">Education Level</th>
+                                    <th className="px-4 py-3 font-semibold uppercase text-gray-200">Grade Year Level</th>
+                                    <th className="px-4 py-3 font-semibold uppercase text-gray-200">Section</th>
+                                    <th className="px-4 py-3 font-semibold uppercase text-gray-200">Sign-in Time</th>
+                                    <th className="px-4 py-3 font-semibold uppercase text-gray-200">Sign-out Time</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-700">
+                                {filteredStudents.map((student) => (
+                                    <tr key={student._id} className="hover:bg-slate-700 transition duration-150">
+                                        <td className="px-4 py-3">{student.studentNumber}</td>
+                                        <td className="px-4 py-3">{`${student.firstName} ${student.lastName}`}</td>
+                                        <td className="px-4 py-3">{student.educationLevel}</td>
+                                        <td className="px-4 py-3">{student.gradeYearLevel}</td>
+                                        <td className="px-4 py-3">{student.section}</td>
+                                        <td className="px-4 py-3">{getSignInTime(student)}</td>
+                                        <td className="px-4 py-3">{getSignOutTime(student)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    !loading && selectedSchedule && (
+                        <div className="flex flex-col items-center justify-center min-h-[200px] w-full bg-slate-800 p-6 rounded-lg border border-slate-700">
+                            <p className="text-gray-500">
+                                {searchTerm ? "No students match your search criteria for this schedule and date." : "No attendance data found for this schedule and date, or no students assigned."}
+                            </p>
+                        </div>
+                    )
+                )}
+                {!selectedSchedule && !loading && (
+                    <div className="flex flex-col items-center justify-center min-h-[200px] w-full bg-slate-800 p-6 rounded-lg border border-slate-700">
+                        <p className="text-gray-500">Please select a schedule to view attendance.</p>
+                    </div>
+                )}
+                <footer className="mt-12 text-center">
+                    <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} St. Clare College of Caloocan</p>
+                </footer>
+            </div>
+        </motion.div>
     );
 };
 

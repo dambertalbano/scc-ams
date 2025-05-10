@@ -110,8 +110,8 @@ const addStudent = async (req, res) => {
             section,
             semester = "1st Sem", // Default to "1st Sem"
             semesterDates = {
-                start: new Date("2024-08-15"),
-                end: new Date("2024-12-15"),
+                start: new Date("2025-01-06"),
+                end: new Date("2025-05-15"),
             }, // Default dates for "1st Sem"
         } = req.body;
 

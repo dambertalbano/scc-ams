@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { motion } from 'framer-motion'; // Import motion
 import { AlertTriangle, Edit3, PlusCircle, Save, Trash2, XCircle } from 'lucide-react';
 import React, { useContext, useEffect, useState } from 'react';
 import { AdminContext } from '../../context/AdminContext';
@@ -22,9 +23,12 @@ const Subjects = () => {
     const initialFormData = {
         name: '',
         code: '',
-        semesterId: ''
     };
     const [formData, setFormData] = useState(initialFormData);
+
+    useEffect(() => {
+        document.title = 'Manage Subjects - SCC AMS'; // Set document title
+    }, []);
 
     const fetchSubjects = async () => {
         setIsLoading(true);
@@ -77,7 +81,6 @@ const Subjects = () => {
         setFormData({
             name: subject.name,
             code: subject.code,
-            semesterId: subject.semesterId?._id || subject.semesterId || ''
         });
     };
 
@@ -91,9 +94,6 @@ const Subjects = () => {
         setError('');
 
         const payload = { ...formData };
-        if (payload.semesterId === '') {
-            delete payload.semesterId;
-        }
 
         try {
             let response;
@@ -121,25 +121,22 @@ const Subjects = () => {
         }
     };
 
-    // Opens the delete confirmation modal
     const handleDelete = (subjectId) => {
         setSubjectToDeleteId(subjectId);
         setShowDeleteModal(true);
     };
 
-    // Closes the delete confirmation modal
     const cancelDeleteHandler = () => {
         setShowDeleteModal(false);
         setSubjectToDeleteId(null);
     };
 
-    // Handles the actual deletion after confirmation
     const confirmDeleteHandler = async () => {
         if (!subjectToDeleteId) return;
 
-        setIsLoading(true); // Use main loading for delete action
+        setIsFormLoading(true);
         setError('');
-        setShowDeleteModal(false); // Close modal immediately
+        setShowDeleteModal(false);
 
         try {
             const response = await axios.delete(`${backendUrl}/api/admin/subjects/${subjectToDeleteId}`, {
@@ -154,140 +151,206 @@ const Subjects = () => {
             setError(err.response?.data?.message || err.message || 'An error occurred while deleting subject.');
             console.error("Delete Subject Error:", err);
         } finally {
-            setIsLoading(false);
-            setSubjectToDeleteId(null); // Reset the ID
+            setIsFormLoading(false);
+            setSubjectToDeleteId(null);
         }
     };
 
+    const pageVariants = {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.5 } },
+        exit: { opacity: 0, transition: { duration: 0.3 } },
+    };
 
-    if (!aToken) return <p className="text-center text-red-500 mt-10">Please log in to manage subjects.</p>;
+    const cardVariants = {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0, transition: { duration: 0.4, delay: 0.1 } },
+        exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
+    };
+
+    const modalVariants = {
+        initial: { opacity: 0, scale: 0.9 },
+        animate: { opacity: 1, scale: 1, transition: { duration: 0.3 } },
+        exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } }
+    };
+
+    if (!aToken) {
+        return (
+            <motion.div
+                variants={pageVariants} initial="initial" animate="animate" exit="exit"
+                className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-gray-800 p-6"
+            >
+                <p className="text-center text-red-400 text-xl">Please log in to manage subjects.</p>
+            </motion.div>
+        );
+    }
 
     return (
-        <div className="container mx-auto p-4 md:p-6">
-            <h2 className="text-2xl font-semibold mb-6 text-gray-700">Manage Subjects</h2>
+        <motion.div
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="min-h-screen w-full bg-gradient-to-br from-slate-900 to-gray-800 p-4 sm:p-6 md:p-10"
+        >
+            <div className="container mx-auto">
+                <header className="mb-8 text-center">
+                    <h2 className="text-3xl font-bold text-gray-100">Manage Subjects</h2>
+                </header>
 
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                    <strong className="font-bold"><AlertTriangle className="inline-block mr-2" size={20} />Error: </strong>
-                    <span className="block sm:inline">{error}</span>
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-red-700 border border-red-900 text-white px-4 py-3 rounded-lg relative mb-6 shadow-lg"
+                        role="alert"
+                    >
+                        <strong className="font-bold"><AlertTriangle className="inline-block mr-2" size={20} />Error: </strong>
+                        <span className="block sm:inline">{error}</span>
+                    </motion.div>
+                )}
+
+                <div className="mb-6">
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleAddClick}
+                        disabled={isAdding || isEditing || isFormLoading}
+                        className="bg-customRed hover:bg-red-700 text-white font-medium py-2 px-6 rounded-lg flex items-center shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        <PlusCircle size={20} className="mr-2" /> Add New Subject
+                    </motion.button>
                 </div>
-            )}
 
-            <div className="mb-6">
-                <button
-                    onClick={handleAddClick}
-                    disabled={isAdding || isEditing}
-                    className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md flex items-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <PlusCircle size={20} className="mr-2" /> Add New Subject
-                </button>
-            </div>
+                {(isAdding || isEditing) && (
+                    <motion.div
+                        variants={cardVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl mb-8 border border-gray-200"
+                    >
+                        <h3 className="text-2xl font-semibold mb-6 text-gray-800">{isEditing ? 'Edit Subject' : 'Add New Subject'}</h3>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name:</label>
+                                <input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} required
+                                    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700" />
+                            </div>
+                            <div>
+                                <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">Code:</label>
+                                <input type="text" id="code" name="code" value={formData.code} onChange={handleInputChange} required
+                                    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700" />
+                            </div>
+                            <div className="flex items-center justify-end space-x-4 pt-4">
+                                <motion.button type="button" onClick={handleCancel} disabled={isFormLoading}
+                                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                    className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-5 rounded-lg shadow-md flex items-center">
+                                    <XCircle size={18} className="mr-2" /> Cancel
+                                </motion.button>
+                                <motion.button type="submit" disabled={isFormLoading}
+                                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded-lg shadow-md flex items-center disabled:opacity-60 disabled:cursor-not-allowed">
+                                    <Save size={18} className="mr-2" />
+                                    {isFormLoading ? (isEditing ? 'Saving...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Subject')}
+                                </motion.button>
+                            </div>
+                        </form>
+                    </motion.div>
+                )}
 
-
-            {(isAdding || isEditing) && (
-                <div className="bg-white p-6 rounded-lg shadow-md mb-8 border border-gray-200">
-                    <h3 className="text-xl font-medium mb-6 text-gray-700">{isEditing ? 'Edit Subject' : 'Add New Subject'}</h3>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name:</label>
-                            <input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} required
-                                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-                        </div>
-                        <div>
-                            <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">Code:</label>
-                            <input type="text" id="code" name="code" value={formData.code} onChange={handleInputChange} required
-                                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-                        </div>
-                        <div className="flex items-center justify-end space-x-3 pt-2">
-                            <button type="button" onClick={handleCancel} disabled={isFormLoading}
-                                className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-md shadow-sm flex items-center">
-                                <XCircle size={18} className="mr-2" /> Cancel
-                            </button>
-                            <button type="submit" disabled={isFormLoading}
-                                className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md shadow-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
-                                <Save size={18} className="mr-2" />
-                                {isFormLoading ? (isEditing ? 'Saving...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Subject')}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
-
-            {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-auto">
-                        <h3 className="text-lg font-medium leading-6 text-gray-900 mb-2">Confirm Deletion</h3>
-                        <div className="mt-2">
-                            <p className="text-sm text-gray-500">
+                {showDeleteModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+                        <motion.div
+                            variants={modalVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md mx-auto"
+                        >
+                            <h3 className="text-xl font-semibold text-gray-800 mb-4">Confirm Deletion</h3>
+                            <p className="text-sm text-gray-600 mb-6">
                                 Are you sure you want to delete this subject? This action cannot be undone.
                             </p>
-                        </div>
-                        <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                            <button
-                                type="button"
-                                onClick={confirmDeleteHandler}
-                                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:col-start-2 sm:text-sm"
-                            >
-                                Confirm Delete
-                            </button>
-                            <button
-                                type="button"
-                                onClick={cancelDeleteHandler}
-                                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm"
-                            >
-                                Cancel
-                            </button>
-                        </div>
+                            <div className="flex justify-end space-x-3">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                    type="button"
+                                    onClick={cancelDeleteHandler}
+                                    className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                                >
+                                    Cancel
+                                </motion.button>
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                    type="button"
+                                    onClick={confirmDeleteHandler}
+                                    disabled={isFormLoading}
+                                    className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-60"
+                                >
+                                    {isFormLoading ? 'Deleting...' : 'Confirm Delete'}
+                                </motion.button>
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {isLoading && !subjects.length && <p className="text-center text-gray-500 py-5">Loading subjects...</p>}
-            {!isLoading && !subjects.length && !isAdding && !isEditing && (
-                <p className="text-center text-gray-500 py-5">No subjects found. Add one to get started!</p>
-            )}
+                {isLoading && !subjects.length && (
+                    <motion.p variants={cardVariants} initial="initial" animate="animate" className="text-center text-gray-300 py-10 text-lg">Loading subjects...</motion.p>
+                )}
+                {!isLoading && !subjects.length && !isAdding && !isEditing && (
+                    <motion.div variants={cardVariants} initial="initial" animate="animate" className="text-center bg-white/10 backdrop-blur-sm p-10 rounded-xl shadow-lg">
+                        <p className="text-gray-200 text-lg">No subjects found.</p>
+                        <p className="text-gray-300">Add one to get started!</p>
+                    </motion.div>
+                )}
 
-            {subjects.length > 0 && (
-                <div className="overflow-x-auto bg-white rounded-lg shadow">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {subjects.map(subject => (
-                                <tr key={subject._id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{subject.name}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{subject.code}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                        <button
-                                            onClick={() => handleEditClick(subject)}
-                                            disabled={isAdding || isEditing}
-                                            className="text-indigo-600 hover:text-indigo-900 disabled:text-gray-300 disabled:cursor-not-allowed"
-                                            title="Edit"
-                                        >
-                                            <Edit3 size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(subject._id)} // This now opens the modal
-                                            disabled={isLoading || isAdding || isEditing}
-                                            className="text-red-600 hover:text-red-900 disabled:text-gray-300 disabled:cursor-not-allowed"
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
+                {subjects.length > 0 && (
+                    <motion.div
+                        variants={cardVariants}
+                        initial="initial"
+                        animate="animate"
+                        className="overflow-x-auto bg-white rounded-xl shadow-2xl"
+                    >
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-100">
+                                <tr>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Code</th>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {subjects.map(subject => (
+                                    <tr key={subject._id} className="hover:bg-gray-50 transition-colors duration-150">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{subject.name}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{subject.code}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                                            <button
+                                                onClick={() => handleEditClick(subject)}
+                                                disabled={isAdding || isEditing || isLoading || isFormLoading}
+                                                className="text-customRed hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Edit3 size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(subject._id)}
+                                                disabled={isLoading || isAdding || isEditing || isFormLoading}
+                                                className="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </motion.div>
+                )}
+            </div>
+        </motion.div>
     );
 };
 

@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -63,7 +64,7 @@ const UserGrowthChart = React.memo(({ data, title, granularity }) => {
 
     return (
         <div className="p-4 border rounded-lg shadow bg-white h-96">
-            <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
+            <h3 className="text-lg font-semibold mb-4 text-center text-gray-700">{title}</h3>
             <ResponsiveContainer width="100%" height="85%">
                 <BarChart data={formattedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -119,7 +120,7 @@ const DailySignInChart = React.memo(({ data, title }) => {
 
     return (
         <div className="p-4 border rounded-lg shadow bg-white h-96">
-            <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
+            <h3 className="text-lg font-semibold mb-4 text-center text-gray-700">{title}</h3>
             <ResponsiveContainer width="100%" height="85%">
                 <BarChart data={formattedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -153,6 +154,10 @@ const Analytics = () => {
     const [filterPeriod, setFilterPeriod] = useState('last30days');
     const [customStartDate, setCustomStartDate] = useState(null);
     const [customEndDate, setCustomEndDate] = useState(null);
+
+    useEffect(() => {
+        document.title = 'Admin Analytics - SCC AMS';
+    }, []);
 
     const fetchAllAnalyticsDataCallback = useCallback(async () => {
         if (!aToken) {
@@ -191,6 +196,7 @@ const Analytics = () => {
             });
         } catch (err) {
             setError(err.message || "Failed to load some analytics data.");
+            toast.error(err.message || "Failed to load some analytics data.");
         } finally {
             setLoading(false);
         }
@@ -271,6 +277,7 @@ const Analytics = () => {
                 toast.success("PDF report exported successfully!");
             } catch (e) {
                 toast.error("Failed to export PDF report.");
+                console.error("PDF Export Error:", e);
             }
         } else {
             toast.warn(`Unsupported export format: ${format}`);
@@ -278,161 +285,172 @@ const Analytics = () => {
     }, [analyticsData]);
 
     const isInitialLoad = analyticsData.summary === null && analyticsData.userGrowth.length === 0 && analyticsData.dailySignIns.length === 0;
-
-    if (loading && isInitialLoad) {
-        return <div className="flex justify-center items-center h-screen"><p className="text-xl">Loading analytics...</p></div>;
-    }
-
-    if (error && isInitialLoad) {
-        return (
-            <div className="flex flex-col justify-center items-center h-screen">
-                <p className="text-xl text-red-500">Error: {error}</p>
-                <button
-                    onClick={fetchAllAnalyticsDataCallback}
-                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                    Retry
-                </button>
-            </div>
-        );
-    }
-
     const currentSummary = analyticsData.summary || {};
 
+    const pageVariants = {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.5 } },
+        exit: { opacity: 0, transition: { duration: 0.3 } },
+    };
+
     return (
-        <div className="p-6 bg-gray-100 min-h-screen">
-             <header className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800">Admin Analytics Dashboard</h1>
-                {loading && !isInitialLoad && <p className="text-sm text-blue-500 animate-pulse">Updating data...</p>}
-                {error && !isInitialLoad && <p className="text-sm text-red-500">Error updating data: {error}. Displaying last known data.</p>}
-
-                {currentSummary.period && (
-                    <p className="text-sm text-gray-500">
-                        Displaying data for: {new Date(currentSummary.period.startDate + 'T00:00:00Z').toLocaleDateString(undefined, { timeZone: 'UTC' })} - {new Date(currentSummary.period.endDate + 'T00:00:00Z').toLocaleDateString(undefined, { timeZone: 'UTC' })}
-                    </p>
-                )}
-            </header>
-
-            <section className={`mb-6 p-4 bg-white rounded-lg shadow transition-opacity duration-300 ${loading && !isInitialLoad ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
-                <h2 className="text-xl font-semibold text-gray-700 mb-3 flex items-center">
-                    <FaFilter className="mr-2 text-blue-500" /> Filters
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-                    <div>
-                        <label htmlFor="filterPeriod" className="block text-sm font-medium text-gray-600 mb-1">Time Period</label>
-                        <select
-                            id="filterPeriod"
-                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                            value={filterPeriod}
-                            onChange={(e) => setFilterPeriod(e.target.value)}
-                            disabled={loading && !isInitialLoad}
-                        >
-                            <option value="last7days">Last 7 Days</option>
-                            <option value="last30days">Last 30 Days</option>
-                            <option value="thisMonth">This Month</option>
-                            <option value="last6months">Last 6 Months</option>
-                            <option value="last12months">Last 12 Months</option>
-                            <option value="custom">Custom Range</option>
-                        </select>
-                    </div>
-                    {filterPeriod === 'custom' && (
-                        <>
-                            <div>
-                                <label htmlFor="customStartDate" className="block text-sm font-medium text-gray-600 mb-1">Start Date</label>
-                                <DatePicker
-                                    selected={customStartDate}
-                                    onChange={(date) => setCustomStartDate(date)}
-                                    selectsStart
-                                    startDate={customStartDate}
-                                    endDate={customEndDate}
-                                    dateFormat="yyyy-MM-dd"
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                    placeholderText="YYYY-MM-DD"
-                                    maxDate={new Date()}
-                                    disabled={loading && !isInitialLoad}
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="customEndDate" className="block text-sm font-medium text-gray-600 mb-1">End Date</label>
-                                <DatePicker
-                                    selected={customEndDate}
-                                    onChange={(date) => setCustomEndDate(date)}
-                                    selectsEnd
-                                    startDate={customStartDate}
-                                    endDate={customEndDate}
-                                    minDate={customStartDate}
-                                    dateFormat="yyyy-MM-dd"
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                    placeholderText="YYYY-MM-DD"
-                                    maxDate={new Date()}
-                                    disabled={loading && !isInitialLoad}
-                                />
-                            </div>
-                        </>
-                    )}
+        <motion.div
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="p-6 bg-gradient-to-br from-slate-900 to-gray-800 min-h-screen"
+        >
+            {loading && isInitialLoad ? (
+                <div className="flex justify-center items-center h-[calc(100vh-3rem)]">
+                    <p className="text-xl text-gray-200">Loading analytics...</p>
                 </div>
-            </section>
-
-            <section className={`mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 transition-opacity duration-300 ${loading && !isInitialLoad ? 'opacity-60' : 'opacity-100'}`}>
-                <StatCard
-                    title="Total Users"
-                    value={currentSummary.totalUsers}
-                    icon={<FaUsers />}
-                    explanation="Total number of registered students and teachers in the system."
-                />
-                <StatCard
-                    title="Total Teachers"
-                    value={currentSummary.activeTeachers}
-                    icon={<FaUserCheck />}
-                    explanation="Total number of registered teachers."
-                />
-                <StatCard
-                    title="Total Students"
-                    value={currentSummary.activeStudents}
-                    icon={<FaUserCheck />}
-                    explanation="Total number of registered students."
-                />
-                <StatCard
-                    title="Overall Activity Rate"
-                    value={currentSummary.overallActivityRate}
-                    icon={<FaPercentage />}
-                    unit="%"
-                    explanation="Percentage of registered users (students and teachers) who signed in at least once during the selected period."
-                />
-                <StatCard
-                    title="Avg. Daily Attendance"
-                    value={currentSummary.averageDailyAttendanceRate}
-                    icon={<FaCalendarAlt />}
-                    unit="%"
-                    explanation="Average percentage of registered users who signed in each day during the selected period."
-                />
-            </section>
-
-            <section className={`mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6 transition-opacity duration-300 ${loading && !isInitialLoad ? 'opacity-60' : 'opacity-100'}`}>
-                <UserGrowthChart
-                    data={analyticsData.userGrowth}
-                    title="User Growth Over Time (New Users per Day)"
-                    granularity="daily"
-                />
-                <DailySignInChart
-                    data={analyticsData.dailySignIns}
-                    title="Daily User Sign-Ins"
-                />
-            </section>
-
-            <section className="p-4 bg-white rounded-lg shadow">
-                <h2 className="text-xl font-semibold text-gray-700 mb-3">Export Report</h2>
-                <div className="flex space-x-4">
+            ) : error && isInitialLoad ? (
+                <div className="flex flex-col justify-center items-center h-[calc(100vh-3rem)]">
+                    <p className="text-xl text-red-500">Error: {error}</p>
                     <button
-                        onClick={() => handleExport('pdf')}
-                        className="flex items-center bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150"
-                        disabled={loading || (!analyticsData.summary && analyticsData.userGrowth.length === 0 && analyticsData.dailySignIns.length === 0)}
+                        onClick={fetchAllAnalyticsDataCallback}
+                        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                     >
-                        <FaFilePdf className="mr-2" /> Export to PDF
+                        Retry
                     </button>
                 </div>
-            </section>
-        </div>
+            ) : (
+                <>
+                    <header className="mb-8">
+                        <h1 className="text-3xl font-bold text-gray-100">Admin Analytics Dashboard</h1>
+                        {loading && !isInitialLoad && <p className="text-sm text-blue-500 animate-pulse">Updating data...</p>}
+                        {error && !isInitialLoad && <p className="text-sm text-red-500">Error updating data: {error}. Displaying last known data.</p>}
+
+                        {currentSummary.period && (
+                            <p className="text-sm text-gray-300">
+                                Displaying data for: {new Date(currentSummary.period.startDate + 'T00:00:00Z').toLocaleDateString(undefined, { timeZone: 'UTC' })} - {new Date(currentSummary.period.endDate + 'T00:00:00Z').toLocaleDateString(undefined, { timeZone: 'UTC' })}
+                            </p>
+                        )}
+                    </header>
+
+                    <section className={`mb-6 p-4 bg-white rounded-lg shadow transition-opacity duration-300 ${loading && !isInitialLoad ? 'opacity-60 pointer-events-none' : 'opacity-100'} max-w-2xl`}>
+                        <h2 className="text-xl font-semibold text-gray-700 mb-3 flex items-center">
+                            <FaFilter className="mr-2 text-blue-500" /> Filters
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label htmlFor="filterPeriod" className="block text-sm font-medium text-gray-600 mb-1">Time Period</label>
+                                <select
+                                    id="filterPeriod"
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+                                    value={filterPeriod}
+                                    onChange={(e) => setFilterPeriod(e.target.value)}
+                                    disabled={loading && !isInitialLoad}
+                                >
+                                    <option value="last7days">Last 7 Days</option>
+                                    <option value="last30days">Last 30 Days</option>
+                                    <option value="thisMonth">This Month</option>
+                                    <option value="last6months">Last 6 Months</option>
+                                    <option value="last12months">Last 12 Months</option>
+                                    <option value="custom">Custom Range</option>
+                                </select>
+                            </div>
+                            {filterPeriod === 'custom' && (
+                                <>
+                                    <div>
+                                        <label htmlFor="customStartDate" className="block text-sm font-medium text-gray-600 mb-1">Start Date</label>
+                                        <DatePicker
+                                            selected={customStartDate}
+                                            onChange={(date) => setCustomStartDate(date)}
+                                            selectsStart
+                                            startDate={customStartDate}
+                                            endDate={customEndDate}
+                                            dateFormat="yyyy-MM-dd"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+                                            placeholderText="YYYY-MM-DD"
+                                            maxDate={new Date()}
+                                            disabled={loading && !isInitialLoad}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="customEndDate" className="block text-sm font-medium text-gray-600 mb-1">End Date</label>
+                                        <DatePicker
+                                            selected={customEndDate}
+                                            onChange={(date) => setCustomEndDate(date)}
+                                            selectsEnd
+                                            startDate={customStartDate}
+                                            endDate={customEndDate}
+                                            minDate={customStartDate}
+                                            dateFormat="yyyy-MM-dd"
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+                                            placeholderText="YYYY-MM-DD"
+                                            maxDate={new Date()}
+                                            disabled={loading && !isInitialLoad}
+                                        />
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </section>
+
+                    <section className={`mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 transition-opacity duration-300 ${loading && !isInitialLoad ? 'opacity-60' : 'opacity-100'}`}>
+                        <StatCard
+                            title="Total Users"
+                            value={currentSummary.totalUsers}
+                            icon={<FaUsers />}
+                            explanation="Total number of registered students and teachers in the system."
+                        />
+                        <StatCard
+                            title="Total Teachers"
+                            value={currentSummary.activeTeachers}
+                            icon={<FaUserCheck />}
+                            explanation="Total number of registered teachers."
+                        />
+                        <StatCard
+                            title="Total Students"
+                            value={currentSummary.activeStudents}
+                            icon={<FaUserCheck />}
+                            explanation="Total number of registered students."
+                        />
+                        <StatCard
+                            title="Overall Activity Rate"
+                            value={currentSummary.overallActivityRate}
+                            icon={<FaPercentage />}
+                            unit="%"
+                            explanation="Percentage of registered users (students and teachers) who signed in at least once during the selected period."
+                        />
+                        <StatCard
+                            title="Avg. Daily Attendance"
+                            value={currentSummary.averageDailyAttendanceRate}
+                            icon={<FaCalendarAlt />}
+                            unit="%"
+                            explanation="Average percentage of registered users who signed in each day during the selected period."
+                        />
+                    </section>
+
+                    <section className={`mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6 transition-opacity duration-300 ${loading && !isInitialLoad ? 'opacity-60' : 'opacity-100'}`}>
+                        <UserGrowthChart
+                            data={analyticsData.userGrowth}
+                            title="User Growth Over Time (New Users per Day)"
+                            granularity="daily"
+                        />
+                        <DailySignInChart
+                            data={analyticsData.dailySignIns}
+                            title="Daily User Sign-Ins"
+                        />
+                    </section>
+
+                    <section className="p-4 bg-white rounded-lg shadow max-w-md">
+                        <h2 className="text-xl font-semibold text-gray-700 mb-3">Export Report</h2>
+                        <div className="flex space-x-4">
+                            <button
+                                onClick={() => handleExport('pdf')}
+                                className="flex items-center bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150"
+                                disabled={loading || (!analyticsData.summary && analyticsData.userGrowth.length === 0 && analyticsData.dailySignIns.length === 0)}
+                            >
+                                <FaFilePdf className="mr-2" /> Export to PDF
+                            </button>
+                        </div>
+                    </section>
+                </>
+            )}
+        </motion.div>
     );
 };
 

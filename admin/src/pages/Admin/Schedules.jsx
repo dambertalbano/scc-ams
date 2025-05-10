@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { motion } from 'framer-motion'; // Import motion
 import { AlertTriangle, Edit3, PlusCircle, Save, Trash2, XCircle } from 'lucide-react';
 import React, { useContext, useEffect, useState } from 'react';
 import { AdminContext } from '../../context/AdminContext';
@@ -34,6 +35,10 @@ const Schedules = () => {
         semester: '1st Sem'
     };
     const [formData, setFormData] = useState(initialFormData);
+
+    useEffect(() => {
+        document.title = 'Manage Schedules - SCC AMS';
+    }, []);
 
     const fetchSchedules = async () => {
         setIsLoading(true);
@@ -204,190 +209,246 @@ const Schedules = () => {
         }
     };
 
-    if (!aToken) return <p className="text-center text-red-500 mt-10">Please log in to manage schedules.</p>;
+    const pageVariants = {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.5 } },
+        exit: { opacity: 0, transition: { duration: 0.3 } },
+    };
+
+    const cardVariants = {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0, transition: { duration: 0.4, delay: 0.1 } },
+        exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
+    };
+
+    if (!aToken) {
+        return (
+            <motion.div
+                variants={pageVariants} initial="initial" animate="animate" exit="exit"
+                className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-gray-800 p-6"
+            >
+                <p className="text-center text-red-400 text-xl">Please log in to manage schedules.</p>
+            </motion.div>
+        );
+    }
 
     return (
-        <div className="container mx-auto p-4 md:p-6">
-            <h2 className="text-2xl font-semibold mb-6 text-gray-700">Manage Schedules</h2>
+        <motion.div
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="min-h-screen w-full bg-gradient-to-br from-slate-900 to-gray-800 p-4 sm:p-6 md:p-10"
+        >
+            <div className="container mx-auto">
+                <header className="mb-8 text-center">
+                    <h2 className="text-3xl font-bold text-gray-100">Manage Schedules</h2>
+                </header>
 
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                    <strong className="font-bold"><AlertTriangle className="inline-block mr-2" size={20} />Error: </strong>
-                    <span className="block sm:inline">{error}</span>
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-red-700 border border-red-900 text-white px-4 py-3 rounded-lg relative mb-6 shadow-lg"
+                        role="alert"
+                    >
+                        <strong className="font-bold"><AlertTriangle className="inline-block mr-2" size={20} />Error: </strong>
+                        <span className="block sm:inline">{error}</span>
+                    </motion.div>
+                )}
+
+                <div className="mb-6">
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleAddClick}
+                        disabled={isAdding || isEditing}
+                        className="bg-customRed hover:bg-red-700 text-white font-medium py-2 px-6 rounded-lg flex items-center shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        <PlusCircle size={20} className="mr-2" /> Add New Schedule
+                    </motion.button>
                 </div>
-            )}
 
-            <div className="mb-6">
-                <button
-                    onClick={handleAddClick}
-                    disabled={isAdding || isEditing}
-                    className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md flex items-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <PlusCircle size={20} className="mr-2" /> Add New Schedule
-                </button>
-            </div>
-
-            {(isAdding || isEditing) && (
-                <div className="bg-white p-6 rounded-lg shadow-md mb-8 border border-gray-200">
-                    <h3 className="text-xl font-medium mb-6 text-gray-700">{isEditing ? 'Edit Schedule' : 'Add New Schedule'}</h3>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="subjectId" className="block text-sm font-medium text-gray-700 mb-1">Subject:</label>
-                                <select id="subjectId" name="subjectId" value={formData.subjectId} onChange={handleInputChange} required
-                                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="">Select Subject</option>
-                                    {subjects.map(sub => <option key={sub._id} value={sub._id}>{sub.name} ({sub.code})</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label htmlFor="teacherId" className="block text-sm font-medium text-gray-700 mb-1">Teacher:</label>
-                                <select id="teacherId" name="teacherId" value={formData.teacherId} onChange={handleInputChange} required
-                                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="">Select Teacher</option>
-                                    {teachers.map(teach => <option key={teach._id} value={teach._id}>{teach.firstName} {teach.lastName}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="section" className="block text-sm font-medium text-gray-700 mb-1">Section:</label>
-                                <input type="text" id="section" name="section" value={formData.section} onChange={handleInputChange} required
-                                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-                            </div>
-                            <div>
-                                <label htmlFor="gradeYearLevel" className="block text-sm font-medium text-gray-700 mb-1">Grade/Year Level:</label>
-                                <input type="text" id="gradeYearLevel" name="gradeYearLevel" value={formData.gradeYearLevel} onChange={handleInputChange} required
-                                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="educationLevel" className="block text-sm font-medium text-gray-700 mb-1">Education Level:</label>
-                                <select id="educationLevel" name="educationLevel" value={formData.educationLevel} onChange={handleInputChange} required
-                                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                    {educationLevels.map(level => <option key={level} value={level}>{level}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Day(s) of Week:</label>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-2 border border-gray-300 rounded-md">
-                                    {daysOfWeekOptions.map(day => (
-                                        <label key={day} className="flex items-center space-x-2 text-sm">
-                                            <input
-                                                type="checkbox"
-                                                name="dayOfWeek"
-                                                value={day}
-                                                checked={formData.dayOfWeek.includes(day)}
-                                                onChange={handleDayOfWeekChange}
-                                                className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
-                                            />
-                                            <span>{day}</span>
-                                        </label>
-                                    ))}
+                {(isAdding || isEditing) && (
+                    <motion.div
+                        variants={cardVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl mb-8 border border-gray-200"
+                    >
+                        <h3 className="text-2xl font-semibold mb-6 text-gray-800">{isEditing ? 'Edit Schedule' : 'Add New Schedule'}</h3>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label htmlFor="subjectId" className="block text-sm font-medium text-gray-700 mb-1">Subject:</label>
+                                    <select id="subjectId" name="subjectId" value={formData.subjectId} onChange={handleInputChange} required
+                                        className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700">
+                                        <option value="">Select Subject</option>
+                                        {subjects.map(sub => <option key={sub._id} value={sub._id}>{sub.name} ({sub.code})</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="teacherId" className="block text-sm font-medium text-gray-700 mb-1">Teacher:</label>
+                                    <select id="teacherId" name="teacherId" value={formData.teacherId} onChange={handleInputChange} required
+                                        className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700">
+                                        <option value="">Select Teacher</option>
+                                        {teachers.map(teach => <option key={teach._id} value={teach._id}>{teach.firstName} {teach.lastName}</option>)}
+                                    </select>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">Start Time:</label>
-                                <input type="time" id="startTime" name="startTime" value={formData.startTime} onChange={handleInputChange} required
-                                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label htmlFor="section" className="block text-sm font-medium text-gray-700 mb-1">Section:</label>
+                                    <input type="text" id="section" name="section" value={formData.section} onChange={handleInputChange} required
+                                        className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700" />
+                                </div>
+                                <div>
+                                    <label htmlFor="gradeYearLevel" className="block text-sm font-medium text-gray-700 mb-1">Grade/Year Level:</label>
+                                    <input type="text" id="gradeYearLevel" name="gradeYearLevel" value={formData.gradeYearLevel} onChange={handleInputChange} required
+                                        className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700" />
+                                </div>
                             </div>
-                            <div>
-                                <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-1">End Time:</label>
-                                <input type="time" id="endTime" name="endTime" value={formData.endTime} onChange={handleInputChange} required
-                                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label htmlFor="educationLevel" className="block text-sm font-medium text-gray-700 mb-1">Education Level:</label>
+                                    <select id="educationLevel" name="educationLevel" value={formData.educationLevel} onChange={handleInputChange} required
+                                        className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700">
+                                        {educationLevels.map(level => <option key={level} value={level}>{level}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Day(s) of Week:</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                        {daysOfWeekOptions.map(day => (
+                                            <label key={day} className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                                <input
+                                                    type="checkbox"
+                                                    name="dayOfWeek"
+                                                    value={day}
+                                                    checked={formData.dayOfWeek.includes(day)}
+                                                    onChange={handleDayOfWeekChange}
+                                                    className="focus:ring-customRed h-4 w-4 text-customRed border-gray-400 rounded"
+                                                />
+                                                <span>{day}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div>
-                            <label htmlFor="semester" className="block text-sm font-medium text-gray-700 mb-1">Semester:</label>
-                            <select id="semester" name="semester" value={formData.semester} onChange={handleInputChange} required
-                                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                {semesters.map(sem => <option key={sem} value={sem}>{sem}</option>)}
-                            </select>
-                        </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">Start Time:</label>
+                                    <input type="time" id="startTime" name="startTime" value={formData.startTime} onChange={handleInputChange} required
+                                        className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700" />
+                                </div>
+                                <div>
+                                    <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-1">End Time:</label>
+                                    <input type="time" id="endTime" name="endTime" value={formData.endTime} onChange={handleInputChange} required
+                                        className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700" />
+                                </div>
+                            </div>
 
-                        <div className="flex items-center justify-end space-x-3 pt-2">
-                            <button type="button" onClick={handleCancel} disabled={isFormLoading}
-                                className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-md shadow-sm flex items-center">
-                                <XCircle size={18} className="mr-2" /> Cancel
-                            </button>
-                            <button type="submit" disabled={isFormLoading}
-                                className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md shadow-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
-                                <Save size={18} className="mr-2" />
-                                {isFormLoading ? (isEditing ? 'Saving...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Schedule')}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
+                            <div>
+                                <label htmlFor="semester" className="block text-sm font-medium text-gray-700 mb-1">Semester:</label>
+                                <select id="semester" name="semester" value={formData.semester} onChange={handleInputChange} required
+                                    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700">
+                                    {semesters.map(sem => <option key={sem} value={sem}>{sem}</option>)}
+                                </select>
+                            </div>
 
-            {isLoading && !schedules.length && <p className="text-center text-gray-500 py-5">Loading schedules...</p>}
-            {!isLoading && !schedules.length && !isAdding && !isEditing && (
-                <p className="text-center text-gray-500 py-5">No schedules found. Add one to get started!</p>
-            )}
+                            <div className="flex items-center justify-end space-x-4 pt-4">
+                                <motion.button type="button" onClick={handleCancel} disabled={isFormLoading}
+                                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                    className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-5 rounded-lg shadow-md flex items-center">
+                                    <XCircle size={18} className="mr-2" /> Cancel
+                                </motion.button>
+                                <motion.button type="submit" disabled={isFormLoading}
+                                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded-lg shadow-md flex items-center disabled:opacity-60 disabled:cursor-not-allowed">
+                                    <Save size={18} className="mr-2" />
+                                    {isFormLoading ? (isEditing ? 'Saving...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Schedule')}
+                                </motion.button>
+                            </div>
+                        </form>
+                    </motion.div>
+                )}
 
-            {schedules.length > 0 && (
-                <div className="overflow-x-auto bg-white rounded-lg shadow">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade/Year</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day(s)</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semester</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {schedules.map(sch => (
-                                <tr key={sch._id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {sch.subjectId?.name || 'N/A'} <span className="text-xs text-gray-500">({sch.subjectId?.code || 'N/A'})</span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {sch.teacherId?.firstName || 'N/A'} {sch.teacherId?.lastName || ''}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sch.section}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sch.gradeYearLevel} ({sch.educationLevel})</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {Array.isArray(sch.dayOfWeek) ? sch.dayOfWeek.join(', ') : sch.dayOfWeek}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sch.startTime} - {sch.endTime}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sch.semester}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                        <button
-                                            onClick={() => handleEditClick(sch)}
-                                            disabled={isAdding || isEditing}
-                                            className="text-indigo-600 hover:text-indigo-900 disabled:text-gray-300 disabled:cursor-not-allowed"
-                                            title="Edit"
-                                        >
-                                            <Edit3 size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(sch._id)}
-                                            disabled={isLoading || isAdding || isEditing}
-                                            className="text-red-600 hover:text-red-900 disabled:text-gray-300 disabled:cursor-not-allowed"
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
+                {isLoading && !schedules.length && (
+                    <motion.p variants={cardVariants} initial="initial" animate="animate" className="text-center text-gray-300 py-10 text-lg">Loading schedules...</motion.p>
+                )}
+                {!isLoading && !schedules.length && !isAdding && !isEditing && (
+                    <motion.div variants={cardVariants} initial="initial" animate="animate" className="text-center bg-white/10 backdrop-blur-sm p-10 rounded-xl shadow-lg">
+                        <p className="text-gray-200 text-lg">No schedules found.</p>
+                        <p className="text-gray-300">Add one to get started!</p>
+                    </motion.div>
+                )}
+
+                {schedules.length > 0 && (
+                    <motion.div
+                        variants={cardVariants}
+                        initial="initial"
+                        animate="animate"
+                        className="overflow-x-auto bg-white rounded-xl shadow-2xl"
+                    >
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-100">
+                                <tr>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subject</th>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Teacher</th>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Section</th>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Grade/Year</th>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Day(s)</th>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time</th>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Semester</th>
+                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {schedules.map(sch => (
+                                    <tr key={sch._id} className="hover:bg-gray-50 transition-colors duration-150">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                            {sch.subjectId?.name || 'N/A'} <span className="text-xs text-gray-500">({sch.subjectId?.code || 'N/A'})</span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                            {sch.teacherId?.firstName || 'N/A'} {sch.teacherId?.lastName || ''}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.section}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.gradeYearLevel} ({sch.educationLevel})</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                            {Array.isArray(sch.dayOfWeek) ? sch.dayOfWeek.join(', ') : sch.dayOfWeek}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.startTime} - {sch.endTime}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.semester}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                                            <button
+                                                onClick={() => handleEditClick(sch)}
+                                                disabled={isAdding || isEditing || isLoading}
+                                                className="text-customRed hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Edit3 size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(sch._id)}
+                                                disabled={isLoading || isAdding || isEditing}
+                                                className="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </motion.div>
+                )}
+            </div>
+        </motion.div>
     );
 };
 

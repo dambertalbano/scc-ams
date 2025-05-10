@@ -1,7 +1,9 @@
+import { motion } from 'framer-motion'; // Import motion
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { FaCalendarAlt, FaFileExcel, FaSearch, FaTimes } from 'react-icons/fa';
+import { toast } from 'react-toastify'; // Import toast
 import * as XLSX from 'xlsx';
 import { useAdminContext } from '../../context/AdminContext';
 
@@ -13,6 +15,10 @@ const AttendanceTeacherCard = () => {
     const [attendanceRecords, setAttendanceRecords] = useState([]);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
+    useEffect(() => {
+        document.title = 'Teacher Attendance - SCC AMS';
+    }, []);
 
     const capitalize = (str) => {
         if (!str) return '';
@@ -46,14 +52,19 @@ const AttendanceTeacherCard = () => {
             const records = await fetchAttendanceRecords(currentDate);
             if (!records || !Array.isArray(records)) {
                 console.error("fetchAttendanceRecords did not return an array:", records);
+                setAttendanceRecords([]); // Ensure it's an empty array if invalid
+                return;
             }
 
             const teacherRecords = records.filter(record => record.userType === 'Teacher');
-
             setAttendanceRecords(teacherRecords);
         } catch (err) {
             console.error('Error fetching attendance records:', err);
-            setError(err.message || 'Failed to fetch attendance records');
+            if (err.response && err.response.status === 500) {
+                setError("No attendance records found for the selected date.");
+            } else {
+                setError(err.message || 'Failed to fetch attendance records');
+            }
             setAttendanceRecords([]);
         } finally {
             setLoading(false);
@@ -93,7 +104,7 @@ const AttendanceTeacherCard = () => {
 
     const generateExcel = useCallback(() => {
         if (filteredAttendanceRecords.length === 0) {
-            alert("No attendance records to export.");
+            toast.error("No attendance records to export."); // Use toast
             return;
         }
 
@@ -121,6 +132,7 @@ const AttendanceTeacherCard = () => {
 
         const fileName = `Teacher_Attendance_${currentDate.toLocaleDateString().replace(/\//g, '-')}.xlsx`;
         XLSX.writeFile(workbook, fileName);
+        toast.success("Excel file generated successfully!"); // Use toast
     }, [filteredAttendanceRecords, currentDate, formatDate, formatFullName, formatTime]);
 
     const mergedRows = useMemo(() => {
@@ -142,82 +154,140 @@ const AttendanceTeacherCard = () => {
         }).filter(row => row !== null);
 
         return rows;
-    }, [filteredAttendanceRecords, formatDate, formatTime]);
+    }, [filteredAttendanceRecords, formatDate, formatTime, formatFullName]);
+
+    const pageVariants = {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.5 } },
+        exit: { opacity: 0, transition: { duration: 0.3 } },
+    };
+
+    const contentVariants = {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.2 } },
+    };
 
     if (loading) {
-        return <div className="flex justify-center items-center h-full">Loading...</div>;
+        return (
+            <motion.div
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-slate-900 to-gray-800 p-4 sm:p-6 md:p-10"
+            >
+                <p className="text-xl text-gray-200">Loading teacher attendance...</p>
+            </motion.div>
+        );
     }
 
     if (error) {
-        return <div className="text-red-500">{error}</div>;
+        return (
+            <motion.div
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-slate-900 to-gray-800 p-4 sm:p-6 md:p-10"
+            >
+                <div className="bg-white p-8 rounded-lg shadow-xl text-center">
+                    <p className="text-red-500 text-xl mb-4">{error}</p>
+                    <button
+                        onClick={fetchData}
+                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </motion.div>
+        );
     }
 
     return (
-        <div className="p-4 sm:p-6 md:p-10 bg-white w-full">
-            <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="relative w-full sm:w-auto">
-                    <input
-                        type="text"
-                        className="border rounded px-4 py-2 w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Search by Name"
-                        value={searchTerm}
-                        onChange={handleSearch}
-                    />
-                    <FaSearch className="absolute top-3 right-3 text-gray-400" />
-                </div>
-                <button
-                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center"
-                    onClick={generateExcel}
-                >
-                    <FaFileExcel className="mr-2" /> Export to Excel
-                </button>
-            </div>
-
-            {/* Date Navigation */}
-            <div className="flex justify-center items-center mb-4 relative">
-                <button
-                    className="bg-gray-200 hover:bg-gray-300 rounded-full p-2"
-                    onClick={toggleCalendar}
-                >
-                    <FaCalendarAlt />
-                </button>
-                <span className="font-semibold mx-4">{currentDate.toLocaleDateString()}</span>
-                {isCalendarOpen && (
-                    <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-4 z-10">
-                        <div className="flex justify-end">
-                            <button
-                                className="text-gray-500 hover:text-gray-700"
-                                onClick={toggleCalendar}
-                            >
-                                <FaTimes />
-                            </button>
-                        </div>
-                        <DatePicker
-                            selected={currentDate}
-                            onChange={handleDateChange}
-                            inline
+        <motion.div // Main page container with Kiosk-like styling
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="flex flex-col items-center justify-start min-h-screen w-full bg-gradient-to-br from-slate-900 to-gray-800 p-4 sm:p-6 md:p-10" // justify-start
+        >
+            <motion.div // Container for the actual content card
+                variants={contentVariants}
+                initial="initial"
+                animate="animate"
+                className="p-4 sm:p-6 md:p-10 bg-white w-full max-w-6xl rounded-lg shadow-xl" // Added max-w and rounded-lg, shadow-xl
+            >
+                <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div className="relative w-full sm:w-auto">
+                        <input
+                            type="text"
+                            className="border rounded px-4 py-2 w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Search by Name"
+                            value={searchTerm}
+                            onChange={handleSearch}
                         />
+                        <FaSearch className="absolute top-3 right-3 text-gray-400" />
                     </div>
-                )}
-            </div>
+                    <button
+                        className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center"
+                        onClick={generateExcel}
+                    >
+                        <FaFileExcel className="mr-2" /> Export to Excel
+                    </button>
+                </div>
 
-            <div className="overflow-x-auto">
-                <table className="min-w-full table-auto border-collapse mt-5">
-                    <thead>
-                        <tr className="border-b bg-gray-100">
-                            <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Name</th>
-                            <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Role</th>
-                            <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Event Type</th>
-                            <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Date</th>
-                            <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {mergedRows}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                {/* Date Navigation */}
+                <div className="flex justify-center items-center mb-4 relative">
+                    <button
+                        className="bg-gray-200 hover:bg-gray-300 rounded-full p-2"
+                        onClick={toggleCalendar}
+                    >
+                        <FaCalendarAlt />
+                    </button>
+                    <span className="font-semibold mx-4 text-gray-700">{currentDate.toLocaleDateString()}</span>
+                    {isCalendarOpen && (
+                        <div className="absolute top-12 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-4 z-10"> {/* Adjusted top */}
+                            <div className="flex justify-end mb-2"> {/* Added mb-2 */}
+                                <button
+                                    className="text-gray-500 hover:text-gray-700"
+                                    onClick={toggleCalendar}
+                                >
+                                    <FaTimes />
+                                </button>
+                            </div>
+                            <DatePicker
+                                selected={currentDate}
+                                onChange={handleDateChange}
+                                inline
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full table-auto border-collapse mt-5">
+                        <thead>
+                            <tr className="border-b bg-gray-100">
+                                <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Name</th>
+                                <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Role</th>
+                                <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Event Type</th>
+                                <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Date</th>
+                                <th className="px-4 py-2 text-left text-gray-600 whitespace-nowrap">Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {mergedRows.length > 0 ? mergedRows : (
+                                <tr>
+                                    <td colSpan="5" className="text-center py-10 text-gray-500">
+                                        No attendance records found for the selected criteria.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </motion.div>
+        </motion.div>
     );
 };
 

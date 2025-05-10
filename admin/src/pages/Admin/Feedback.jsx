@@ -148,7 +148,7 @@ const AdminFeedbackPage = () => {
       className="p-4 md:p-6 bg-gradient-to-br from-slate-900 to-gray-900 min-h-screen text-white" // Changed background, added default text-white
     >
       <header className="mb-6 flex flex-col sm:flex-row justify-between items-center">
-        <h1 className="text-2xl md:text-3xl font-bold text-white">User Feedback Management</h1> {/* Ensured text is white */}
+        <h1 className="text-2xl md:text-3xl font-bold text-white">Feedback Management</h1> {/* Ensured text is white */}
         <button
           onClick={handleRefresh}
           className="mt-2 sm:mt-0 flex items-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-opacity-50 transition duration-150 border border-blue-400 hover:border-blue-300"

@@ -96,8 +96,7 @@ const AddTeacher = () => {
                 setAddress('');
                 setNumber('');
                 setCode('');
-                toast.success('Teacher added successfully!');
-                navigate('/admin/add-users'); // Redirect to Add Users selection page
+                navigate('/add-users'); // Redirect to Add Users selection page
             }
         } catch (error) {
             console.error("Error Response:", error.response);

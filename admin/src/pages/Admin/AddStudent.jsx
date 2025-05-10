@@ -24,12 +24,16 @@ const useAddStudentForm = () => {
     const [code, setCode] = useState('');
     const [openCardReaderWindow, setOpenCardReaderWindow] = useState(false);
     const [availableSections, setAvailableSections] = useState([]);
+    const [semester, setSemester] = useState('1st Sem');
+    const [semesterStartDate, setSemesterStartDate] = useState('');
+    const [semesterEndDate, setSemesterEndDate] = useState('');
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const { aToken } = useContext(AdminContext);
     const navigate = useNavigate();
 
     const educationLevels = Object.keys(gradeOptions);
+    const semesterOptions = ["1st Sem", "2nd Sem", "Summer"];
 
     useEffect(() => {
         document.title = 'Add Student - SCC AMS';
@@ -52,6 +56,9 @@ const useAddStudentForm = () => {
         setSection('');
         setNumber('');
         setCode('');
+        setSemester('1st Sem');
+        setSemesterStartDate('');
+        setSemesterEndDate('');
     }, [educationLevels]);
 
     const handleOpenRFID = useCallback(() => {
@@ -130,6 +137,26 @@ const useAddStudentForm = () => {
             return;
         }
 
+        if (!semester) {
+            toast.error('Please select a Semester.');
+            return;
+        }
+
+        if (!semesterStartDate) {
+            toast.error('Please select a Semester Start Date.');
+            return;
+        }
+
+        if (!semesterEndDate) {
+            toast.error('Please select a Semester End Date.');
+            return;
+        }
+
+        if (new Date(semesterEndDate) < new Date(semesterStartDate)) {
+            toast.error('Semester End Date cannot be before Start Date.');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('image', docImg);
         formData.append('studentNumber', studentNumber);
@@ -144,6 +171,9 @@ const useAddStudentForm = () => {
         formData.append('educationLevel', educationLevel);
         formData.append('gradeYearLevel', gradeYearLevel);
         formData.append('section', section);
+        formData.append('semester', semester);
+        formData.append('semesterDates[start]', semesterStartDate);
+        formData.append('semesterDates[end]', semesterEndDate);
 
         try {
             const { data } = await axios.post(backendUrl + '/api/admin/add-student', formData, {
@@ -156,7 +186,7 @@ const useAddStudentForm = () => {
             if (data.success) {
                 toast.success(data.message);
                 resetForm();
-                navigate('/admin/add-users');
+                navigate('/add-users');
             } else {
                 toast.error(data.message);
             }
@@ -164,7 +194,7 @@ const useAddStudentForm = () => {
             toast.error('Failed to add student. Please try again.');
             console.error(error);
         }
-    }, [aToken, address, backendUrl, code, docImg, educationLevel, email, firstName, gradeYearLevel, lastName, middleName, navigate, number, password, section, resetForm, studentNumber]);
+    }, [aToken, address, backendUrl, code, docImg, educationLevel, email, firstName, gradeYearLevel, lastName, middleName, navigate, number, password, section, resetForm, studentNumber, semester, semesterStartDate, semesterEndDate]);
 
     useEffect(() => {
         setAvailableSections(gradeOptions[educationLevel]?.[gradeYearLevel] || []);
@@ -175,7 +205,7 @@ const useAddStudentForm = () => {
         email, setEmail, password, setPassword, number, setNumber, educationLevel, setEducationLevel,
         gradeYearLevel, setGradeYearLevel, section, setSection, address, setAddress,
         code, setCode, openCardReaderWindow, setOpenCardReaderWindow, availableSections, handleOpenRFID,
-        handleCloseRFID, onSubmitHandler, educationLevels
+        handleCloseRFID, onSubmitHandler, educationLevels, semester, setSemester, semesterStartDate, setSemesterStartDate, semesterEndDate, setSemesterEndDate, semesterOptions
     };
 };
 
@@ -185,7 +215,8 @@ const AddStudent = () => {
         email, setEmail, password, setPassword, number, setNumber, educationLevel, setEducationLevel,
         gradeYearLevel, setGradeYearLevel, section, setSection, address, setAddress,
         code, setCode, openCardReaderWindow, handleOpenRFID,
-        handleCloseRFID, onSubmitHandler, educationLevels, availableSections
+        handleCloseRFID, onSubmitHandler, educationLevels, availableSections,
+        semester, setSemester, semesterStartDate, setSemesterStartDate, semesterEndDate, setSemesterEndDate, semesterOptions
     } = useAddStudentForm();
 
     const pageVariants = {
@@ -251,28 +282,28 @@ const AddStudent = () => {
                         <input onChange={(e) => setStudentNumber(e.target.value)} value={studentNumber} className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="text" required />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Password</label>
-                        <input onChange={(e) => setPassword(e.target.value)} value={password} className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="password" required />
+                        <label className="block text-sm font-medium text-gray-700">Email</label>
+                        <input onChange={(e) => setEmail(e.target.value)} value={email} className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="email" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">First Name</label>
                         <input onChange={(e) => setFirstName(e.target.value)} value={firstName} className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="text" required />
                     </div>
                     <div>
+                        <label className="block text-sm font-medium text-gray-700">Password</label>
+                        <input onChange={(e) => setPassword(e.target.value)} value={password} className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="password" required />
+                    </div>
+                    <div>
                         <label className="block text-sm font-medium text-gray-700">Middle Name</label>
                         <input onChange={(e) => setMiddleName(e.target.value)} value={middleName} className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="text" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                        <input onChange={(e) => setLastName(e.target.value)} value={lastName} className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="text" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Email</label>
-                        <input onChange={(e) => setEmail(e.target.value)} value={email} className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="email" required />
-                    </div>
-                    <div>
                         <label className="block text-sm font-medium text-gray-700">Contact Number</label>
                         <input onChange={(e) => setNumber(e.target.value)} value={number} className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="tel" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                        <input onChange={(e) => setLastName(e.target.value)} value={lastName} className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="text" required />
                     </div>
                     <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700">Address</label>
@@ -328,6 +359,41 @@ const AddStudent = () => {
                                 <option key={index} value={sec}>{sec}</option>
                             ))}
                         </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Semester</label>
+                        <select
+                            value={semester}
+                            onChange={(e) => setSemester(e.target.value)}
+                            className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed"
+                            required
+                        >
+                            <option value="">Select Semester</option>
+                            {semesterOptions.map((sem) => (
+                                <option key={sem} value={sem}>{sem}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="md:col-span-1">
+                        <label className="block text-sm font-medium text-gray-700">Semester Start Date</label>
+                        <input
+                            type="date"
+                            value={semesterStartDate}
+                            onChange={(e) => setSemesterStartDate(e.target.value)}
+                            className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed"
+                            required
+                        />
+                    </div>
+                    <div className="md:col-span-1">
+                        <label className="block text-sm font-medium text-gray-700">Semester End Date</label>
+                        <input
+                            type="date"
+                            value={semesterEndDate}
+                            onChange={(e) => setSemesterEndDate(e.target.value)}
+                            className="mt-1 border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed"
+                            required
+                        />
                     </div>
                 </div>
 

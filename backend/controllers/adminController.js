@@ -162,6 +162,7 @@ const addStudent = async (req, res) => {
         await newStudent.save();
         res.status(201).json({ success: true, message: `Student Added` });
     } catch (error) {
+        console.error("Detailed error in addStudent:", error);
         if (error.name === "ValidationError") {
             const errors = {};
             for (const field in error.errors) {
@@ -169,7 +170,10 @@ const addStudent = async (req, res) => {
             }
             return res.status(400).json({ success: false, message: "Validation error", errors });
         }
-        res.status(500).json({ success: false, message: error.message });
+        if (error.code === 11000) {
+            return res.status(409).json({ success: false, message: "Duplicate key error.", details: error.keyValue });
+        }
+        res.status(500).json({ success: false, message: "Internal server error during student creation.", fullError: error.message });
     }
 };
 

@@ -162,7 +162,6 @@ const FeedbackDetailPage = () => {
             )}
             <p><strong>From:</strong> <span className="text-gray-600">{feedback.name}</span></p>
             <p><strong>Email:</strong> <span className="text-gray-600">{feedback.email || 'Not provided'}</span></p>
-            <p><strong>Source:</strong> <span className="text-gray-600">{feedback.source || 'N/A'}</span></p>
           </div>
 
           <div className="pt-3">

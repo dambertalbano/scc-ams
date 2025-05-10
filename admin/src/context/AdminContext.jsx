@@ -321,7 +321,7 @@ const AdminContextProvider = (props) => {
         }
     }, [backendUrl, handleApiError, updateAToken]);
 
-    const adminSignIn = useCallback(async (code, tokenOverride = null, options = { showToast: true }) => {
+    const adminSignIn = useCallback(async (code, tokenOverride = null, options = { showToast: false }) => {
         const currentToken = tokenOverride !== null ? tokenOverride : aToken;
         try {
             const headers = {};
@@ -331,23 +331,17 @@ const AdminContextProvider = (props) => {
             const response = await axios.put(`${backendUrl}/api/admin/sign-in/${code}`, {}, { headers });
 
             if (response.data.success) {
-                if (options.showToast) {
-                    toast.success("Sign in successful");
-                }
                 return true;
             } else {
-                if (options.showToast) {
-                    toast.error(response.data.message || "Sign in failed");
-                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Sign in error', options);
+            handleApiError(error, 'Sign in error', options); // handleApiError will respect options.showToast (which is false by default here)
             return false;
         }
     }, [aToken, backendUrl, handleApiError]);
 
-    const adminSignOut = useCallback(async (code, tokenOverride = null, options = { showToast: true }) => {
+    const adminSignOut = useCallback(async (code, tokenOverride = null, options = { showToast: false }) => {
         const currentToken = tokenOverride !== null ? tokenOverride : aToken;
         try {
             const headers = {};
@@ -357,18 +351,12 @@ const AdminContextProvider = (props) => {
             const response = await axios.put(`${backendUrl}/api/admin/sign-out/${code}`, {}, { headers });
 
             if (response.data.success) {
-                if (options.showToast) {
-                    toast.success("Sign out successful");
-                }
                 return true;
             } else {
-                if (options.showToast) {
-                    toast.error(response.data.message || "Sign out failed");
-                }
                 return false;
             }
         } catch (error) {
-            handleApiError(error, 'Sign out error', options);
+            handleApiError(error, 'Sign out error', options); // handleApiError will respect options.showToast (which is false by default here)
             return false;
         }
     }, [aToken, backendUrl, handleApiError]);

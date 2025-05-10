@@ -108,7 +108,7 @@ const Navbar = forwardRef((props, ref) => {
                 },
                 {
                     title: 'Feedbacks',
-                    path: '/feedback',
+                    path: '/admin/feedback',
                 },
             ];
         } else if (dToken) {

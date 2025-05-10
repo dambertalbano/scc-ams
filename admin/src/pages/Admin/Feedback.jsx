@@ -1,7 +1,30 @@
+import { motion } from 'framer-motion'; // Import motion
 import { AlertCircle, Archive, CheckCircle, ChevronLeft, ChevronRight, Eye, Inbox, RefreshCw, Trash2 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAdminContext } from '../../context/AdminContext'; // Import useAdminContext
+
+// Define page transition variants
+const pageVariants = {
+  initial: {
+    opacity: 0,
+    x: "-10vw", // Slide in from left
+  },
+  in: {
+    opacity: 1,
+    x: 0,
+  },
+  out: {
+    opacity: 0,
+    x: "10vw", // Slide out to right
+  }
+};
+
+const pageTransition = {
+  type: "tween",
+  ease: "anticipate",
+  duration: 0.5
+};
 
 const AdminFeedbackPage = () => {
   const {
@@ -116,51 +139,59 @@ const AdminFeedbackPage = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 bg-gray-100 min-h-screen">
+    <motion.div
+      initial="initial"
+      animate="in"
+      exit="out"
+      variants={pageVariants}
+      transition={pageTransition}
+      className="p-4 md:p-6 bg-gradient-to-br from-slate-900 to-gray-900 min-h-screen text-white" // Changed background, added default text-white
+    >
       <header className="mb-6 flex flex-col sm:flex-row justify-between items-center">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">User Feedback Management</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-white">User Feedback Management</h1> {/* Ensured text is white */}
         <button
           onClick={handleRefresh}
-          className="mt-2 sm:mt-0 flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150"
+          className="mt-2 sm:mt-0 flex items-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-opacity-50 transition duration-150 border border-blue-400 hover:border-blue-300"
         >
           <RefreshCw size={18} className="mr-2" /> Refresh Data
         </button>
       </header>
 
+      {/* Stats cards will have bg-white, so their internal text colors are fine */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
+        <div className="bg-white text-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow">
           <div className="flex items-center">
             <Inbox size={24} className="text-blue-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Total Feedback</p>
-              <p className="text-2xl font-semibold text-gray-800">{contextFeedbackStats.totalFeedback}</p>
+              <p className="text-2xl font-semibold ">{contextFeedbackStats?.totalFeedback || 0}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
+        <div className="bg-white text-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow">
           <div className="flex items-center">
             <AlertCircle size={24} className="text-yellow-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500">New Feedback</p>
-              <p className="text-2xl font-semibold text-gray-800">{contextFeedbackStats.newFeedbackCount}</p>
+              <p className="text-2xl font-semibold">{contextFeedbackStats?.newFeedbackCount || 0}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
+        <div className="bg-white text-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow">
           <div className="flex items-center">
             <CheckCircle size={24} className="text-green-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Viewed Feedback</p>
-              <p className="text-2xl font-semibold text-gray-800">{contextFeedbackStats.viewedFeedbackCount}</p>
+              <p className="text-2xl font-semibold">{contextFeedbackStats?.viewedFeedbackCount || 0}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
+        <div className="bg-white text-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow">
           <div className="flex items-center">
             <Archive size={24} className="text-gray-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Archived Feedback</p>
-              <p className="text-2xl font-semibold text-gray-800">{contextFeedbackStats.archivedFeedbackCount}</p>
+              <p className="text-2xl font-semibold">{contextFeedbackStats?.archivedFeedbackCount || 0}</p>
             </div>
           </div>
         </div>
@@ -168,11 +199,12 @@ const AdminFeedbackPage = () => {
 
       {loading && (
         <div className="flex justify-center items-center h-64">
-          <RefreshCw size={32} className="animate-spin text-blue-600" />
-          <p className="ml-2 text-gray-600">Loading feedback...</p>
+          <RefreshCw size={32} className="animate-spin text-sky-300" />
+          <p className="ml-2 text-gray-200">Loading feedback...</p> {/* Adjusted text color */}
         </div>
       )}
 
+      {/* Error message styling might need adjustment if it clashes, but bg-red-100 should provide enough contrast */}
       {error && !loading && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
           <strong className="font-bold">Error: </strong>
@@ -182,13 +214,14 @@ const AdminFeedbackPage = () => {
 
       {!loading && !error && feedbackItems.length === 0 && (
         <div className="text-center py-10">
-          <Inbox size={48} className="mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-500 text-lg">No feedback submissions yet.</p>
+          <Inbox size={48} className="mx-auto text-gray-300 mb-4" /> {/* Adjusted icon color */}
+          <p className="text-gray-300 text-lg">No feedback submissions yet.</p> {/* Adjusted text color */}
         </div>
       )}
 
+      {/* Table has bg-white, so its internal text colors are fine */}
       {!loading && !error && feedbackItems.length > 0 && (
-        <div className="bg-white shadow-md rounded-lg overflow-x-auto">
+        <div className="bg-white shadow-md rounded-lg overflow-x-auto text-gray-800"> {/* Added text-gray-800 for table content */}
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -265,6 +298,7 @@ const AdminFeedbackPage = () => {
         </div>
       )}
 
+      {/* Pagination buttons are bg-white, their text color should be fine */}
       {!loading && !error && feedbackItems.length > 0 && totalPages > 1 && (
         <div className="mt-6 flex justify-between items-center">
           <button
@@ -274,7 +308,7 @@ const AdminFeedbackPage = () => {
           >
             <ChevronLeft size={18} className="mr-1" /> Previous
           </button>
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-gray-200"> {/* Adjusted text color */}
             Page {currentPage} of {totalPages}
           </span>
           <button
@@ -286,7 +320,7 @@ const AdminFeedbackPage = () => {
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

@@ -19,7 +19,7 @@ import AttendanceStudentCard from './pages/Admin/AttendanceStudentCard';
 import AttendanceTeacherCard from './pages/Admin/AttendanceTeacherCard';
 import Dashboard from './pages/Admin/Dashboard';
 import EditUser from './pages/Admin/EditUser';
-import Feedback from './pages/Admin/Feedback';
+import AdminFeedbackPage from './pages/Admin/Feedback';
 import FeedbackDetailPage from './pages/Admin/FeedbackDetailPage';
 import Manage from './pages/Admin/Manage';
 import RFID_Scan from './pages/Admin/RFID_Scan';
@@ -127,8 +127,10 @@ const App = () => {
                     <Route path='/kiosk-scan' element={<KioskScanPage />} />
                     <Route path='/use-rfid-scan' element={aToken ? <UseRfidScanLogic /> : <LandingPage />} />
                     <Route path='/manage' element={aToken ? <Manage /> : <LandingPage />} />
-                    <Route path="feedback" element={<Feedback />} />
-                    <Route path="feedback/:feedbackId" element={<FeedbackDetailPage />} />
+                    
+                    {/* Corrected Feedback Routes */}
+                    <Route path="admin/feedback" element={aToken ? <AdminFeedbackPage /> : <LandingPage />} />
+                    <Route path="admin/feedback/:feedbackId" element={aToken ? <FeedbackDetailPage /> : <LandingPage />} />
 
                 </Routes>
             </div>

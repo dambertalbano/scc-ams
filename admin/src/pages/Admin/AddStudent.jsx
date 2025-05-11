@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { RFIDReaderInput } from 'rfid-reader-input';
@@ -267,12 +267,12 @@ const AddStudent = () => {
                             Scan
                         </button>
                     </div>
-                    <RFIDReaderInput 
-                        isOpen={openCardReaderWindow} 
-                        onRequestClose={handleCloseRFID} 
-                        handleCodeCardRFID={setCode} 
-                        textTitle='Student RFID Scanner'
-                        textBody='Please tap the student RFID card on the reader.' 
+                    <RFIDReaderInput
+                        isOpen={openCardReaderWindow}
+                        onRequestClose={handleCloseRFID}
+                        handleCodeCardRFID={setCode}
+                        textTitle='Scan Student RFID Card'
+                        textBody=''
                     />
                 </div>
 

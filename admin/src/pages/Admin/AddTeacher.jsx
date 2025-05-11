@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'; // Import motion
-import React, { useContext, useEffect, useState } from 'react'; // Added useEffect
+import { useContext, useEffect, useState } from 'react'; // Added useEffect
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { RFIDReaderInput } from 'rfid-reader-input';
@@ -148,8 +148,14 @@ const AddTeacher = () => {
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Scan RFID Card</label>
                     <div className="flex items-center gap-2">
-                        <input value={code} className="border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed" type="text" placeholder="RFID Serial (auto-filled)" readOnly />
-                        <button type="button" onClick={handleOpenRFID} className="bg-customRed text-white px-4 py-2 rounded hover:bg-red-700 transition-colors">
+                        <input value={code}
+                        className="border border-gray-300 rounded px-3 py-2 w-full focus:ring-customRed focus:border-customRed"
+                        type="text"
+                        placeholder="RFID Serial (auto-filled)"
+                        readOnly />
+                        <button type="button"
+                        onClick={handleOpenRFID}
+                        className="bg-customRed text-white px-4 py-2 rounded hover:bg-red-700 transition-colors">
                             Scan
                         </button>
                     </div>
@@ -157,8 +163,8 @@ const AddTeacher = () => {
                         isOpen={openCardReaderWindow}
                         onRequestClose={handleCloseRFID}
                         handleCodeCardRFID={setCode}
-                        textTitle='Teacher RFID Scanner'
-                        textBody='Please tap the teacher RFID card on the reader.'
+                        textTitle='Scan Teacher RFID Card'
+                        textBody=''
                     />
                 </div>
 

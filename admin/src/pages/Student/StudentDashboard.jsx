@@ -2,7 +2,7 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { motion } from "framer-motion";
 import { Loader } from "lucide-react";
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { FiInfo } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import UserInfoDisplay from '../../components/rfid/UserInfoDisplay';

@@ -1,5 +1,7 @@
 import axios from "axios";
 import { motion } from "framer-motion"; // Import motion
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable'; // Import the function directly
 import { useCallback, useContext, useEffect, useState } from "react";
 import { FaCalendarAlt, FaCheckCircle, FaExclamationCircle, FaPercentage } from "react-icons/fa";
 import { StudentContext } from "../../context/StudentContext";
@@ -180,7 +182,95 @@ const AttendanceStatsSection = ({ stats, semesterDates }) => {
     );
 };
 
-const StudentSchedulesSection = ({ schedules }) => {
+const StudentSchedulesSection = ({ schedules, studentInfo }) => {
+  const formatTime = (timeStr) => {
+    if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return 'N/A';
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours, 10);
+    const m = parseInt(minutes, 10);
+    if (isNaN(h) || isNaN(m)) return 'N/A';
+    const date = new Date();
+    date.setHours(h);
+    date.setMinutes(m);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
+
+  const formatTeacherName = (teacher) => {
+    if (!teacher) return 'N/A';
+    const middleInitial = teacher.middleName ? `${teacher.middleName.charAt(0)}.` : '';
+    const lastName = teacher.lastName || '';
+    const firstName = teacher.firstName || '';
+    if (!lastName && !firstName) return 'N/A';
+    return `${lastName}, ${firstName} ${middleInitial}`.trim();
+  };
+
+  const formatStudentNameForPDF = (info) => {
+    if (!info) return 'Student';
+    const middleInitial = info.middleName ? `${info.middleName.charAt(0)}.` : '';
+    const lastName = info.lastName || 'N/A';
+    const firstName = info.firstName || 'N/A';
+    return `${lastName}, ${firstName} ${middleInitial}`.trim();
+  };
+
+  const handleExportPDF = () => {
+    console.log("Exporting PDF with studentInfo:", studentInfo);
+    console.log("Exporting PDF with schedules:", schedules);
+
+    if (!studentInfo || !schedules) {
+      alert("Student data or schedules are not loaded yet. Please wait and try again.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    const studentName = formatStudentNameForPDF(studentInfo);
+    
+    doc.setFontSize(18);
+    doc.text(`${studentName} - Class Schedule`, 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100); 
+
+    doc.text(`Student No: ${studentInfo.studentNumber || 'N/A'}`, 14, 30);
+    doc.text(`Grade & Section: ${studentInfo.gradeYearLevel || 'N/A'} - ${studentInfo.section || 'N/A'}`, 14, 36);
+    doc.text(`Semester: ${studentInfo.semester || 'N/A'}`, 14, 42);
+
+    const tableColumn = ["Subject Code", "Subject Name", "Day(s)", "Time", "Teacher"];
+    const tableRows = [];
+
+    schedules.forEach(schedule => {
+      const scheduleData = [
+        schedule.subjectId?.code || 'N/A',
+        schedule.subjectId?.name || 'N/A',
+        Array.isArray(schedule.dayOfWeek) ? schedule.dayOfWeek.join(', ') : (schedule.dayOfWeek || 'N/A'),
+        schedule.startTime && schedule.endTime ? `${formatTime(schedule.startTime)} - ${formatTime(schedule.endTime)}` : 'N/A',
+        formatTeacherName(schedule.teacherId) 
+      ];
+      tableRows.push(scheduleData);
+    });
+    
+    autoTable(doc, {
+        head: [tableColumn], 
+        body: tableRows,
+        startY: 50,
+        theme: 'grid',
+        headStyles: { fillColor: [22, 160, 133] }, 
+        styles: { fontSize: 9, cellPadding: 2 },
+        columnStyles: {
+            0: { cellWidth: 30 }, 
+            1: { cellWidth: 50 }, 
+            2: { cellWidth: 40 }, 
+            3: { cellWidth: 35 }, 
+            4: { cellWidth: 'auto' },
+        },
+    });
+
+    try {
+        doc.save(`${studentName.replace(/[^a-zA-Z0-9_-\s]/g, '') || 'student'}_schedule.pdf`);
+    } catch (e) {
+        console.error("Error saving PDF:", e);
+        alert("An error occurred while trying to save the PDF.");
+    }
+  };
+
   if (!schedules || schedules.length === 0) {
     return (
       <div className="p-4 sm:p-6 bg-slate-800 rounded-xl mt-8">
@@ -190,24 +280,18 @@ const StudentSchedulesSection = ({ schedules }) => {
     );
   }
 
-  const formatTime = (timeStr) => {
-    if (!timeStr) return 'N/A';
-    const [hours, minutes] = timeStr.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours, 10));
-    date.setMinutes(parseInt(minutes, 10));
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  };
-
-  const formatTeacherName = (teacher) => {
-    if (!teacher) return 'N/A';
-    const middleInitial = teacher.middleName ? `${teacher.middleName.charAt(0)}.` : '';
-    return `${teacher.lastName}, ${teacher.firstName} ${middleInitial}`.trim();
-  };
-
   return (
     <div className="p-4 sm:p-6 bg-slate-800 rounded-xl mt-8">
-      <h3 className="text-xl font-semibold text-gray-200 mb-4">My Schedules</h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-semibold text-gray-200">My Schedules</h3>
+        <button
+          onClick={handleExportPDF}
+          disabled={!studentInfo || !schedules || schedules.length === 0}
+          className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Export to PDF
+        </button>
+      </div>
       <div className="space-y-4">
         {schedules.map((schedule) => (
           <div key={schedule._id} className="bg-slate-700 p-4 rounded-lg shadow">
@@ -264,7 +348,7 @@ const StudentProfile = () => {
   const [rawAttendanceRecords, setRawAttendanceRecords] = useState([]);
   const [semesterDates, setSemesterDates] = useState({ start: null, end: null });
   const [attendanceStats, setAttendanceStats] = useState(null);
-  const [studentSchedules, setStudentSchedules] = useState([]); // New state for schedules
+  const [studentSchedules, setStudentSchedules] = useState([]);
 
   const calculateAttendanceStats = useCallback((records, semStartDateStr, semEndDateStr) => {
     if (!semStartDateStr || !semEndDateStr || !records) {
@@ -320,7 +404,7 @@ const StudentProfile = () => {
         const studentData = response.data.student;
         const attendanceData = response.data.attendance || [];
         const semDates = response.data.semesterDates || { start: null, end: null };
-        const schedulesData = response.data.schedules || []; // Expect schedules from API
+        const schedulesData = response.data.schedules || [];
 
         setStudentInfo(studentData);
         setFormData({
@@ -334,7 +418,7 @@ const StudentProfile = () => {
         });
         setRawAttendanceRecords(attendanceData);
         setSemesterDates(semDates);
-        setStudentSchedules(schedulesData); // Set schedules state
+        setStudentSchedules(schedulesData);
 
       } else {
         setError(response.data.message || "Failed to fetch student data.");
@@ -402,7 +486,7 @@ const StudentProfile = () => {
             <ProfileHeader studentInfo={studentInfo} />
             <ProfileForm formData={formData} setFormData={setFormData} onSubmit={onSubmitHandler} />
             <AttendanceStatsSection stats={attendanceStats} semesterDates={semesterDates} />
-            <StudentSchedulesSection schedules={studentSchedules} /> {/* Add new section here */}
+            <StudentSchedulesSection schedules={studentSchedules} studentInfo={studentInfo} />
             <SuccessModal isOpen={showSuccessCard} onClose={() => setShowSuccessCard(false)} />
              <footer className="mt-12 text-center">
                 <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} St. Clare College of Caloocan</p>

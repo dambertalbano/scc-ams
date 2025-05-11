@@ -40,6 +40,18 @@ const studentSchema = new mongoose.Schema(
       start: { type: Date, required: true, default: new Date("2024-08-15") }, // Default start date for 1st Sem
       end: { type: Date, required: true, default: new Date("2024-12-15") }, // Default end date for 1st Sem
     },
+    // Suggested new fields:
+    enrolledSchedules: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Schedule' // Make sure 'Schedule' matches your schedule model name
+    }],
+    status: {
+      type: String,
+      enum: ['Active', 'Inactive', 'Pending Enrollment', 'Graduated', 'Dropped', 'On Leave'],
+      default: 'Active',
+      required: true,
+      trim: true,
+    }
   },
   { timestamps: true }
 );

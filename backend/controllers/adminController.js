@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
 import { eachDayOfInterval, endOfMonth, formatISO, isValid, parseISO, startOfMonth, subMonths } from 'date-fns';
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import multer from 'multer';
 import validator from "validator";
 import { default as Attendance, default as attendanceModel } from "../models/attendanceModel.js";
@@ -108,11 +109,12 @@ const addStudent = async (req, res) => {
             educationLevel,
             gradeYearLevel,
             section,
-            semester = "1st Sem", // Default to "1st Sem"
+            semester = "1st Sem",
             semesterDates = {
                 start: new Date("2025-01-06"),
                 end: new Date("2025-05-15"),
-            }, // Default dates for "1st Sem"
+            },
+            status
         } = req.body;
 
         const imageFile = req.file;
@@ -121,7 +123,7 @@ const addStudent = async (req, res) => {
             return res.status(400).json({ success: false, message: "Image is required" });
         }
 
-        if (!studentNumber || !firstName || !lastName || !email || !password || !number || !code || !educationLevel || !gradeYearLevel || !section) {
+        if (!studentNumber || !firstName || !lastName || !email || !password || !number || !code || !educationLevel || !gradeYearLevel || !section || !semester) {
             return res.status(400).json({ success: false, message: "Missing Details" });
         }
 
@@ -155,12 +157,40 @@ const addStudent = async (req, res) => {
             section,
             semester,
             semesterDates,
-            date: Date.now(),
+            status: status || 'Active'
         };
 
         const newStudent = new studentModel(userData);
         await newStudent.save();
-        res.status(201).json({ success: true, message: `Student Added` });
+
+        try {
+            const matchingSchedules = await scheduleModel.find({
+                educationLevel: newStudent.educationLevel,
+                gradeYearLevel: newStudent.gradeYearLevel,
+                section: newStudent.section,
+                semester: newStudent.semester
+            });
+
+            if (matchingSchedules.length > 0) {
+                const scheduleIdsForStudent = [];
+                for (const schedule of matchingSchedules) {
+                    if (!schedule.enrolledStudents.includes(newStudent._id)) {
+                        schedule.enrolledStudents.push(newStudent._id);
+                        await schedule.save();
+                    }
+                    scheduleIdsForStudent.push(schedule._id);
+                }
+                newStudent.enrolledSchedules = scheduleIdsForStudent;
+                await newStudent.save();
+                console.log(`[Admin] Student ${newStudent._id} automatically enrolled in ${matchingSchedules.length} schedules.`);
+            } else {
+                console.log(`[Admin] No matching schedules found for student ${newStudent._id} based on their class details and semester.`);
+            }
+        } catch (enrollError) {
+            console.error(`[Admin] Error during automatic schedule enrollment for student ${newStudent._id}:`, enrollError);
+        }
+
+        res.status(201).json({ success: true, message: `Student Added`, student: newStudent });
     } catch (error) {
         console.error("Detailed error in addStudent:", error);
         if (error.name === "ValidationError") {
@@ -325,6 +355,39 @@ const getUserByCode = async (req, res) => {
 const deleteUser = async (req, res, model, userType) => {
     try {
         const userId = req.params.id;
+
+        if (userType === "Student") {
+            try {
+                const studentObjectId = new mongoose.Types.ObjectId(userId);
+                const schedulesToUpdate = await scheduleModel.find({ enrolledStudents: studentObjectId });
+
+                if (schedulesToUpdate.length > 0) {
+                    for (const schedule of schedulesToUpdate) {
+                        schedule.enrolledStudents.pull(studentObjectId);
+                        await schedule.save();
+                    }
+                    console.log(`[Admin] Student ${userId} automatically unenrolled from ${schedulesToUpdate.length} schedules.`);
+                }
+            } catch (unenrollError) {
+                console.error(`[Admin] Error during automatic schedule unenrollment for student ${userId}:`, unenrollError);
+            }
+        } else if (userType === "Teacher") {
+            try {
+                const teacherObjectId = new mongoose.Types.ObjectId(userId);
+                const schedulesAssignedToTeacher = await scheduleModel.find({ teacherId: teacherObjectId });
+
+                if (schedulesAssignedToTeacher.length > 0) {
+                    for (const schedule of schedulesAssignedToTeacher) {
+                        schedule.teacherId = null;
+                        await schedule.save();
+                    }
+                    console.log(`[Admin] Teacher ${userId} unassigned from ${schedulesAssignedToTeacher.length} schedules.`);
+                }
+            } catch (teacherUnassignError) {
+                console.error(`[Admin] Error during unassigning teacher ${userId} from schedules:`, teacherUnassignError);
+            }
+        }
+
         const deletedUser = await model.findByIdAndDelete(userId);
 
         if (!deletedUser) {
@@ -333,6 +396,7 @@ const deleteUser = async (req, res, model, userType) => {
 
         res.status(200).json({ success: true, message: `${userType} deleted successfully` });
     } catch (error) {
+        console.error(`[Admin] Error deleting ${userType} ${req.params.id}:`, error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -367,7 +431,6 @@ const updateTeacher = async (req, res) => {
 
         console.log("Raw request body:", req.body);
 
-        // Validate required fields
         if (!updatedData.firstName || !updatedData.lastName || !updatedData.email) {
             return res.status(400).json({ success: false, message: "Missing required fields" });
         }
@@ -404,7 +467,6 @@ const updateStudent = async (req, res) => {
         const userId = req.params.id;
         const updatedData = req.body;
 
-        // Validate semesterDates if provided
         if (updatedData.semesterDates) {
             if (!updatedData.semesterDates.start || !updatedData.semesterDates.end) {
                 return res.status(400).json({
@@ -418,7 +480,7 @@ const updateStudent = async (req, res) => {
 
         const updatedStudent = await studentModel.findByIdAndUpdate(userId, updatedData, {
             new: true,
-            runValidators: true, // Ensure validation rules are applied
+            runValidators: true,
         });
 
         if (!updatedStudent) {
@@ -494,7 +556,6 @@ const getAttendanceRecords = async (req, res) => {
             select: 'firstName lastName middleName studentNumber position',
         });
 
-        // Return an empty array if no records are found
         if (!attendanceRecords || attendanceRecords.length === 0) {
             return res.status(200).json({ success: true, attendanceRecords: [] });
         }
@@ -628,13 +689,11 @@ const createSchedule = async (req, res) => {
     try {
         const { subjectId, teacherId, section, gradeYearLevel, educationLevel, dayOfWeek, startTime, endTime, semester } = req.body;
 
-        // Updated validation for dayOfWeek
         if (!subjectId || !teacherId || !section || !gradeYearLevel || !educationLevel || !startTime || !endTime || !semester ||
             !dayOfWeek || !Array.isArray(dayOfWeek) || dayOfWeek.length === 0) {
             return res.status(400).json({ success: false, message: 'All schedule fields are required, and dayOfWeek must be a non-empty array.' });
         }
 
-        // Optional: Validate each day in the dayOfWeek array if the enum in the model isn't sufficient for your needs here
         const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         for (const day of dayOfWeek) {
             if (!validDays.includes(day)) {
@@ -642,13 +701,11 @@ const createSchedule = async (req, res) => {
             }
         }
 
-        // Check if teacher exists
         const teacher = await teacherModel.findById(teacherId);
         if (!teacher) {
             return res.status(404).json({ success: false, message: 'Assigned teacher not found' });
         }
 
-        // Check if subject exists
         const subject = await subjectModel.findById(subjectId);
         if (!subject) {
             return res.status(404).json({ success: false, message: 'Assigned subject not found' });
@@ -660,18 +717,45 @@ const createSchedule = async (req, res) => {
             section,
             gradeYearLevel,
             educationLevel,
-            dayOfWeek, // Pass the array directly
+            dayOfWeek,
             startTime,
             endTime,
             semester
         });
 
-        // Add schedule reference to teacher
         if (newSchedule && teacher) {
-            if (!teacher.schedules.includes(newSchedule._id)) { // Ensure it's not already there
+            if (!teacher.schedules.includes(newSchedule._id)) {
                 teacher.schedules.push(newSchedule._id);
                 await teacher.save();
             }
+        }
+
+        try {
+            const matchingStudents = await studentModel.find({
+                educationLevel: newSchedule.educationLevel,
+                gradeYearLevel: newSchedule.gradeYearLevel,
+                section: newSchedule.section,
+                semester: newSchedule.semester
+            });
+
+            if (matchingStudents.length > 0) {
+                const studentIdsForSchedule = [];
+                for (const student of matchingStudents) {
+                    if (!student.enrolledSchedules.includes(newSchedule._id)) {
+                        student.enrolledSchedules.push(newSchedule._id);
+                        await student.save();
+                    }
+                    studentIdsForSchedule.push(student._id);
+                }
+
+                newSchedule.enrolledStudents = studentIdsForSchedule;
+                await newSchedule.save();
+                console.log(`[Admin] Automatically enrolled ${matchingStudents.length} students into new schedule ${newSchedule._id}.`);
+            } else {
+                console.log(`[Admin] No existing students found matching the criteria for new schedule ${newSchedule._id}.`);
+            }
+        } catch (autoEnrollError) {
+            console.error(`[Admin] Error during automatic student enrollment for new schedule ${newSchedule._id}:`, autoEnrollError);
         }
 
         res.status(201).json({ success: true, message: 'Schedule created successfully', schedule: newSchedule });
@@ -681,6 +765,77 @@ const createSchedule = async (req, res) => {
              return res.status(400).json({ success: false, message: 'Validation error: ' + error.message, errors: error.errors });
         }
         res.status(500).json({ success: false, message: error.message || 'Server Error when creating schedule' });
+    }
+};
+
+const addSchedule = async (req, res) => {
+    try {
+        const { subjectId, teacherId, section, gradeYearLevel, educationLevel, dayOfWeek, startTime, endTime, semester } = req.body;
+
+        // --- Basic Validation (add more as needed) ---
+        if (!subjectId || !teacherId || !section || !gradeYearLevel || !educationLevel || !dayOfWeek || dayOfWeek.length === 0 || !startTime || !endTime || !semester) {
+            return res.status(400).json({ success: false, message: "Missing required schedule details." });
+        }
+
+        // --- Create and Save New Schedule ---
+        const newSchedule = new scheduleModel({
+            subjectId,
+            teacherId,
+            section,
+            gradeYearLevel,
+            educationLevel,
+            dayOfWeek,
+            startTime,
+            endTime,
+            semester
+            // enrolledStudents will be populated next
+        });
+        await newSchedule.save();
+        console.log(`[Admin] New schedule ${newSchedule._id} created.`);
+
+        // --- Automatically Enroll Matching Students ---
+        try {
+            const matchingStudents = await studentModel.find({
+                educationLevel: newSchedule.educationLevel,
+                gradeYearLevel: newSchedule.gradeYearLevel,
+                section: newSchedule.section,
+                semester: newSchedule.semester
+            });
+
+            if (matchingStudents.length > 0) {
+                const studentIdsForSchedule = [];
+                for (const student of matchingStudents) {
+                    // Add schedule to student's enrolledSchedules
+                    if (!student.enrolledSchedules.includes(newSchedule._id)) {
+                        student.enrolledSchedules.push(newSchedule._id);
+                        await student.save(); // Save each updated student
+                    }
+                    studentIdsForSchedule.push(student._id);
+                }
+
+                // Add students to the schedule's enrolledStudents
+                newSchedule.enrolledStudents = studentIdsForSchedule;
+                await newSchedule.save(); // Save schedule again with enrolled students
+
+                console.log(`[Admin] Automatically enrolled ${matchingStudents.length} students into new schedule ${newSchedule._id}.`);
+            } else {
+                console.log(`[Admin] No existing students found matching the criteria for new schedule ${newSchedule._id}.`);
+            }
+        } catch (autoEnrollError) {
+            console.error(`[Admin] Error during automatic student enrollment for new schedule ${newSchedule._id}:`, autoEnrollError);
+            // Decide on error handling: proceed with schedule creation or return an error
+            // For now, we log and the schedule is still considered created.
+        }
+        // --- End Automatic Enrollment ---
+
+        res.status(201).json({ success: true, message: "Schedule created successfully and matching students enrolled.", schedule: newSchedule });
+
+    } catch (error) {
+        console.error("[Admin] Error in addSchedule:", error);
+        if (error.name === "ValidationError") {
+            return res.status(400).json({ success: false, message: "Validation error creating schedule.", errors: error.errors });
+        }
+        res.status(500).json({ success: false, message: "Internal server error while creating schedule." });
     }
 };
 
@@ -719,7 +874,6 @@ const updateSchedule = async (req, res) => {
         const scheduleId = req.params.id;
         const updates = req.body;
 
-        // Fetch the current schedule to check old teacherId
         const currentSchedule = await scheduleModel.findById(scheduleId);
         if (!currentSchedule) {
             return res.status(404).json({ success: false, message: 'Schedule not found for update' });
@@ -731,32 +885,28 @@ const updateSchedule = async (req, res) => {
             .populate('teacherId', 'firstName lastName code');
 
         if (!updatedSchedule) {
-            // This case should ideally be caught by the findById above, but as a fallback
             return res.status(404).json({ success: false, message: 'Schedule not found after update attempt' });
         }
 
-        // If teacherId has changed, update teacher documents
-        const newTeacherId = updatedSchedule.teacherId?._id || updatedSchedule.teacherId; // Handle populated vs non-populated
+        const newTeacherId = updatedSchedule.teacherId?._id || updatedSchedule.teacherId;
 
         if (oldTeacherId && newTeacherId && oldTeacherId.toString() !== newTeacherId.toString()) {
-            // Remove schedule from old teacher
             const oldTeacher = await teacherModel.findById(oldTeacherId);
             if (oldTeacher) {
                 oldTeacher.schedules.pull(scheduleId);
                 await oldTeacher.save();
             }
 
-            // Add schedule to new teacher
             const newTeacher = await teacherModel.findById(newTeacherId);
             if (newTeacher) {
-                if (!newTeacher.schedules.includes(scheduleId)) { // Avoid duplicates
+                if (!newTeacher.schedules.includes(scheduleId)) {
                     newTeacher.schedules.push(scheduleId);
                     await newTeacher.save();
                 }
             } else {
                  console.warn(`New teacher with ID ${newTeacherId} not found while updating schedule references.`);
             }
-        } else if (!oldTeacherId && newTeacherId) { // Case: Schedule was not assigned to a teacher, but now is
+        } else if (!oldTeacherId && newTeacherId) {
             const newTeacher = await teacherModel.findById(newTeacherId);
             if (newTeacher) {
                 if (!newTeacher.schedules.includes(scheduleId)) {
@@ -764,14 +914,13 @@ const updateSchedule = async (req, res) => {
                     await newTeacher.save();
                 }
             }
-        } else if (oldTeacherId && !newTeacherId) { // Case: Schedule was assigned, but now is not (teacherId removed)
+        } else if (oldTeacherId && !newTeacherId) {
              const oldTeacher = await teacherModel.findById(oldTeacherId);
             if (oldTeacher) {
                 oldTeacher.schedules.pull(scheduleId);
                 await oldTeacher.save();
             }
         }
-
 
         res.status(200).json({ success: true, message: 'Schedule updated successfully', schedule: updatedSchedule });
     } catch (error) {
@@ -790,7 +939,6 @@ const deleteScheduleAdmin = async (req, res) => {
     try {
         const scheduleId = req.params.id;
 
-        // Find the schedule to get the teacherId before deleting
         const scheduleToDelete = await scheduleModel.findById(scheduleId);
 
         if (!scheduleToDelete) {
@@ -799,14 +947,12 @@ const deleteScheduleAdmin = async (req, res) => {
 
         const teacherId = scheduleToDelete.teacherId;
 
-        // Delete the schedule
         const schedule = await scheduleModel.findByIdAndDelete(scheduleId);
 
-        // If schedule was successfully deleted and had an associated teacher
         if (schedule && teacherId) {
             const teacher = await teacherModel.findById(teacherId);
             if (teacher) {
-                teacher.schedules.pull(scheduleId); // Remove the scheduleId from teacher's schedules array
+                teacher.schedules.pull(scheduleId);
                 await teacher.save();
             }
         }
@@ -824,35 +970,32 @@ const deleteScheduleAdmin = async (req, res) => {
 // --- Analytics Helper ---
 const getAnalyticsDateRange = (periodQuery, customStartDate, customEndDate) => {
     const now = new Date();
-    let startDate, endDateRes; // Renamed endDate to avoid conflict with global if any
+    let startDate, endDateRes;
 
     if (customStartDate && customEndDate && isValid(parseISO(customStartDate)) && isValid(parseISO(customEndDate))) {
         startDate = parseISO(customStartDate);
         endDateRes = parseISO(customEndDate);
     } else {
-        endDateRes = endOfMonth(now); // Default end date
+        endDateRes = endOfMonth(now);
         switch (periodQuery) {
             case 'last7days':
                 startDate = new Date(new Date().setDate(now.getDate() - 7));
-                endDateRes = new Date(); // today
+                endDateRes = new Date();
                 break;
             case 'last30days':
                 startDate = new Date(new Date().setDate(now.getDate() - 30));
-                endDateRes = new Date(); // today
+                endDateRes = new Date();
                 break;
             case 'last6months':
                 startDate = startOfMonth(subMonths(now, 5));
-                // endDateRes remains endOfMonth(now) or is set if custom
                 break;
             case 'last12months':
                 startDate = startOfMonth(subMonths(now, 11));
-                // endDateRes remains endOfMonth(now) or is set if custom
                 break;
             case 'thisMonth':
                 startDate = startOfMonth(now);
-                // endDateRes remains endOfMonth(now) or is set if custom
                 break;
-            default: // Default to last 30 days if period is invalid
+            default:
                 startDate = new Date(new Date().setDate(now.getDate() - 30));
                 endDateRes = new Date();
                 break;
@@ -875,7 +1018,6 @@ const getAnalyticsSummary = async (req, res) => {
         const totalTeachers = await teacherModel.countDocuments();
         const totalUsers = totalStudents + totalTeachers;
 
-        // Fetch all current valid student and teacher IDs
         const allStudentDocs = await studentModel.find({}, '_id').lean();
         const allTeacherDocs = await teacherModel.find({}, '_id').lean();
         const validStudentIds = new Set(allStudentDocs.map(s => s._id.toString()));
@@ -886,7 +1028,6 @@ const getAnalyticsSummary = async (req, res) => {
             timestamp: { $gte: startDate, $lte: endDate }
         }).distinct('user');
 
-        // Filter out user IDs from attendance that no longer exist in student or teacher collections
         const validSignInUserIds = signInUserIdsFromAttendance.filter(userId =>
             validStudentIds.has(userId.toString()) || validTeacherIds.has(userId.toString())
         );
@@ -924,8 +1065,8 @@ const getAnalyticsSummary = async (req, res) => {
             success: true,
             summary: {
                 totalUsers,
-                activeTeachers: totalTeachers, // This still represents total registered teachers
-                activeStudents: totalStudents, // This still represents total registered students
+                activeTeachers: totalTeachers,
+                activeStudents: totalStudents,
                 overallActivityRate: parseFloat(overallActivityRate.toFixed(2)),
                 averageDailyAttendanceRate: parseFloat(averageDailyAttendanceRate.toFixed(2)),
                 period: {
@@ -949,9 +1090,8 @@ const getUserGrowthStats = async (req, res) => {
         const { startDate, endDate } = getAnalyticsDateRange(period, customStartDateQuery, customEndDateQuery);
         console.log('[Analytics] getUserGrowthStats date range:', { startDate, endDate });
 
-        // --- MODIFICATIONS START: Force daily granularity ---
-        const dataKeyName = "date"; // Always use 'date' as the key name
-        const isDaily = true; // Always treat as daily for output structure
+        const dataKeyName = "date";
+        const isDaily = true;
 
         const groupByFormat = { 
             year: { $year: "$createdAt" }, 
@@ -964,10 +1104,9 @@ const getUserGrowthStats = async (req, res) => {
                 { $toString: "$_id.month" }, "-",
                 { $toString: "$_id.day" }
             ]
-        }; // Ensures "YYYY-M-D" format from aggregation
+        };
         
         console.log('[Analytics] getUserGrowthStats (Forced Daily) dataKeyName:', dataKeyName);
-        // --- MODIFICATIONS END ---
 
         const studentGrowth = await studentModel.aggregate([
             { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
@@ -995,7 +1134,6 @@ const getUserGrowthStats = async (req, res) => {
             }
             let formattedKey;
             try {
-                // Always format to "YYYY-MM-DD" since output is always daily
                 const [year, monthNum, dayNum] = String(key).split('-').map(Number);
                 formattedKey = `${year}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
             } catch (e) {
@@ -1015,7 +1153,6 @@ const getUserGrowthStats = async (req, res) => {
             }
             let formattedKey;
             try {
-                // Always format to "YYYY-MM-DD"
                 const [year, monthNum, dayNum] = String(key).split('-').map(Number);
                 formattedKey = `${year}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
             } catch (e) {
@@ -1028,12 +1165,10 @@ const getUserGrowthStats = async (req, res) => {
         });
         console.log('[Analytics] growthDataMap after processing student/teacher growth:', JSON.stringify(Array.from(growthDataMap.entries())));
 
-        // Always use eachDayOfInterval
         const intervalPoints = eachDayOfInterval({ start: startDate, end: endDate });
 
         console.log(`[Analytics] Interval generation: Number of interval points: ${intervalPoints.length}`);
         intervalPoints.forEach((pointInTime) => {
-            // Always format keyToFill as "YYYY-MM-DD"
             const keyToFill = formatISO(pointInTime, { representation: 'date' }); 
             
             if (!growthDataMap.has(keyToFill)) {
@@ -1053,7 +1188,6 @@ const getUserGrowthStats = async (req, res) => {
         });
 
         console.log('[Analytics] getUserGrowthStats combinedGrowth:', JSON.stringify(combinedGrowth, null, 2));
-        // Granularity is now always 'daily'
         console.log('[Analytics] getUserGrowthStats response granularity: daily'); 
         
         res.status(200).json({
@@ -1063,7 +1197,7 @@ const getUserGrowthStats = async (req, res) => {
                 startDate: formatISO(startDate, { representation: 'date' }),
                 endDate: formatISO(endDate, { representation: 'date' })
             },
-            granularity: 'daily' // Always respond with daily granularity
+            granularity: 'daily'
         });
     } catch (error) {
         console.error("Error in getUserGrowthStats:", error);
@@ -1169,7 +1303,7 @@ const getDailySignInStats = async (req, res) => {
                         year: { $year: "$timestamp" },
                         month: { $month: "$timestamp" },
                         day: { $dayOfMonth: "$timestamp" },
-                        user: "$user" // Group by user first to count unique users per day
+                        user: "$user"
                     }
                 }
             },
@@ -1180,7 +1314,7 @@ const getDailySignInStats = async (req, res) => {
                         month: "$_id.month",
                         day: "$_id.day"
                     },
-                    signInCount: { $sum: 1 } // Count the unique users for that day
+                    signInCount: { $sum: 1 }
                 }
             },
             {
@@ -1251,14 +1385,14 @@ const getDailySignInStats = async (req, res) => {
 };
 
 export {
-    addStudent,
+    addSchedule, addStudent,
     addTeacher,
     adminDashboard,
     adminSignIn,
     adminSignOut,
     allStudents,
     allTeachers, createSchedule, createSubject, deleteScheduleAdmin, deleteStudent, deleteSubjectAdmin, deleteTeacher, getAllSchedules, getAllSubjects, getAnalyticsDateRange, getAnalyticsSummary, getAttendanceByDate,
-    getAttendanceRecords, getAttendanceStatsByEducationLevel, getDailySignInStats, // Added getDailySignInStats
+    getAttendanceRecords, getAttendanceStatsByEducationLevel, getDailySignInStats,
     getScheduleById, getStudentByCode, getSubjectById, getUserByCode, getUserGrowthStats, loginAdmin, updateSchedule, updateStudent, updateSubject, updateTeacher
 };
 

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { motion } from "framer-motion"; // Import motion
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { FaCalendarAlt, FaCheckCircle, FaExclamationCircle, FaPercentage } from "react-icons/fa";
 import { StudentContext } from "../../context/StudentContext";
 
@@ -20,13 +20,16 @@ const ProfileHeader = ({ studentInfo }) => {
           className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-white shadow-md object-cover"
           onError={(e) => {
             e.target.onerror = null;
-            e.target.src = "https://via.placeholder.com/150"; 
+            e.target.src = "https://via.placeholder.com/150";
           }}
         />
       )}
       <div className="text-center sm:text-left">
         <h2 className="text-2xl sm:text-3xl font-bold">{formatName(studentInfo)}</h2>
         <p className="text-md sm:text-lg opacity-80">{studentInfo?.email || 'No email provided'}</p>
+        <p className="text-md sm:text-lg opacity-80">
+          {studentInfo?.educationLevel || 'N/A'} - {studentInfo?.gradeYearLevel || 'N/A'} - {studentInfo?.section || 'N/A'}
+        </p>
       </div>
     </div>
   );
@@ -177,6 +180,53 @@ const AttendanceStatsSection = ({ stats, semesterDates }) => {
     );
 };
 
+const StudentSchedulesSection = ({ schedules }) => {
+  if (!schedules || schedules.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 bg-slate-800 rounded-xl mt-8">
+        <h3 className="text-xl font-semibold text-gray-200 mb-4">My Schedules</h3>
+        <p className="text-gray-400">No schedules assigned or found.</p>
+      </div>
+    );
+  }
+
+  const formatTime = (timeStr) => {
+    if (!timeStr) return 'N/A';
+    const [hours, minutes] = timeStr.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours, 10));
+    date.setMinutes(parseInt(minutes, 10));
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
+
+  const formatTeacherName = (teacher) => {
+    if (!teacher) return 'N/A';
+    const middleInitial = teacher.middleName ? `${teacher.middleName.charAt(0)}.` : '';
+    return `${teacher.lastName}, ${teacher.firstName} ${middleInitial}`.trim();
+  };
+
+  return (
+    <div className="p-4 sm:p-6 bg-slate-800 rounded-xl mt-8">
+      <h3 className="text-xl font-semibold text-gray-200 mb-4">My Schedules</h3>
+      <div className="space-y-4">
+        {schedules.map((schedule) => (
+          <div key={schedule._id} className="bg-slate-700 p-4 rounded-lg shadow">
+            <h4 className="text-lg font-semibold text-red-400">{schedule.subjectId?.name || 'N/A'} ({schedule.subjectId?.code || 'N/A'})</h4>
+            <p className="text-sm text-gray-300">
+              Teacher: <span className="font-medium">{formatTeacherName(schedule.teacherId)}</span>
+            </p>
+            <p className="text-sm text-gray-300">
+              Schedule: <span className="font-medium">{Array.isArray(schedule.dayOfWeek) ? schedule.dayOfWeek.join(', ') : schedule.dayOfWeek} | {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}</span>
+            </p>
+            <p className="text-sm text-gray-300">
+              Class: <span className="font-medium">{schedule.gradeYearLevel} - {schedule.section}</span>
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const SuccessModal = ({ isOpen, onClose }) => (
   isOpen && (
@@ -214,7 +264,7 @@ const StudentProfile = () => {
   const [rawAttendanceRecords, setRawAttendanceRecords] = useState([]);
   const [semesterDates, setSemesterDates] = useState({ start: null, end: null });
   const [attendanceStats, setAttendanceStats] = useState(null);
-
+  const [studentSchedules, setStudentSchedules] = useState([]); // New state for schedules
 
   const calculateAttendanceStats = useCallback((records, semStartDateStr, semEndDateStr) => {
     if (!semStartDateStr || !semEndDateStr || !records) {
@@ -239,7 +289,6 @@ const StudentProfile = () => {
     let currentDate = new Date(semStartDate);
     const today = new Date(); 
     today.setHours(23,59,59,999);
-
 
     while (currentDate <= semEndDate && currentDate <= today) {
       const dayOfWeek = currentDate.getDay();
@@ -271,6 +320,7 @@ const StudentProfile = () => {
         const studentData = response.data.student;
         const attendanceData = response.data.attendance || [];
         const semDates = response.data.semesterDates || { start: null, end: null };
+        const schedulesData = response.data.schedules || []; // Expect schedules from API
 
         setStudentInfo(studentData);
         setFormData({
@@ -284,6 +334,7 @@ const StudentProfile = () => {
         });
         setRawAttendanceRecords(attendanceData);
         setSemesterDates(semDates);
+        setStudentSchedules(schedulesData); // Set schedules state
 
       } else {
         setError(response.data.message || "Failed to fetch student data.");
@@ -305,7 +356,6 @@ const StudentProfile = () => {
         setAttendanceStats(stats);
     }
   }, [rawAttendanceRecords, semesterDates, calculateAttendanceStats]);
-
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
@@ -352,6 +402,7 @@ const StudentProfile = () => {
             <ProfileHeader studentInfo={studentInfo} />
             <ProfileForm formData={formData} setFormData={setFormData} onSubmit={onSubmitHandler} />
             <AttendanceStatsSection stats={attendanceStats} semesterDates={semesterDates} />
+            <StudentSchedulesSection schedules={studentSchedules} /> {/* Add new section here */}
             <SuccessModal isOpen={showSuccessCard} onClose={() => setShowSuccessCard(false)} />
              <footer className="mt-12 text-center">
                 <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} St. Clare College of Caloocan</p>

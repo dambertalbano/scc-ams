@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import mongoose from 'mongoose';
 import attendanceModel from "../models/attendanceModel.js";
+import scheduleModel from "../models/scheduleModel.js"; // Import scheduleModel
 import studentModel from "../models/studentModel.js";
 
 const handleControllerError = (res, error, message = 'An error occurred') => {
@@ -235,7 +236,11 @@ const getStudentAttendanceProfile = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid student ID' });
         }
 
-        const student = await studentModel.findById(studentId).select('-password').lean();
+        // Fetch the student document, ensuring enrolledSchedules is populated
+        const student = await studentModel.findById(studentId)
+            .select('-password') // Exclude password
+            .lean();
+
 
         if (!student) {
             console.log('[AttendanceProfile] Student not found in DB for ID:', studentId);
@@ -246,58 +251,62 @@ const getStudentAttendanceProfile = async (req, res) => {
         const semesterDates = student.semesterDates;
         console.log('[AttendanceProfile] Raw Semester Dates from student doc:', JSON.stringify(semesterDates, null, 2));
 
+        let startDate, endDate;
+        if (semesterDates && semesterDates.start && semesterDates.end) {
+            startDate = new Date(semesterDates.start);
+            endDate = new Date(semesterDates.end);
 
-        if (!semesterDates || !semesterDates.start || !semesterDates.end) {
-            console.log('[AttendanceProfile] Semester dates missing or incomplete on student doc.');
-            return res.status(400).json({
-                success: false,
-                message: 'Semester dates not found for the student. Please contact an administrator.'
-            });
+            console.log(`[AttendanceProfile] Querying for attendance with:`);
+            console.log(`  User ID: ${studentId}`);
+            console.log(`  Start Date (UTC): ${startDate.toISOString()}`);
+            console.log(`  End Date (UTC): ${endDate.toISOString()}`);
+
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                console.log('[AttendanceProfile] Invalid date conversion for semester start/end dates.');
+            }
         }
 
-        const startDate = new Date(semesterDates.start);
-        const endDate = new Date(semesterDates.end);
-
-        console.log(`[AttendanceProfile] Querying for attendance with:`);
-        console.log(`  User ID: ${studentId}`);
-        console.log(`  Start Date (UTC): ${startDate.toISOString()}`);
-        console.log(`  End Date (UTC): ${endDate.toISOString()}`);
-
-
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            console.log('[AttendanceProfile] Invalid date conversion for semester start/end dates.');
-            return res.status(400).json({ success: false, message: 'Invalid semester dates stored for the student.' });
+        let attendance = [];
+        if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+            const attendanceQuery = {
+                user: student._id, 
+                userType: 'Student',
+                timestamp: {
+                    $gte: startDate,
+                    $lte: endDate,
+                },
+            };
+            console.log('[AttendanceProfile] Attendance Query:', JSON.stringify(attendanceQuery, null, 2));
+            attendance = await attendanceModel.find(attendanceQuery)
+                .sort({ timestamp: 1 })
+                .lean();
+            console.log(`[AttendanceProfile] Found ${attendance.length} attendance records.`);
+        } else {
+            console.log('[AttendanceProfile] Skipping attendance query due to missing or invalid semester dates.');
         }
-
-        const attendanceQuery = {
-            user: studentId, // or mongoose.Types.ObjectId(studentId) if studentId is a string
-            userType: 'Student',
-            timestamp: {
-                $gte: startDate,
-                $lte: endDate,
-            },
-        };
-        console.log('[AttendanceProfile] Attendance Query:', JSON.stringify(attendanceQuery, null, 2));
-
-        const attendance = await attendanceModel.find(attendanceQuery)
-            .sort({ timestamp: 1 })
-            .lean();
-
-        console.log(`[AttendanceProfile] Found ${attendance.length} attendance records.`);
-        if (attendance.length > 0) {
-            console.log('[AttendanceProfile] First few attendance records:', JSON.stringify(attendance.slice(0, 3), null, 2)); // Log first 3 records
+        
+        let studentSchedules = [];
+        if (student.enrolledSchedules && student.enrolledSchedules.length > 0) {
+            // Fetch schedules where their _id is in the student's enrolledSchedules array
+            studentSchedules = await scheduleModel.find({ _id: { $in: student.enrolledSchedules } })
+                .populate('subjectId', 'name code') // Populate subject details
+                .populate('teacherId', 'firstName lastName middleName') // Populate teacher details
+                .lean();
+            console.log(`[AttendanceProfile] Found ${studentSchedules.length} schedules for the student based on student.enrolledSchedules.`);
+        } else {
+            console.log(`[AttendanceProfile] Student has no enrolledSchedules or array is empty.`);
         }
 
 
         res.status(200).json({
             success: true,
-            student: student,
+            student: student, // student object already includes the enrolledSchedules IDs
             attendance: attendance,
-            semesterDates: semesterDates,
+            semesterDates: semesterDates || { start: null, end: null }, 
+            schedules: studentSchedules, // This will now be the populated schedule details
         });
 
     } catch (error) {
-        // Pass the specific message to the handler
         handleControllerError(res, error, 'Error in getStudentAttendanceProfile');
     }
 };

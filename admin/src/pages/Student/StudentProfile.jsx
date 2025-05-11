@@ -183,6 +183,16 @@ const AttendanceStatsSection = ({ stats, semesterDates }) => {
 };
 
 const StudentSchedulesSection = ({ schedules, studentInfo }) => {
+  const timeToMinutes = (timeStr) => {
+    if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return Infinity;
+    const [hours, minutes] = timeStr.split(':');
+    return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
+  };
+
+  const sortedSchedules = [...schedules].sort((a, b) => {
+    return timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
+  });
+
   const formatTime = (timeStr) => {
     if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return 'N/A';
     const [hours, minutes] = timeStr.split(':');
@@ -214,9 +224,9 @@ const StudentSchedulesSection = ({ schedules, studentInfo }) => {
 
   const handleExportPDF = () => {
     console.log("Exporting PDF with studentInfo:", studentInfo);
-    console.log("Exporting PDF with schedules:", schedules);
+    console.log("Exporting PDF with sortedSchedules:", sortedSchedules);
 
-    if (!studentInfo || !schedules) {
+    if (!studentInfo || !sortedSchedules) {
       alert("Student data or schedules are not loaded yet. Please wait and try again.");
       return;
     }
@@ -236,7 +246,7 @@ const StudentSchedulesSection = ({ schedules, studentInfo }) => {
     const tableColumn = ["Subject Code", "Subject Name", "Day(s)", "Time", "Teacher"];
     const tableRows = [];
 
-    schedules.forEach(schedule => {
+    sortedSchedules.forEach(schedule => {
       const scheduleData = [
         schedule.subjectId?.code || 'N/A',
         schedule.subjectId?.name || 'N/A',
@@ -271,7 +281,7 @@ const StudentSchedulesSection = ({ schedules, studentInfo }) => {
     }
   };
 
-  if (!schedules || schedules.length === 0) {
+  if (!sortedSchedules || sortedSchedules.length === 0) {
     return (
       <div className="p-4 sm:p-6 bg-slate-800 rounded-xl mt-8">
         <h3 className="text-xl font-semibold text-gray-200 mb-4">My Schedules</h3>
@@ -286,14 +296,14 @@ const StudentSchedulesSection = ({ schedules, studentInfo }) => {
         <h3 className="text-xl font-semibold text-gray-200">My Schedules</h3>
         <button
           onClick={handleExportPDF}
-          disabled={!studentInfo || !schedules || schedules.length === 0}
+          disabled={!studentInfo || !sortedSchedules || sortedSchedules.length === 0}
           className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Export to PDF
         </button>
       </div>
       <div className="space-y-4">
-        {schedules.map((schedule) => (
+        {sortedSchedules.map((schedule) => (
           <div key={schedule._id} className="bg-slate-700 p-4 rounded-lg shadow">
             <h4 className="text-lg font-semibold text-red-400">{schedule.subjectId?.name || 'N/A'} ({schedule.subjectId?.code || 'N/A'})</h4>
             <p className="text-sm text-gray-300">

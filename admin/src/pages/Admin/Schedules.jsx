@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { motion } from 'framer-motion'; // Import motion
-import { AlertTriangle, Edit3, PlusCircle, Save, Trash2, XCircle } from 'lucide-react';
-import React, { useContext, useEffect, useState } from 'react';
+import { AlertTriangle, Edit3, PlusCircle, Save, Search, Trash2, XCircle } from 'lucide-react'; // Import Search icon
+import { useContext, useEffect, useState } from 'react';
 import { AdminContext } from '../../context/AdminContext';
 
 const Schedules = () => {
@@ -10,6 +10,7 @@ const Schedules = () => {
     const [schedules, setSchedules] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [teachers, setTeachers] = useState([]);
+    const [searchQuery, setSearchQuery] = useState(''); // State for search query
 
     const [isLoading, setIsLoading] = useState(false);
     const [isFormLoading, setIsFormLoading] = useState(false);
@@ -221,6 +222,66 @@ const Schedules = () => {
         exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
     };
 
+    // Helper function to format time from "HH:mm" to "hh:mm AM/PM"
+    const formatDisplayTime = (timeStr) => {
+        if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) {
+            return 'N/A';
+        }
+        const [hours, minutes] = timeStr.split(':');
+        let h = parseInt(hours, 10);
+        const m = parseInt(minutes, 10);
+
+        if (isNaN(h) || isNaN(m)) {
+            return 'N/A';
+        }
+
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        h = h ? h : 12; // Handle midnight (00:xx) and noon (12:xx)
+        
+        const formattedMinutes = m < 10 ? `0${m}` : m;
+        return `${h}:${formattedMinutes} ${ampm}`;
+    };
+
+    // Filter schedules based on search query
+    const filteredSchedules = schedules.filter(sch => {
+        const query = searchQuery.toLowerCase().trim();
+        if (!query) return true; // Show all if search is empty
+
+        const subjectName = sch.subjectId?.name?.toLowerCase() || '';
+        const subjectCode = sch.subjectId?.code?.toLowerCase() || '';
+        const teacherFirstName = sch.teacherId?.firstName?.toLowerCase() || '';
+        const teacherLastName = sch.teacherId?.lastName?.toLowerCase() || '';
+        const section = sch.section?.toLowerCase() || '';
+        const gradeYearLevel = sch.gradeYearLevel?.toLowerCase() || '';
+        const educationLevel = sch.educationLevel?.toLowerCase() || '';
+        const days = Array.isArray(sch.dayOfWeek) ? sch.dayOfWeek.join(', ').toLowerCase() : (sch.dayOfWeek?.toLowerCase() || '');
+        const startTime = sch.startTime?.toLowerCase() || '';
+        const endTime = sch.endTime?.toLowerCase() || '';
+        const semester = sch.semester?.toLowerCase() || '';
+        
+        // Also search against formatted display time
+        const displayStartTime = formatDisplayTime(sch.startTime).toLowerCase();
+        const displayEndTime = formatDisplayTime(sch.endTime).toLowerCase();
+
+        return (
+            subjectName.includes(query) ||
+            subjectCode.includes(query) ||
+            teacherFirstName.includes(query) ||
+            teacherLastName.includes(query) ||
+            `${teacherFirstName} ${teacherLastName}`.includes(query) ||
+            section.includes(query) ||
+            gradeYearLevel.includes(query) ||
+            educationLevel.includes(query) ||
+            days.includes(query) ||
+            startTime.includes(query) || // Search raw time
+            endTime.includes(query) ||   // Search raw time
+            displayStartTime.includes(query) || // Search formatted time
+            displayEndTime.includes(query) ||   // Search formatted time
+            semester.includes(query)
+        );
+    });
+
     if (!aToken) {
         return (
             <motion.div
@@ -257,16 +318,26 @@ const Schedules = () => {
                     </motion.div>
                 )}
 
-                <div className="mb-6">
+                <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleAddClick}
                         disabled={isAdding || isEditing}
-                        className="bg-customRed hover:bg-red-700 text-white font-medium py-2 px-6 rounded-lg flex items-center shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="bg-customRed hover:bg-red-700 text-white font-medium py-2 px-6 rounded-lg flex items-center shadow-md disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto"
                     >
                         <PlusCircle size={20} className="mr-2" /> Add New Schedule
                     </motion.button>
+                    <div className="relative w-full sm:w-auto sm:max-w-xs">
+                        <input
+                            type="text"
+                            placeholder="Search schedules..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700"
+                        />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    </div>
                 </div>
 
                 {(isAdding || isEditing) && (
@@ -377,17 +448,17 @@ const Schedules = () => {
                     </motion.div>
                 )}
 
-                {isLoading && !schedules.length && (
+                {isLoading && !filteredSchedules.length && (
                     <motion.p variants={cardVariants} initial="initial" animate="animate" className="text-center text-gray-300 py-10 text-lg">Loading schedules...</motion.p>
                 )}
-                {!isLoading && !schedules.length && !isAdding && !isEditing && (
+                {!isLoading && !filteredSchedules.length && !isAdding && !isEditing && (
                     <motion.div variants={cardVariants} initial="initial" animate="animate" className="text-center bg-white/10 backdrop-blur-sm p-10 rounded-xl shadow-lg">
-                        <p className="text-gray-200 text-lg">No schedules found.</p>
-                        <p className="text-gray-300">Add one to get started!</p>
+                        <p className="text-gray-200 text-lg">{searchQuery ? 'No schedules found matching your search.' : 'No schedules found.'}</p>
+                        {!searchQuery && <p className="text-gray-300">Add one to get started!</p>}
                     </motion.div>
                 )}
 
-                {schedules.length > 0 && (
+                {filteredSchedules.length > 0 && (
                     <motion.div
                         variants={cardVariants}
                         initial="initial"
@@ -408,7 +479,7 @@ const Schedules = () => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {schedules.map(sch => (
+                                {filteredSchedules.map(sch => (
                                     <tr key={sch._id} className="hover:bg-gray-50 transition-colors duration-150">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                                             {sch.subjectId?.name || 'N/A'} <span className="text-xs text-gray-500">({sch.subjectId?.code || 'N/A'})</span>
@@ -421,7 +492,9 @@ const Schedules = () => {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                             {Array.isArray(sch.dayOfWeek) ? sch.dayOfWeek.join(', ') : sch.dayOfWeek}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.startTime} - {sch.endTime}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                            {formatDisplayTime(sch.startTime)} - {formatDisplayTime(sch.endTime)}
+                                        </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.semester}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
                                             <button

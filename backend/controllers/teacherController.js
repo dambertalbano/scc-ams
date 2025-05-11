@@ -144,7 +144,7 @@ const updateTeacherProfile = async (req, res) => {
     } catch (error) {
         console.error("Update Teacher Profile Error:", error);
         if (error.code === 11000) { // Handle duplicate key errors (e.g., email, code)
-            return res.status(400).json({ success: false, message: "Update failed. Duplicate value for unique field.", field: error.keyValue });
+            return res.status(400).json({ success: false, message: "Update failed. RFID value for unique field.", field: error.keyValue });
         }
         res.status(500).json({ success: false, message: "Failed to update profile." });
     }

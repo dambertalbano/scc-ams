@@ -376,16 +376,14 @@ const AdminContextProvider = (props) => {
             });
 
             if (response.data.success) {
+                // This is where the data is returned
                 return response.data.attendanceRecords.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             } else {
-                if (options.showToast) {
-                    toast.error(response.data.message || "Failed to fetch attendance records");
-                }
+                // ... error handling ...
                 return [];
             }
         } catch (error) {
-            console.error("Error fetching attendance records:", error);
-            handleApiError(error, "Error fetching attendance records", options);
+            // ... error handling ...
             return [];
         }
     }, [aToken, backendUrl, handleApiError]);

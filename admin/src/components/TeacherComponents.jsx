@@ -41,7 +41,7 @@ export const ProfileForm = ({ formData, setFormData, onSubmit }) => (
           type="text"
           placeholder="First Name"
           value={formData.firstName || ''}
-          readOnly
+          
         />
       </div>
       <div>
@@ -54,7 +54,7 @@ export const ProfileForm = ({ formData, setFormData, onSubmit }) => (
           type="text"
           placeholder="Last Name"
           value={formData.lastName || ''}
-          readOnly
+          
         />
       </div>
       <div>
@@ -67,7 +67,7 @@ export const ProfileForm = ({ formData, setFormData, onSubmit }) => (
           type="text"
           placeholder="Middle Name"
           value={formData.middleName || ''}
-          readOnly
+          
         />
       </div>
       <div>
@@ -80,7 +80,7 @@ export const ProfileForm = ({ formData, setFormData, onSubmit }) => (
           type="email"
           placeholder="Email"
           value={formData.email || ''}
-          readOnly
+          
         />
       </div>
       <div>
@@ -119,7 +119,7 @@ export const ProfileForm = ({ formData, setFormData, onSubmit }) => (
           type="text"
           placeholder="Teacher Code"
           value={formData.code || ''}
-          readOnly
+          
         />
       </div>
     </div>

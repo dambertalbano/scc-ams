@@ -51,7 +51,7 @@ const ProfileForm = ({ formData, setFormData, onSubmit }) => (
           placeholder="First Name"
           value={formData.firstName}
           onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-          readOnly
+          
         />
       </div>
       <div>
@@ -65,7 +65,7 @@ const ProfileForm = ({ formData, setFormData, onSubmit }) => (
           placeholder="Last Name"
           value={formData.lastName}
           onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-          readOnly
+          
         />
       </div>
       <div>
@@ -79,7 +79,7 @@ const ProfileForm = ({ formData, setFormData, onSubmit }) => (
           placeholder="Middle Name"
           value={formData.middleName}
           onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
-          readOnly
+          
         />
       </div>
       <div>
@@ -93,7 +93,7 @@ const ProfileForm = ({ formData, setFormData, onSubmit }) => (
           placeholder="Email"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          readOnly
+          
         />
       </div>
       <div>
@@ -132,7 +132,6 @@ const ProfileForm = ({ formData, setFormData, onSubmit }) => (
           type="text"
           placeholder="Student Number"
           value={formData.studentNumber}
-          readOnly 
         />
       </div>
     </div>

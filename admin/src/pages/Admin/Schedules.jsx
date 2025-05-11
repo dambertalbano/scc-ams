@@ -11,6 +11,7 @@ const Schedules = () => {
     const [subjects, setSubjects] = useState([]);
     const [teachers, setTeachers] = useState([]);
     const [searchQuery, setSearchQuery] = useState(''); // State for search query
+    const [selectedTeacherFilter, setSelectedTeacherFilter] = useState(''); // New state for teacher filter
 
     const [isLoading, setIsLoading] = useState(false);
     const [isFormLoading, setIsFormLoading] = useState(false);
@@ -243,8 +244,13 @@ const Schedules = () => {
         return `${h}:${formattedMinutes} ${ampm}`;
     };
 
-    // Filter schedules based on search query
+    // Filter schedules based on search query and teacher filter
     const filteredSchedules = schedules.filter(sch => {
+        // Teacher Filter
+        if (selectedTeacherFilter && sch.teacherId?._id !== selectedTeacherFilter && sch.teacherId !== selectedTeacherFilter) {
+            return false;
+        }
+
         const query = searchQuery.toLowerCase().trim();
         if (!query) return true; // Show all if search is empty
 
@@ -328,15 +334,31 @@ const Schedules = () => {
                     >
                         <PlusCircle size={20} className="mr-2" /> Add New Schedule
                     </motion.button>
-                    <div className="relative w-full sm:w-auto sm:max-w-xs">
-                        <input
-                            type="text"
-                            placeholder="Search schedules..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700"
-                        />
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                        <div className="relative w-full sm:w-auto sm:max-w-xs">
+                            <select
+                                value={selectedTeacherFilter}
+                                onChange={(e) => setSelectedTeacherFilter(e.target.value)}
+                                className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700"
+                            >
+                                <option value="">All Teachers</option>
+                                {teachers.map(teach => (
+                                    <option key={teach._id} value={teach._id}>
+                                        {teach.firstName} {teach.lastName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="relative w-full sm:w-auto sm:max-w-xs">
+                            <input
+                                type="text"
+                                placeholder="Search schedules..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:ring-customRed focus:border-customRed text-gray-700"
+                            />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        </div>
                     </div>
                 </div>
 
@@ -453,8 +475,10 @@ const Schedules = () => {
                 )}
                 {!isLoading && !filteredSchedules.length && !isAdding && !isEditing && (
                     <motion.div variants={cardVariants} initial="initial" animate="animate" className="text-center bg-white/10 backdrop-blur-sm p-10 rounded-xl shadow-lg">
-                        <p className="text-gray-200 text-lg">{searchQuery ? 'No schedules found matching your search.' : 'No schedules found.'}</p>
-                        {!searchQuery && <p className="text-gray-300">Add one to get started!</p>}
+                        <p className="text-gray-200 text-lg">
+                            {searchQuery || selectedTeacherFilter ? 'No schedules found matching your criteria.' : 'No schedules found.'}
+                        </p>
+                        {!(searchQuery || selectedTeacherFilter) && <p className="text-gray-300">Add one to get started!</p>}
                     </motion.div>
                 )}
 

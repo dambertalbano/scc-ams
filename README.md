@@ -30,43 +30,35 @@ St. Clare Online AMS is a web-based Attendance Monitoring System designed to str
 
 ## 📁 Folder Structure (Simplified)
 
-/client → React frontend
-/server → Express backend API
-/models → Mongoose schemas
-/routes → API routes (auth, students, schedules, etc.)
-/controllers → Business logic for handling requests
-
+/client → React frontend /server → Express backend API /models → Mongoose schemas /routes → API routes (auth, students, schedules, etc.) /controllers → Business logic for handling requests
 
 ---
 
 ## 📦 Installation (for local development)
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/dambertalbano/scc-ams
 
-2. Navigate to folders and install dependencies
+   ```
 
-cd server
-npm install
+2. **Navigate to folders and install dependencies**
 
-cd ../client
-npm install
+cd server npm install
 
-3. Set up environment variables
+cd ../client npm install
+
+3. **Set up environment variables**
 
 Create .env files in both server and client folders.
 
-MONGO_URI=your-mongodb-uri
-JWT_SECRET=your-secret-key
-PORT=5000
+MONGO_URI=your-mongodb-uri JWT_SECRET=your-secret-key PORT=5000
 
-4. Run the app
+4. **Run the app**
 
-cd server
-npm run dev
+cd server npm run dev
 
 In another terminal:
 
-cd client
-npm start
+cd client npm start

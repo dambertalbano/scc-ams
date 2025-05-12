@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'; // Import motion
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { FaCalendarAlt, FaFileExcel, FaSearch, FaTimes } from 'react-icons/fa';
@@ -49,7 +49,12 @@ const AttendanceTeacherCard = () => {
         setLoading(true);
         setError(null);
         try {
-            const records = await fetchAttendanceRecords(currentDate);
+            const records = await fetchAttendanceRecords(currentDate); // currentDate is the one you select
+            
+            // --- CRUCIAL LOG FOR DEPLOYED VERSION ---
+            console.log(`[DEPLOY_DEBUG] Raw records from API for ${currentDate.toISOString()}:`, JSON.stringify(records));
+            // --- END CRUCIAL LOG ---
+
             if (!records || !Array.isArray(records)) {
                 console.error("fetchAttendanceRecords did not return an array:", records);
                 setAttendanceRecords([]); // Ensure it's an empty array if invalid
@@ -57,6 +62,9 @@ const AttendanceTeacherCard = () => {
             }
 
             const teacherRecords = records.filter(record => record.userType === 'Teacher');
+            // --- Log filtered records too ---
+            console.log(`[DEPLOY_DEBUG] Filtered teacher records for ${currentDate.toISOString()}:`, JSON.stringify(teacherRecords));
+            // --- END Log ---
             setAttendanceRecords(teacherRecords);
         } catch (err) {
             console.error('Error fetching attendance records:', err);

@@ -21,6 +21,11 @@ const Schedules = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [currentSchedule, setCurrentSchedule] = useState(null);
 
+    const [expandedSubjectId, setExpandedSubjectId] = useState(null); // State for expanded subject name
+    const [expandedDaysId, setExpandedDaysId] = useState(null); // New state for expanded days
+    const MAX_SUBJECT_NAME_LENGTH = 20; // Maximum length for subject name
+    const MAX_DAYS_DISPLAY_LENGTH = 25; // Maximum character length for days display before truncating
+
     const daysOfWeekOptions = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     const educationLevels = ["Primary", "Secondary"];
     const semesters = ["1st Sem", "2nd Sem"];
@@ -209,6 +214,14 @@ const Schedules = () => {
                 setIsLoading(false);
             }
         }
+    };
+
+    const handleSubjectNameClick = (scheduleId) => {
+        setExpandedSubjectId(prevId => (prevId === scheduleId ? null : scheduleId));
+    };
+
+    const handleDaysDisplayClick = (scheduleId) => { // New handler for days display
+        setExpandedDaysId(prevId => (prevId === scheduleId ? null : scheduleId));
     };
 
     const pageVariants = {
@@ -499,47 +512,78 @@ const Schedules = () => {
                                     <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Day(s)</th>
                                     <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time</th>
                                     <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Semester</th>
-                                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                                    <th scope="col" className="sticky right-0 bg-gray-100 px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {filteredSchedules.map(sch => (
-                                    <tr key={sch._id} className="hover:bg-gray-50 transition-colors duration-150">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                                            {sch.subjectId?.name || 'N/A'} <span className="text-xs text-gray-500">({sch.subjectId?.code || 'N/A'})</span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                                            {sch.teacherId?.firstName || 'N/A'} {sch.teacherId?.lastName || ''}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.section}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.gradeYearLevel} ({sch.educationLevel})</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {Array.isArray(sch.dayOfWeek) ? sch.dayOfWeek.join(', ') : sch.dayOfWeek}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {formatDisplayTime(sch.startTime)} - {formatDisplayTime(sch.endTime)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.semester}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
-                                            <button
-                                                onClick={() => handleEditClick(sch)}
-                                                disabled={isAdding || isEditing || isLoading}
-                                                className="text-customRed hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-                                                title="Edit"
+                                {filteredSchedules.map(sch => {
+                                    const subjectName = sch.subjectId?.name || 'N/A';
+                                    const subjectCode = sch.subjectId?.code || 'N/A';
+                                    const isSubjectExpanded = expandedSubjectId === sch._id;
+                                    const isLongSubject = subjectName.length > MAX_SUBJECT_NAME_LENGTH;
+
+                                    let displaySubjectName = subjectName;
+                                    if (isLongSubject && !isSubjectExpanded) {
+                                        displaySubjectName = `${subjectName.substring(0, MAX_SUBJECT_NAME_LENGTH)}...`;
+                                    }
+
+                                    const daysString = Array.isArray(sch.dayOfWeek) ? sch.dayOfWeek.join(', ') : (sch.dayOfWeek || 'N/A');
+                                    const isDaysExpanded = expandedDaysId === sch._id;
+                                    const isLongDays = daysString.length > MAX_DAYS_DISPLAY_LENGTH;
+
+                                    let displayDays = daysString;
+                                    if (isLongDays && !isDaysExpanded) {
+                                        displayDays = `${daysString.substring(0, MAX_DAYS_DISPLAY_LENGTH)}...`;
+                                    }
+
+                                    return (
+                                        <tr key={sch._id} className="hover:bg-gray-50 transition-colors duration-150">
+                                            <td
+                                                className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 cursor-pointer"
+                                                onClick={() => isLongSubject && handleSubjectNameClick(sch._id)}
+                                                title={isLongSubject && !isSubjectExpanded ? "Click to see full name" : (isLongSubject && isSubjectExpanded ? "Click to shorten" : "")}
                                             >
-                                                <Edit3 size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(sch._id)}
-                                                disabled={isLoading || isAdding || isEditing}
-                                                className="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-                                                title="Delete"
+                                                {displaySubjectName} <span className="text-xs text-gray-500">({subjectCode})</span>
+                                                {isLongSubject && !isSubjectExpanded && <span className="text-blue-500 text-xs ml-1">(more)</span>}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                                {sch.teacherId?.firstName || 'N/A'} {sch.teacherId?.lastName || ''}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.section}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.gradeYearLevel} ({sch.educationLevel})</td>
+                                            <td 
+                                                className="px-6 py-4 text-sm text-gray-600 cursor-pointer" // Removed whitespace-nowrap to allow wrapping if needed, added cursor-pointer
+                                                onClick={() => isLongDays && handleDaysDisplayClick(sch._id)}
+                                                title={isLongDays && !isDaysExpanded ? "Click to see all days" : (isLongDays && isDaysExpanded ? "Click to shorten" : "")}
                                             >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                                {displayDays}
+                                                {isLongDays && !isDaysExpanded && <span className="text-blue-500 text-xs ml-1">(more)</span>}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                {formatDisplayTime(sch.startTime)} - {formatDisplayTime(sch.endTime)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sch.semester}</td>
+                                            <td className="sticky right-0 bg-white px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                                                <button
+                                                    onClick={() => handleEditClick(sch)}
+                                                    disabled={isAdding || isEditing || isLoading}
+                                                    className="text-customRed hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Edit3 size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(sch._id)}
+                                                    disabled={isLoading || isAdding || isEditing}
+                                                    className="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </motion.div>

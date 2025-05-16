@@ -114,8 +114,8 @@ const App = () => {
                     <Route path='/attendance' element={aToken ? <Attendance /> : <LandingPage />} />
                     <Route path='/attendance-student' element={aToken ? <AttendanceStudentCard /> : <LandingPage />} />
                     <Route path='/attendance-teacher' element={aToken ? <AttendanceTeacherCard /> : <LandingPage />} />
-                    <Route path='/att1' element={dToken ? <TeacherAttendance /> : <LandingPage />} />
-                    <Route path='/att2' element={sToken ? <StudentAttendance /> : <LandingPage />} />
+                    <Route path='/teacher-attendance' element={dToken ? <TeacherAttendance /> : <LandingPage />} />
+                    <Route path='/student-attendance' element={sToken ? <StudentAttendance /> : <LandingPage />} />
                     <Route path='/student-profile' element={sToken ? <StudentProfile /> : <LandingPage />} />
                     <Route path='/teacher-profile' element={dToken ? <TeacherProfile /> : <LandingPage />} />
                     <Route path='/all-users' element={aToken ? <AllUsers /> : <LandingPage />} />

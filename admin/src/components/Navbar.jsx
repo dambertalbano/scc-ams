@@ -113,11 +113,11 @@ const Navbar = forwardRef((props, ref) => {
             ];
         } else if (dToken) {
             return [
-                { title: 'Attendance', path: '/att1' },
+                { title: 'Attendance', path: '/teacher-attendance' },
             ];
         } else if (sToken) {
             return [
-                { title: 'Attendance', path: '/att2' },
+                { title: 'Attendance', path: '/student-attendance' },
             ];
         } else {
             return [];

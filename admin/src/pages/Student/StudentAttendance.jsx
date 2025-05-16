@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { motion } from "framer-motion"; // Import motion
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { FaBell, FaFileExcel } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -83,10 +83,15 @@ const StudentAttendance = () => {
         records.forEach(record => {
             if (!record.timestamp) return;
             const recordDate = new Date(record.timestamp);
-            const dateKey = recordDate.toISOString().split('T')[0];
+            // Use local date part (YYYY-MM-DD) as the key
+            const dateKey = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}-${String(recordDate.getDate()).padStart(2, '0')}`;
 
             if (!dailyRecords[dateKey]) {
-                dailyRecords[dateKey] = { date: record.timestamp, signInTime: null, signOutTime: null };
+                dailyRecords[dateKey] = { 
+                    date: dateKey,
+                    signInTime: null, 
+                    signOutTime: null 
+                };
             }
 
             if (record.eventType === "sign-in") {
@@ -99,6 +104,7 @@ const StudentAttendance = () => {
                 }
             }
         });
+        // Sort by date ascending
         return Object.values(dailyRecords).sort((a, b) => new Date(a.date) - new Date(b.date));
     }, []);
 

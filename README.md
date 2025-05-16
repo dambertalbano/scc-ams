@@ -49,7 +49,7 @@ cd server npm install
 
 cd ../client npm install
 
-3. **Set up environment variables**
+3. **Set up environment variables.**
 
 Create .env files in both server and client folders.
 
